@@ -99,6 +99,7 @@
 <body class="ph-day">
 <div id="stage">
   <canvas id="backdrop"></canvas>
+  <canvas id="moon"></canvas>
   <canvas id="sun"></canvas>
   <canvas id="land"></canvas>
   <div id="clouds"></div>
@@ -189,20 +190,9 @@
       : kmh < 50 ? 'A strong wind' : kmh < 62 ? 'Near-gale winds' : 'Gale-force winds';
     return kind + from + '.';
   }
-  function phaseClass() {
-    var p = /[?&]phase=(\w+)/.exec(location.search);
-    if (p) return p[1];
-    if (/[?&]time=/.test(location.search)) return 'day';
-    var w = lastState && lastState.weather;
-    if (!w || w.error || !w.sunrise) return w && !w.is_day ? 'night' : 'day';
-    var d = new Date(Date.now() + (w.utc_offset || 0) * 1000), now = d.getUTCHours() * 60 + d.getUTCMinutes();
-    var m = function (iso) { var q = iso.split('T')[1].split(':'); return +q[0] * 60 + +q[1]; };
-    var rise = m(w.sunrise), set = m(w.sunset);
-    return Math.abs(now - rise) < 45 || Math.abs(now - set) < 45 ? 'golden' : now > rise && now < set ? 'day' : 'night';
-  }
   function renderWeather(w) {
     Meadow.setWeather(w);
-    var ph = phaseClass();
+    var ph = Meadow.phase();
     setBodyClass('ph-day', ph === 'day'); setBodyClass('ph-golden', ph === 'golden'); setBodyClass('ph-night', ph === 'night');
     if (!w || w.error) {
       $('w-temp').textContent = ''; $('w-text').textContent = 'Weather is unavailable right now.';

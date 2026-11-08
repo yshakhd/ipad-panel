@@ -4,7 +4,7 @@
  * redraws the foreground grass, the painter's arm and the painting in progress.
  * Preview any look with URL params, e.g. /meadow.html?wx=rain&phase=night&wind=40
  * (wx: clear partly cloudy fog drizzle rain heavy snow blizzard storm; phase: day golden night;
- *  wind in km/h; time=HH:MM for another time of day today)
+ *  wind in km/h; time=HH:MM for another time of day; days=N to look N days ahead)
  * Embedding without the panel server (see demo/): set window.MEADOW_STANDALONE = true before
  * loading this file, then feed it with Meadow.setWeather(), Meadow.setTime() and Meadow.paint().
  */
@@ -76,7 +76,7 @@
   /* ---------------- layers ---------------- */
   var stage = $('stage');
   var back = $('backdrop'), bctx = back.getContext('2d');
-  var land = $('land'), lctx = land.getContext('2d'), sunEl = $('sun');
+  var land = $('land'), lctx = land.getContext('2d'), sunEl = $('sun'), moonEl = $('moon');
   var figBox = $('figure');
   var fg = $('grass');
   var wx = $('wx'), wctx = wx.getContext('2d');
@@ -196,25 +196,42 @@
   /* The real sun: elevation and compass bearing for this place and moment (low-precision
    * NOAA formulas, well under a degree off). We look south, so east is on the left.
    * Bearing maps to x (due south = centre), elevation to height above the hills. */
-  function sunPosition(ms) {
-    var rad = Math.PI / 180, n = ms / 86400000 - 10957.5;
-    var L = 280.46 + 0.9856474 * n, g = (357.528 + 0.9856003 * n) * rad;
-    var lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * rad, eps = (23.439 - 0.0000004 * n) * rad;
-    var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)), dec = Math.asin(Math.sin(eps) * Math.sin(lam));
-    var gmst = (18.697374558 + 24.06570982441908 * n) % 24;
-    var H = ((gmst * 15 + lon) * rad - ra), la = lat * rad;
+  var RAD = Math.PI / 180;
+  function days(ms) { return ms / 86400000 - 10957.5; }   // since J2000
+  function horizontal(ra, dec, ms) {   // sky position -> elevation and compass bearing here
+    var n = days(ms), gmst = (18.697374558 + 24.06570982441908 * n) % 24;
+    var H = (gmst * 15 + lon) * RAD - ra, la = lat * RAD;
     var el = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(H));
-    var az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(la) - Math.sin(la) * Math.cos(H)) / rad;
-    return { el: el / rad, az: (az + 360) % 360 };
+    var az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(la) - Math.sin(la) * Math.cos(H)) / RAD;
+    return { el: el / RAD, az: (az + 360) % 360 };
   }
-  function sunXY() {
-    var p = sunPosition(Date.now() + timeShift);
+  function eclToEq(lam, beta, n) {
+    var eps = (23.439 - 0.0000004 * n) * RAD;
+    return { ra: Math.atan2(Math.sin(lam) * Math.cos(eps) - Math.tan(beta) * Math.sin(eps), Math.cos(lam)),
+      dec: Math.asin(Math.sin(beta) * Math.cos(eps) + Math.cos(beta) * Math.sin(eps) * Math.sin(lam)) };
+  }
+  function sunLon(n) {
+    var g = (357.528 + 0.9856003 * n) * RAD;
+    return (280.46 + 0.9856474 * n + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * RAD;
+  }
+  function moonLon(n) {   // low-precision lunar theory, about a degree off: plenty for a picture
+    var L = (218.316 + 13.176396 * n) * RAD, M = (134.963 + 13.064993 * n) * RAD, F = (93.272 + 13.22935 * n) * RAD;
+    return { lam: L + 6.289 * RAD * Math.sin(M), beta: 5.128 * RAD * Math.sin(F) };
+  }
+  function sunPosition(ms) { var n = days(ms), q = eclToEq(sunLon(n), 0, n); return horizontal(q.ra, q.dec, ms); }
+  function moonPosition(ms) {
+    var n = days(ms), m = moonLon(n), q = eclToEq(m.lam, m.beta, n), p = horizontal(q.ra, q.dec, ms);
+    p.lit = (1 - Math.cos(m.lam - sunLon(n))) / 2;   // fraction of the disc lit, 0 new to 1 full
+    return p;
+  }
+  function toScreen(p) {
     // North of the equator the midday sun is due south, so we face south (east on the left);
     // south of it we face north, so east is on the right.
     var off = lat >= 0 ? p.az - 180 : ((p.az + 180) % 360) - 180;
     if (lat < 0) off = -off;
     return [512 + off / 120 * 470, 352 - p.el / 75 * 292, p.el];
   }
+  function sunXY() { return toScreen(sunPosition(Date.now() + timeShift)); }
   var SUN_R = 260;
   function buildSun() {
     var g = sunEl.getContext('2d'), c = SUN_R, gr;
@@ -237,6 +254,40 @@
   }
   setInterval(placeSun, 30000);
 
+  /* The real moon: position like the sun, the right phase, and its lit side turned toward
+   * wherever the sun is (even below the horizon), so waxing and waning come out right. */
+  var MOON_R = 120;
+  function placeMoon() {
+    if (!moonEl) return;
+    var ms = Date.now() + timeShift, m = moonPosition(ms), xy = toScreen(m), sxy = toScreen(sunPosition(ms));
+    var night = phase === 'night';
+    if (m.el < -4 || m.lit < 0.03 || pal.oc > (night ? 0.6 : 0.45)) { moonEl.style.display = 'none'; return; }
+    moonEl.style.display = 'block';
+    moonEl.width = moonEl.height = MOON_R * 2;
+    var g = moonEl.getContext('2d'), c = MOON_R, r = 21, i;
+    g.clearRect(0, 0, MOON_R * 2, MOON_R * 2);
+    if (night) {
+      var gr = g.createRadialGradient(c, c, 0, c, c, MOON_R);
+      gr.addColorStop(0, 'rgba(240,235,210,' + (0.12 + 0.25 * m.lit) + ')'); gr.addColorStop(1, 'rgba(240,235,210,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, MOON_R * 2, MOON_R * 2);
+      g.fillStyle = 'rgba(120,135,170,0.18)'; g.beginPath(); g.arc(c, c, r, 0, 6.2832); g.fill();   // earthshine
+    }
+    g.save(); g.translate(c, c); g.rotate(Math.atan2(sxy[1] - xy[1], sxy[0] - xy[0]));
+    // lit limb on the +x side, terminator an ellipse that sweeps from crescent to full
+    var k = 1 - 2 * m.lit;
+    g.beginPath(); g.moveTo(0, -r);
+    for (i = 0; i <= 24; i++) { var a = -Math.PI / 2 + Math.PI * i / 24; g.lineTo(r * Math.cos(a), r * Math.sin(a)); }
+    for (i = 0; i <= 24; i++) { var b = Math.PI / 2 - Math.PI * i / 24; g.lineTo(r * k * Math.cos(b), r * Math.sin(b)); }
+    g.closePath();
+    g.fillStyle = night ? '#f3eed8' : 'rgba(255,255,255,0.6)'; g.fill();
+    g.clip();
+    g.fillStyle = night ? 'rgba(190,190,170,0.35)' : 'rgba(170,190,215,0.25)';
+    g.beginPath(); g.arc(-6, -5, 5, 0, 6.2832); g.arc(7, 6, 3.5, 0, 6.2832); g.arc(4, -9, 2.5, 0, 6.2832); g.fill();
+    g.restore();
+    setXY(moonEl, xy[0] - MOON_R, xy[1] - MOON_R);
+  }
+  setInterval(placeMoon, 30000);
+
   function drawBackdrop() {
     var g = bctx, R = seeded(11), i, gr;
     gr = g.createLinearGradient(0, 0, 0, 470);
@@ -250,13 +301,6 @@
         g.globalAlpha = (0.35 + R() * 0.6) * (1 - sy / 380); g.beginPath(); g.arc(sx, sy, sr, 0, 6.2832); g.fill();
       }
       g.globalAlpha = 1;
-      var mx = 455, my = 118;
-      gr = g.createRadialGradient(mx, my, 0, mx, my, 120);
-      gr.addColorStop(0, 'rgba(240,235,210,0.35)'); gr.addColorStop(1, 'rgba(240,235,210,0)');
-      g.fillStyle = gr; g.fillRect(mx - 120, my - 120, 240, 240);
-      g.fillStyle = '#f3eed8'; g.beginPath(); g.arc(mx, my, 21, 0, 6.2832); g.fill();
-      g.fillStyle = 'rgba(190,190,170,0.35)';
-      g.beginPath(); g.arc(mx - 6, my - 5, 5, 0, 6.2832); g.arc(mx + 7, my + 6, 3.5, 0, 6.2832); g.arc(mx + 4, my - 9, 2.5, 0, 6.2832); g.fill();
     }
 
     g = lctx; g.clearRect(0, 0, W, H);
@@ -825,7 +869,7 @@
   /* ---------------- build + main loop ---------------- */
   function rebuild() {
     pal = palette(phase || 'day', kind || 'clear');
-    drawBackdrop(); buildSun(); buildClouds(); buildFigure(); buildGrass(); buildWx();
+    drawBackdrop(); buildSun(); placeMoon(); buildClouds(); buildFigure(); buildGrass(); buildWx();
     builtAt = Date.now();
   }
   function minutesOf(iso) { var p = iso.split('T')[1].split(':'); return +p[0] * 60 + +p[1]; }
@@ -838,6 +882,7 @@
       var off = (w.utc_offset || 0) * 1000, loc = new Date(Date.now() + off);
       timeShift = Date.UTC(loc.getUTCFullYear(), loc.getUTCMonth(), loc.getUTCDate()) + timeOverride * 3600000 - off - Date.now();
     } else timeShift = 0;
+    timeShift += (+param('days') || 0) * 86400000;   // preview another day, e.g. ?days=9
     var k = forced.wx ? kind : (KIND[w.code] || 'cloudy'), ph = phase;
     if (!forced.phase) {
       ph = w.is_day ? 'day' : 'night';
@@ -929,12 +974,13 @@
   window.Meadow = {
     setWeather: setWeather,
     wind: function () { return windNow(); },
+    phase: function () { return phase || 'day'; },   // the light the scene is drawn in: day, golden or night
     dim: function (on) { dimmed = on; },
     photo: function () { return current; },
     paintingRect: function () { return [PX, PY, PW, PH]; },
     snapshot: function () { return painting.toDataURL('image/jpeg', 0.9); },
     // hours since local midnight (e.g. 16.5), or null for the real time
-    setTime: function (h) { timeOverride = h; if (lastW) setWeather(lastW); placeSun(); },
+    setTime: function (h) { timeOverride = h; if (lastW) setWeather(lastW); placeSun(); placeMoon(); },
     // start painting an <img> (already loaded) right away; src is what a tap on the painting shows
     paint: function (img, src) { clearTimeout(cycle); current = src || null; paintFrom(img); cycle = setTimeout(nextPainting, paintSecs * 1000); },
     // photo URLs to cycle through, and seconds per painting

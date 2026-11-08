@@ -78,6 +78,7 @@
 <body class="ph-day">
 <div id="stage">
   <canvas id="backdrop"></canvas>
+  <canvas id="moon"></canvas>
   <canvas id="sun"></canvas>
   <canvas id="land"></canvas>
   <div id="clouds"></div>
@@ -161,14 +162,7 @@
   }
   function hm(iso) { var p = iso.split('T')[1].split(':'); return +p[0] + p[1] / 60; }
   function fmt(h) { var hh = Math.floor(h), mm = Math.round((h - hh) * 60); if (mm === 60) { hh++; mm = 0; } return { t: (hh % 12 || 12) + ':' + pad(mm), ap: hh % 24 < 12 ? 'am' : 'pm' }; }
-  function setPhase() {
-    var ph = 'day';
-    if (live) {
-      var now = localNow(), rise = hm(live.sunrise), set = hm(live.sunset);
-      ph = Math.abs(now - rise) < 0.75 || Math.abs(now - set) < 0.75 ? 'golden' : now > rise && now < set ? 'day' : 'night';
-    }
-    document.body.className = document.body.className.replace(/ph-\w+/, 'ph-' + ph);
-  }
+  function setPhase() { document.body.className = document.body.className.replace(/ph-\w+/, 'ph-' + Meadow.phase()); }
   function render() {
     if (!live) return;
     var w = current();

@@ -75,7 +75,8 @@ reaches up for a small touch-up.
   and compass bearing from the time and my location (the low-precision NOAA
   formulas are well under a degree off) and faces south, so it rises on the
   left and sets behind the hills on the right. In November it barely clears the
-  hills; in June it rides high.
+  hills; in June it rides high. The moon gets the same treatment, in its real
+  phase, with its lit side turned toward wherever the sun is.
 - **Light and weather.** Golden hour warms everything. At night he paints by
   lantern, fireflies drift through the grass and the cottage window glows. Rain
   puts up an umbrella over him, snow covers the field, and storms flash.

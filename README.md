@@ -33,6 +33,7 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
     follow it too.
   - The sun sits where it really is in your sky, computed from the time and
     your location. It rises on the left and sets behind the hills on the right.
+    The moon does the same, in its real phase, with its lit side toward the sun.
   - Golden hour, night (lantern, fireflies, a lit cottage window), rain (an
     umbrella), fog, snow and storms each look different.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
@@ -115,7 +116,7 @@ for trying the tiles without real hardware.
 ## Previews and debugging
 - Preview any look: `/meadow.html?wx=storm&phase=night&wind=40&time=16:20`
   (wx: clear partly cloudy fog drizzle rain heavy snow blizzard storm; phase:
-  day golden night; wind in km/h). `&sim=60` fast-forwards the painting by 60
+  day golden night; wind in km/h; `days=9` looks 9 days ahead). `&sim=60` fast-forwards the painting by 60
   seconds, useful for screenshots since headless browsers barely animate. The
   photo scene takes `/?wx=…&phase=…`.
 - Jump straight to a screen: `/#home` or `/#system`.
