@@ -212,7 +212,7 @@
     if (o.tall && t < v.hy - 40) o.tops.push([cx, o.crown === 'antenna' ? t - 22 * s : o.crown ? t - top0[2] * 1.9 : t]);
   }
   function buildCity(v, name) {
-    var g = v.city.getContext('2d'), R = seeded(name === 'desk' ? 7 : 23), w = v.w, h = v.h, hy = v.hy, i, x;
+    var g = v.city.getContext('2d'), R = seeded(name === 'desk' ? 13 : 23), w = v.w, h = v.h, hy = v.hy, i, x;
     g.clearRect(0, 0, w, h);
     var sunX = skyXY(v, Sky.sun(now(), lat, lon))[0];
     city.rim = phase === 'golden' && oc < 0.5 ? (phase === 'golden' ? '#ffb070' : null) : null;
