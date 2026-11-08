@@ -1,0 +1,11 @@
+# Dev Home Assistant. On the Pi, use the same file with a real config dir.
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: ha-dev
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./config:/config
+    environment:
+      - TZ=US/Eastern

@@ -1,0 +1,11 @@
+[Unit]
+Description=iPad display panel server
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/work/ipad-panel/server.py
+WorkingDirectory=%h/work/ipad-panel
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

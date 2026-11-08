@@ -1,0 +1,53 @@
+{
+  "port": 8765,
+  "place_name": "London",
+  "latitude": 51.5072,
+  "longitude": -0.1276,
+  "units": "celsius",
+  "night_dim_start_hour": 23,
+  "night_dim_end_hour": 7,
+  "home_assistant": {
+    "enabled": false,
+    "url": "http://localhost:8123",
+    "token_file": "ha-token.txt",
+    "entities": [
+      "light.kitchen_lights",
+      "light.ceiling_lights",
+      "light.living_room_rgbww_lights",
+      "light.bed_light",
+      "switch.decorative_lights",
+      "fan.living_room_fan",
+      "climate.heatpump",
+      "media_player.living_room",
+      "lock.front_door",
+      {
+        "id": "cover.garage_door",
+        "name": "Garage"
+      },
+      "cover.living_room_window",
+      "binary_sensor.movement_backyard",
+      "binary_sensor.basement_floor_wet",
+      "sensor.outside_temperature",
+      "sensor.power_consumption"
+    ]
+  },
+  "photos": {
+    "dirs": [
+      "~/Pictures/wallpapers",
+      "~/Pictures/panel"
+    ],
+    "seconds_per_photo": 5,
+    "seconds_per_painting": 120
+  },
+  "disks": [
+    {
+      "path": "/home",
+      "label": "Home"
+    },
+    {
+      "path": "/",
+      "label": "System"
+    }
+  ],
+  "scene": "meadow"
+}
