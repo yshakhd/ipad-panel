@@ -48,7 +48,9 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
   glows on a digital clock on his desk and by the bed. Every so often a golden
   retriever wanders through, chases a ball (and brings it back), chases its
   tail, or comes to sit by his chair to be petted; at night it sleeps on its
-  bed by his. The camera pans across
+  bed by his. The cat naps on the desk, and every few minutes wakes, stretches,
+  washes and walks over (across the keyboard, which types for it) to be
+  petted. `cat=1` sends it more often. The camera pans across
   the apartment when he gets up or turns in.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
   a time-of-day tint and animated weather.

@@ -178,7 +178,7 @@
     // setbacks come from the seeded random too, so every device draws the same skyline
     if (steps) { var t1 = t + (b - t) * (0.18 + R() * 0.14), t2 = t1 + (b - t1) * (0.15 + R() * 0.15); body = [[x + w * 0.24, t, w * 0.52], [x + w * 0.1, t1, w * 0.8], [x, t2, w]]; }
     g.fillStyle = col;
-    for (var i = 0; i < body.length; i++) g.fillRect(body[i][0], body[i][1], body[i][2], b - body[i][1]);
+    for (var i = 0; i < body.length; i++) { g.fillRect(body[i][0], body[i][1], body[i][2], b - body[i][1]); o.rects.push(body[i][0], body[i][1], body[i][2], o.row); }
     var top0 = body[0], cx = top0[0] + top0[2] / 2;
     if (o.crown === 'spire') { g.beginPath(); g.moveTo(top0[0] + top0[2] * 0.2, t); g.lineTo(cx, t - top0[2] * 1.6); g.lineTo(top0[0] + top0[2] * 0.8, t); g.fill(); g.fillRect(cx - 0.6, t - top0[2] * 2.6, 1.2, top0[2]); }
     if (o.crown === 'deco') {   // stacked arches narrowing to a needle
@@ -235,7 +235,7 @@
       g.fillStyle = phase === 'golden' ? 'rgba(255,200,130,0.55)' : 'rgba(255,255,240,0.4)';
       for (i = 0; i < 14; i++) g.fillRect(sunX - 18 + R() * 36 - i, hy + 5 + i * 0.9, 6 + R() * 18, 1);
     }
-    var cells = [], tops = [], steam = [], rows = [[hy + 14, 0.55, 0.12], [hy + 30, 0.8, 0.14], [hy + 58, 1.1, 0.16], [hy + 98, 1.45, 0.14]];
+    var cells = [], tops = [], steam = [], rects = [], rows = [[hy + 14, 0.55, 0.12], [hy + 30, 0.8, 0.14], [hy + 58, 1.1, 0.16], [hy + 98, 1.45, 0.14]];
     for (var r = 0; r < rows.length; r++) {
       var col = r < 2 ? mix(city.far, city.mid, r * 0.6) : mix(city.mid, city.near, (r - 2) * 0.6), s = rows[r][1];
       x = -10 - R() * 20;
@@ -246,7 +246,7 @@
           var cr = R(); crown = cr < 0.12 ? 'deco' : cr < 0.3 ? 'spire' : cr < 0.55 ? 'antenna' : null;
           if (R() < 0.15) { bw *= 0.45; top -= 40; }   // a needle-thin supertall
         }
-        tower(v, g, { x: x, top: top, w: bw, bottom: h + 5, col: col, s: s, tall: tall, crown: crown, R: R, cells: cells, tops: tops, steam: steam, row: r,
+        tower(v, g, { x: x, top: top, w: bw, bottom: h + 5, col: col, s: s, tall: tall, crown: crown, R: R, cells: cells, tops: tops, steam: steam, rects: rects, row: r,
           rim: city.rim ? (x + bw / 2 < sunX ? 1 : -1) : 0 });
         x += bw + (R() < 0.25 ? R() * 5 * s : -1);
       }
@@ -257,14 +257,25 @@
       g.fillStyle = gr; g.fillRect(0, 0, w, h);
     }
     if (name === 'desk' || name === 'bed') roofGarden(v, g, R);
+    gr = g.createLinearGradient(0, hy + 60, 0, h);   // the street canyon falls into shadow
+    gr.addColorStop(0, rgba(city.near, 0)); gr.addColorStop(1, rgba(city.near, phase === 'night' ? 0.55 : 0.35));
+    g.fillStyle = gr; g.fillRect(0, hy + 60, w, h - hy - 60);
     // the two towers right outside, framing the view
     var near = name === 'desk' ? [[-40, 34, 130, 'deco'], [w - 120, 96, 150, null]] : [[-30, 70, 120, 'antenna'], [w - 96, 20, 120, 'spire']];
     for (i = 0; i < near.length; i++)
-      tower(v, g, { x: near[i][0], top: near[i][1], w: near[i][2], bottom: h + 5, col: city.near, s: 1.9, tall: true, crown: near[i][3], R: R, cells: cells, tops: tops, steam: steam, row: 4,
+      tower(v, g, { x: near[i][0], top: near[i][1], w: near[i][2], bottom: h + 5, col: city.near, s: 1.9, tall: true, crown: near[i][3], R: R, cells: cells, tops: tops, steam: steam, rects: rects, row: 4,
         rim: city.rim ? (near[i][0] + near[i][2] / 2 < sunX ? 1 : -1) : 0 });
     if (kind === 'fog') { gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, rgba(sky.low, 0.75)); gr.addColorStop(0.6, rgba(sky.low, 0.45)); gr.addColorStop(1, rgba(sky.low, 0.2)); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
     if (kind === 'snow' || kind === 'blizzard') { g.fillStyle = 'rgba(240,244,250,0.18)'; g.fillRect(0, hy, w, h - hy); }
     v.cells = cells; v.tops = tops; v.steamAt = steam;
+    // for each row, the skyline of everything in front of it: a window lower than that is hidden
+    var prof = [], r2, j, k;
+    for (r2 = 0; r2 < 5; r2++) { prof[r2] = []; for (j = 0; j <= w; j++) prof[r2][j] = 1e9; }
+    for (k = 0; k < rects.length; k += 4) {
+      var x0 = Math.max(0, Math.ceil(rects[k])), x1 = Math.min(w, Math.floor(rects[k] + rects[k + 2])), top_ = rects[k + 1], rr = rects[k + 3];
+      for (r2 = 0; r2 < rr; r2++) for (j = x0; j <= x1; j++) if (top_ < prof[r2][j]) prof[r2][j] = top_;
+    }
+    v.prof = prof;
   }
   function roofGarden(v, g, R) {   // a terrace garden down below that keeps the seasons
     var S = Sky.season(now(), lat, param('season')), x0 = v.w * 0.28, y0 = v.hy + 70, i;
@@ -287,12 +298,19 @@
     var g = v.lights.getContext('2d'), c = v.cells, R = seeded(41), f = litFraction(), i;
     g.clearRect(0, 0, v.w, v.h);
     var cols = ['#ffd99a', '#ffe7c0', '#ffc976', '#cfe6ff'];
+    var P = v.prof;
     for (i = 0; i < c.length; i += 5) {
       if (R() > f * (c[i + 4] === 4 ? 0.8 : 1)) continue;
+      var row = c[i + 4], bot = c[i + 1] + c[i + 3], xl = Math.max(0, Math.floor(c[i])), xr = Math.min(v.w, Math.ceil(c[i] + c[i + 2]));
+      if (row < 4 && (P[row][xl] < bot || P[row][xr] < bot)) continue;   // behind a nearer building
       g.fillStyle = cols[Math.floor(R() * 4)]; g.globalAlpha = c[i + 4] < 2 ? 0.75 : 0.95;
       g.fillRect(c[i], c[i + 1], c[i + 2], c[i + 3]);
     }
     g.globalAlpha = 1;
+    g.globalCompositeOperation = 'destination-out';   // fewer lights down in the canyon
+    var fade = g.createLinearGradient(0, v.hy + 60, 0, v.h); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,0.6)');
+    g.fillStyle = fade; g.fillRect(0, v.hy + 60, v.w, v.h - v.hy - 60);
+    g.globalCompositeOperation = 'source-over';
     v.lights.style.opacity = phase === 'night' ? 1 : phase === 'golden' ? 0.28 : oc > 0.5 ? 0.25 : 0;
     v.lights.style.display = v.lights.style.opacity === '0' ? 'none' : 'block';
   }
@@ -432,7 +450,6 @@
   }
   function deskThings(g, R) {
     var night = phase === 'night', i;
-    cat(g, 46, 488);   // the cat naps on the desk while he works
     // books, with the clock on top
     g.fillStyle = night ? '#1f2a44' : '#2f4a73'; g.fillRect(124, 484, 142, 8);
     g.fillStyle = night ? '#4a3b22' : '#d0a24a'; g.fillRect(130, 492, 132, 8);
@@ -525,9 +542,10 @@
   function buildPeople() {
     var bd = V.desk.box, bb = V.bed.box, rim = room.rim, night = phase === 'night';
     steamEls.forEach(function (e) { if (e.parentNode) e.parentNode.removeChild(e); }); steamEls = [];
-    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat, guy.legs, guy.armPet].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
+    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat, guy.legs, guy.armPet, guy.armRPet].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
     var awake = view === 'desk';
     if (awake) {
+      bd.appendChild(catEl);   // on the desk: in front of the room, behind his arms
       guy.armL = sprite(bd, 236, 440, 110, 110, function (g) { arm(g, 300, 452, 262, 528, 304, 520); });
       guy.armR = sprite(bd, 420, 440, 110, 110, function (g) { arm(g, 444, 452, 482, 530, 506, 518); });
       guy.body = sprite(bd, 270, 400, 200, 200, function (g) {
@@ -574,12 +592,15 @@
       bd.appendChild(dogEl); bd.appendChild(ballEl);   // the dog runs in front of the chair
       guy.armPet = sprite(bd, 200, 440, 120, 180, function (g) { arm(g, 300, 452, 272, 516, 246, 552); });   // reaching down to the dog
       guy.armPet.style.display = 'none'; guy.petting = false;
+      guy.armRPet = sprite(bd, 420, 440, 160, 110, function (g) { arm(g, 444, 452, 494, 512, 548, 490); });   // stroking the cat
+      guy.armRPet.style.display = 'none'; guy.pettingCat = false;
       for (var k = 0; k < 2; k++) {   // steam off his coffee
         var st = mk(22, 40), sg = st.getContext('2d');
         for (var j = 0; j < 6; j++) { var gx = 11 + Math.sin(j * 1.1) * 4, gy = 36 - j * 6, rg = sg.createRadialGradient(gx, gy, 0, gx, gy, 5 + j); rg.addColorStop(0, 'rgba(255,255,255,' + (night ? 0.14 : 0.3) + ')'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = rg; sg.fillRect(0, 0, 22, 40); }
         steamEls.push(place(bd, st, 692, 452));
       }
     } else {
+      if (catEl.parentNode) catEl.parentNode.removeChild(catEl);   // the cat is on the bed with him
       // asleep: the desk is empty and dark; the duvet breathes
       guy.empty = sprite(bd, 260, 450, 230, 318, function (g) {
         g.fillStyle = room.chair; rrect(g, 300, 470, 164, 150, 26); g.fill(); g.fillRect(376, 620, 12, 76); g.fillRect(310, 700, 144, 8);
@@ -772,6 +793,133 @@
     tr(dogEl, 'translate3d(' + (dog.x - FW / 2).toFixed(1) + 'px,' + (dog.y - FH + bob).toFixed(1) + 'px,0) scale(' + (sc * dog.dir).toFixed(3) + ',' + sc.toFixed(3) + ')');
   }
 
+  /* ---------------- the cat ----------------
+   * A grey tabby asleep on the desk. Every few minutes it wakes, gets up, stretches, washes,
+   * then walks along the desk with its tail up (across the keyboard, which types for it) to
+   * be petted, sits by the mug for a while, and goes back to sleep. ?cat=1 to watch it often. */
+  var CTW = 110, CTH = 90, CATF = 12, CATP = param('cat');
+  var catEl = document.createElement('div'), catSheet = null;
+  catEl.style.cssText = 'position:absolute;left:0;top:0;width:' + CTW + 'px;height:' + CTH + 'px;overflow:hidden;-webkit-transform-origin:55px 84px;transform-origin:55px 84px';
+  function catCols() {
+    var c = phase === 'night' ? '#3a3d4a' : phase === 'golden' ? '#8a7f80' : '#7b7f8b';
+    return { c: c, d: mix(c, '#000000', 0.28), l: mix(c, '#ffffff', 0.28), eye: phase === 'night' ? '#9fc28a' : '#c6d36a' };
+  }
+  function catHead(g, x, y, C, o) {   // facing right
+    g.fillStyle = C.c; g.beginPath();
+    g.moveTo(x - 8, y - 4); g.lineTo(x - 6, y - 15); g.lineTo(x - 1, y - 8); g.moveTo(x + 2, y - 8); g.lineTo(x + 7, y - 16); g.lineTo(x + 9, y - 4); g.fill();
+    g.beginPath(); g.arc(x, y, 9.5, 0, 6.2832); g.fill();
+    ellipse(g, x + 7, y + 3, 5, 4); g.fill();
+    g.fillStyle = C.d; g.fillRect(x - 3, y - 9, 1.5, 4); g.fillRect(x + 1, y - 9, 1.5, 4);
+    if (o.shut) { g.strokeStyle = C.d; g.lineWidth = 1.2; g.beginPath(); g.arc(x + 4, y - 1, 2.2, 0.3, 2.8); g.stroke(); }
+    else { g.fillStyle = C.eye; ellipse(g, x + 4, y - 1.5, 2.2, 2.4); g.fill(); g.fillStyle = '#111111'; g.fillRect(x + 4, y - 3, 1, 3); }
+    g.fillStyle = '#d98a8a'; g.fillRect(x + 11, y + 1, 2, 1.6);
+    if (o.tongue) { g.fillStyle = '#e88a9a'; ellipse(g, x + 9, y + 7, 2, 2.6); g.fill(); }
+  }
+  function catLeg(g, x, y, a, col, len) { var L = len || 20; g.strokeStyle = col; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.sin(a) * L, y + Math.cos(a) * L); g.stroke(); }
+  function catTail(g, x, y, C, sway) {   // held up, the tip curled over
+    g.strokeStyle = C.c; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath();
+    g.moveTo(x, y); g.quadraticCurveTo(x - 10, y - 18, x - 6 + sway, y - 36); g.quadraticCurveTo(x - 3 + sway, y - 44, x + 3 + sway, y - 40); g.stroke();
+  }
+  function catStand(g, legs, o) {
+    var C = catCols(), arch = o.arch ? -4 : 0, i;
+    catLeg(g, 70, 62, legs[1], C.d); catLeg(g, 34, 62, legs[3], C.d);
+    catTail(g, 26, 56 + arch, C, o.sway || 0);
+    g.fillStyle = C.c; ellipse(g, 50, 56 + arch, 26, o.arch ? 13 : 11); g.fill(); ellipse(g, 70, 56, 10, 12); g.fill();
+    g.fillStyle = C.l; ellipse(g, 52, 65, 16, 3.5); g.fill();
+    g.fillStyle = C.d; for (i = 0; i < 4; i++) g.fillRect(38 + i * 8, 46 + arch, 2, 7);   // tabby stripes
+    catLeg(g, 66, 62, legs[0], C.c); catLeg(g, 30, 62, legs[2], C.c);
+    catHead(g, 80, 44, C, o);
+  }
+  function catStretch(g) {   // the long front-down stretch, with a yawn
+    var C = catCols();
+    g.strokeStyle = C.d; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(70, 74); g.lineTo(98, 82); g.stroke();
+    catLeg(g, 36, 54, 0.05, C.d, 29);
+    catTail(g, 26, 48, C, 5);
+    g.fillStyle = C.c; g.save(); g.translate(50, 60); g.rotate(0.34); ellipse(g, 0, 0, 27, 10); g.fill(); g.restore();
+    ellipse(g, 72, 72, 10, 8); g.fill();
+    g.strokeStyle = C.c; g.lineWidth = 5; g.beginPath(); g.moveTo(68, 76); g.lineTo(94, 83); g.stroke();
+    catLeg(g, 32, 54, -0.05, C.c, 29);
+    catHead(g, 86, 68, C, { shut: true, tongue: true });
+  }
+  function catSit(g, lick) {
+    var C = catCols();
+    g.strokeStyle = C.c; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(34, 80); g.quadraticCurveTo(50, 87, 74, 83); g.stroke();   // tail round the paws
+    g.fillStyle = C.c; ellipse(g, 44, 70, 16, 14); g.fill();
+    g.save(); g.translate(56, 58); g.rotate(-1.1); ellipse(g, 0, 0, 18, 11); g.fill(); g.restore();
+    ellipse(g, 62, 54, 9, 12); g.fill();
+    g.fillStyle = C.l; ellipse(g, 65, 60, 5, 8); g.fill();
+    catLeg(g, 62, 62, 0, C.c, 21);
+    if (lick) { g.strokeStyle = C.c; g.lineWidth = 5; g.beginPath(); g.moveTo(66, 62); g.lineTo(73, 46 + lick); g.stroke(); }   // a paw up to wash
+    else catLeg(g, 68, 62, 0, C.c, 21);
+    catHead(g, lick ? 70 : 66, lick ? 34 + lick : 32, C, { shut: !!lick, tongue: lick === 3 });
+  }
+  function catLie(g, awake) {
+    var C = catCols();
+    if (!awake) { cat(g, 30, 70); return; }   // curled up asleep
+    g.strokeStyle = C.c; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(22, 76); g.quadraticCurveTo(30, 86, 66, 84); g.stroke();
+    g.fillStyle = C.c; ellipse(g, 46, 74, 28, 12); g.fill();
+    g.fillStyle = C.d; for (var i = 0; i < 4; i++) g.fillRect(34 + i * 8, 63, 2, 7);
+    catHead(g, 74, 60, C, {});
+  }
+  function buildCat() {
+    var sheet = mk(CTW * CATF, CTH), g = sheet.getContext('2d'), i;
+    var WK = [[0.3, -0.25, -0.25, 0.3, -2], [0.05, 0.05, 0.05, 0.05, 0], [-0.25, 0.3, 0.3, -0.25, 2], [0.05, 0.05, 0.05, 0.05, 0]];
+    for (i = 0; i < CATF; i++) {
+      g.save(); g.translate(i * CTW, 0); g.beginPath(); g.rect(0, 0, CTW, CTH); g.clip();
+      g.fillStyle = 'rgba(20,12,8,0.18)'; ellipse(g, 52, 85, 30, 3); g.fill();
+      if (i < 2) catLie(g, i === 1);
+      else if (i === 2) catStand(g, [0.05, -0.05, -0.05, 0.05], {});
+      else if (i < 7) catStand(g, WK[i - 3], { sway: WK[i - 3][4] });
+      else if (i === 7) catStretch(g);
+      else if (i === 8) catSit(g, 0);
+      else if (i < 11) catSit(g, i === 9 ? 1 : 3);
+      else catStand(g, [0.05, -0.05, -0.05, 0.05], { arch: true, shut: true });
+      g.restore();
+    }
+    catEl.innerHTML = ''; catEl.appendChild(sheet); catSheet = sheet; kitty.f = -1;
+  }
+  var HOME = [64, 510];
+  var kitty = { x: HOME[0], y: HOME[1], dir: 1, f: -1, steps: null, si: 0, ph: 0, next: 0, pet: false, keys: false, keyAt: 0 };
+  function catEpisode() {
+    return [{ f: 1, d: 2.5 }, { f: 2, d: 0.8 }, { f: 7, d: 2.6 }, { f: 8, d: 0.8 }, { lick: 4 }, { f: 8, d: 0.6 },
+      { m: 'walk', x: 562, y: 528 }, { f: 11, d: 7, pet: true, dir: 1 }, { m: 'walk', x: 642, y: 528 }, { f: 8, d: 2 }, { lick: 3 }, { f: 8, d: 10 },
+      { m: 'walk', x: HOME[0], y: HOME[1] }, { f: 2, d: 0.5, dir: 1 }];
+  }
+  function updateCat(t, dt) {
+    var f = 0, k = kitty;
+    if (view !== 'desk') { k.steps = null; k.x = HOME[0]; k.y = HOME[1]; k.pet = false; k.keys = false; }
+    else if (!k.steps) {
+      if (!k.next) k.next = t + (CATP ? 2 : rnd(60, 180));
+      if (t > k.next) { k.steps = catEpisode(); k.si = 0; }
+    }
+    if (k.steps) {
+      var s = k.steps[k.si];
+      if (!s) { k.steps = null; k.next = t + (CATP ? 5 : rnd(150, 330)); k.dir = 1; }
+      else {
+        if (s.st == null) s.st = t;
+        if (s.m === 'walk') {
+          var dx = s.x - k.x, dy = s.y - k.y, d = Math.sqrt(dx * dx + dy * dy), sp = 42;
+          if (d < sp * dt + 0.5) { k.x = s.x; k.y = s.y; k.si++; } else { k.x += dx / d * sp * dt; k.y += dy / d * sp * dt; if (Math.abs(dx) > 0.5) k.dir = dx > 0 ? 1 : -1; }
+          k.ph += dt * 5; f = 3 + Math.floor(k.ph) % 4;
+        } else if (s.lick) { f = 9 + Math.floor(t * 3) % 2; if (t - s.st > s.lick) k.si++; }
+        else { f = s.f; if (s.dir) k.dir = s.dir; if (t - s.st > s.d) k.si++; }
+        k.pet = !!(s.pet && t - s.st > 0.8 && t - s.st < s.d - 0.5);
+        k.keys = s.m === 'walk' && k.x > 400 && k.x < 562;   // paws on the keyboard
+      }
+    }
+    if (!k.steps) { f = 0; k.pet = false; k.keys = false; }
+    if (f !== k.f) { tr(catSheet, 'translate3d(' + (-f * CTW) + 'px,0,0)'); k.f = f; }
+    var breathe = f === 0 ? 1 + 0.03 * (0.5 + 0.5 * Math.sin(t * 1.6)) : 1;
+    tr(catEl, 'translate3d(' + (k.x - 55).toFixed(1) + 'px,' + (k.y - 84).toFixed(1) + 'px,0) scale(' + k.dir + ',' + breathe.toFixed(3) + ')');
+  }
+  function catKey() {   // the cat's paws on the keyboard type into his code
+    var x = GUT + (code.ci + code.extra) * CW;
+    if (!code.lines.length || x > D.code.w - CW) return;
+    cursor(false);
+    cg.fillStyle = COL.txt; cg.fillText('asdfghjkl;'.charAt(Math.floor(Math.random() * 10)), x, rowY(code.row) + 9);
+    code.extra++; cursor(true);
+  }
+
   /* ---------------- the code on his screen ----------------
    * He types this very file, with editor colours, at a believable pace. Only the new
    * characters are drawn, so it costs almost nothing. */
@@ -794,7 +942,7 @@
     }
     return out;
   }
-  var code = { lines: [], li: 0, ci: 0, row: 0, cols: null, next: 0, think: 0, lastKey: 0, cur: false };
+  var code = { lines: [], li: 0, ci: 0, row: 0, cols: null, next: 0, think: 0, lastKey: 0, cur: false, extra: 0 };
   function codeChrome() {
     cg.fillStyle = '#0d1320'; cg.fillRect(0, 0, D.code.w, D.code.h);
     cg.fillStyle = '#0a0f19'; cg.fillRect(0, 0, D.code.w, 14); cg.fillStyle = '#16203a'; cg.fillRect(0, 0, 58, 14);
@@ -806,20 +954,20 @@
   function rowY(r) { return TOP + r * LH; }
   function gutter(r, n) { cg.fillStyle = '#0d1320'; cg.fillRect(0, rowY(r) - 1, GUT - 4, LH); cg.fillStyle = '#3b4a66'; cg.font = '9px Menlo, "DejaVu Sans Mono", monospace'; var s = String(n); cg.fillText(s, GUT - 6 - s.length * 5.4, rowY(r) + 9); cg.font = FONT; }
   function cursor(on) {
-    var x = GUT + code.ci * CW, y = rowY(code.row);
+    var x = GUT + (code.ci + code.extra) * CW, y = rowY(code.row);
     if (code.row < 0 || x > D.code.w - CW) return;
     cg.fillStyle = on ? '#89ddff' : '#0d1320'; cg.fillRect(x, y, on ? 1.5 : CW, LH - 2);
     code.cur = on;
   }
   function typeChar() {
-    var line = code.lines[code.li], x = GUT + code.ci * CW;
+    var line = code.lines[code.li], x = GUT + (code.ci + code.extra) * CW;
     cursor(false);
     if (x < D.code.w - CW) { cg.fillStyle = code.cols[code.ci]; cg.fillText(line.charAt(code.ci), x, rowY(code.row) + 9); }
     code.ci++;
   }
   function newRow() {
     cursor(false);
-    code.li = (code.li + 1) % code.lines.length; code.ci = 0; code.cols = colours(code.lines[code.li]);
+    code.li = (code.li + 1) % code.lines.length; code.ci = 0; code.extra = 0; code.cols = colours(code.lines[code.li]);
     code.row++;
     if (code.row >= ROWS) {   // scroll the editor up a line
       code.row = ROWS - 1;
@@ -840,12 +988,17 @@
   }
   function codeTick(t) {
     if (!code.lines.length) return;
+    if (code.extra > 0 && !kitty.keys && t >= code.next) {   // the cat has gone: delete what it typed
+      cursor(false); code.extra--;
+      cg.fillStyle = '#0d1320'; cg.fillRect(GUT + (code.ci + code.extra) * CW, rowY(code.row), CW, LH - 2);
+      cursor(true); code.lastKey = t; code.next = t + (code.extra ? 0.06 : 0.6); return;
+    }
     if (t < code.next) { if (t > code.lastKey + 0.5) { var on = Math.floor(t * 2) % 2 === 0; if (on !== code.cur) cursor(on); } return; }
     var line = code.lines[code.li];
     if (code.ci < line.length) {
       var burst = 1 + Math.floor(Math.random() * 2);
       while (burst-- && code.ci < line.length) typeChar();
-      if (GUT + code.ci * CW > D.code.w - CW) code.ci = line.length;   // the rest of a long line is off screen
+      if (GUT + (code.ci + code.extra) * CW > D.code.w - CW) code.ci = line.length;   // the rest of a long line is off screen
       cursor(true); code.lastKey = t; code.next = t + rnd(0.04, 0.14);
     } else {
       newRow(); cursor(true); code.lastKey = t;
@@ -1006,7 +1159,7 @@
     room.rim = ROOM[phase].rim && (phase === 'night' || o < 0.5) ? ROOM[phase].rim : null;
     clouds = []; fxList = [];
     ['bed', 'desk'].forEach(function (n) { var v = V[n]; drawSky(v); buildSun(v); buildCity(v, n); buildLights(v); buildClouds(v); buildFx(v); placeSky(v); });
-    drawDeskRoom(); drawBedRoom(); buildDog(); buildPeople(); buildWx();
+    drawDeskRoom(); drawBedRoom(); buildDog(); buildCat(); buildPeople(); buildWx();
     builtAt = Date.now();
   }
   function setView(v, animate) {
@@ -1079,13 +1232,18 @@
     if (view === 'desk') {
       codeTick(t); editTick(t);
       // he looks at whichever screen is busy, leans back to think, and his hands type
-      updateDog(t, dt);
+      updateDog(t, dt); updateCat(t, dt);
+      if (kitty.keys && t > kitty.keyAt) { catKey(); kitty.keyAt = t + rnd(0.1, 0.25); code.next = Math.max(code.next, t + 1.5); }
+      if (guy.armRPet && kitty.pet !== guy.pettingCat) {
+        guy.pettingCat = kitty.pet; guy.armRPet.style.display = kitty.pet ? 'block' : 'none'; guy.armR.style.display = kitty.pet ? 'none' : 'block';
+      }
+      if (kitty.pet) tr(guy.armRPet, 'translate3d(' + (Math.sin(t * 2.2) * 7).toFixed(1) + 'px,' + (Math.abs(Math.sin(t * 2.2)) * -2).toFixed(1) + 'px,0)');
       if (guy.armPet) {   // when the dog sits by him, his left hand comes down to pet it
         var petting = dog.pet;
         if (petting !== guy.petting) { guy.petting = petting; guy.armPet.style.display = petting ? 'block' : 'none'; guy.armL.style.display = petting ? 'none' : 'block'; }
         if (petting) tr(guy.armPet, 'translate3d(' + (Math.sin(t * 2.5) * 3).toFixed(1) + 'px,' + (Math.max(0, Math.sin(t * 5)) * 3).toFixed(1) + 'px,0)');
       }
-      var aim = dog.pet ? -9 : !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = dog.pet ? 3 : code.think && t < code.think ? -3 : 0;
+      var aim = dog.pet ? -9 : kitty.pet ? 8 : !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = dog.pet ? 3 : code.think && t < code.think ? -3 : 0;
       headA += (aim - headA) * Math.min(1, dt * 2); headY += (ay - headY) * Math.min(1, dt * 2);
       if (guy.head) tr(guy.head, 'translate3d(' + (headA * 0.5).toFixed(2) + 'px,' + headY.toFixed(2) + 'px,0) rotate(' + headA.toFixed(2) + 'deg)');
       if (guy.armR && t > jitterAt) {
