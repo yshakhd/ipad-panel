@@ -8,8 +8,8 @@ real wind outside.
 
 ![The painter's meadow in the afternoon](docs/images/meadow-day.jpg)
 
-**[Try the meadow in your browser](demo/)**: change the wind, the weather and
-the time of day, or give him your own photos (they never leave your device).
+**[Try the meadow in your browser](demo/)**: change the wind, the weather, the
+time of day and the date, or give him your own photos (they never leave your device).
 How it came together, and how it runs on a 2012 iPad, is in
 [docs/STORY.md](docs/STORY.md).
 
@@ -34,6 +34,9 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
   - The sun sits where it really is in your sky, computed from the time and
     your location. It rises on the left and sets behind the hills on the right.
     The moon does the same, in its real phase, with its lit side toward the sun.
+  - The seasons follow the date: blossom in spring, a tree that turns gold and
+    red in fall and drops its leaves on the wind, a bare tree and a straw-coloured
+    field in winter.
   - Golden hour, night (lantern, fireflies, a lit cottage window), rain (an
     umbrella), fog, snow and storms each look different.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
@@ -116,8 +119,10 @@ for trying the tiles without real hardware.
 ## Previews and debugging
 - Preview any look: `/meadow.html?wx=storm&phase=night&wind=40&time=16:20`
   (wx: clear partly cloudy fog drizzle rain heavy snow blizzard storm; phase:
-  day golden night; wind in km/h; `days=9` looks 9 days ahead). `&sim=60` fast-forwards the painting by 60
-  seconds, useful for screenshots since headless browsers barely animate. The
+  day golden night; wind in km/h; `days=9` looks 9 days ahead; `season=winter`
+  shows a season). `&sim=60` fast-forwards the painting by 60 seconds, and
+  `&timer=1` keeps the animation running, both useful for screenshots since
+  headless browsers barely animate. The
   photo scene takes `/?wx=…&phase=…`.
 - Jump straight to a screen: `/#home` or `/#system`.
 - The iPad has no developer console, so the page reports page loads, JavaScript

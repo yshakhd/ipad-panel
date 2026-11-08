@@ -77,6 +77,12 @@ reaches up for a small touch-up.
   left and sets behind the hills on the right. In November it barely clears the
   hills; in June it rides high. The moon gets the same treatment, in its real
   phase, with its lit side turned toward wherever the sun is.
+- **The season.** The date sets how far the tree's leaves have turned, how many
+  are left, and how dry the field is, on a smooth curve through the year. In
+  November the tree is orange and gold and the field has gone tawny. When a gust
+  reaches the tree it shakes a few leaves loose to flutter down the hill, and a
+  strong gust sends big leaves tumbling past the painter, from some tree just out
+  of frame. In winter the tree is bare branches; in spring it blossoms.
 - **Light and weather.** Golden hour warms everything. At night he paints by
   lantern, fireflies drift through the grass and the cottage window glows. Rain
   puts up an umbrella over him, snow covers the field, and storms flash.
@@ -125,7 +131,7 @@ temperatures.
 ## Try it
 
 The meadow runs in any browser: [try the demo](../demo/). You can change the
-wind and the weather, scrub through the day, or give him your own photos (they
+wind and the weather, scrub through the day and the year, or give him your own photos (they
 stay on your device). The code is MIT-licensed. If you have an old iPad in a
 drawer, the [README](../README.md) explains how to set it up.
 

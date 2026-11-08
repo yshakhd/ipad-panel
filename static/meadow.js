@@ -50,18 +50,57 @@
     71: 'snow', 73: 'snow', 77: 'snow', 85: 'snow', 75: 'blizzard', 86: 'blizzard',
     95: 'storm', 96: 'storm', 99: 'storm' };
 
+  /* ---------------- seasons ----------------
+   * A smooth year rather than four switches: how far the leaves have turned, how much canopy
+   * is left, spring blossom, and how dry the field is, keyed by day of the year (north of the
+   * equator; shifted half a year south of it). Preview with ?season=autumn or ?days=N. */
+  var SEASON_KEYS = [   // [day of year, turn, cover, bloom, dry]
+    [0, 0, 0, 0, 1], [65, 0, 0, 0, 1], [95, 0, 0.55, 1, 0.35], [130, 0, 1, 0.15, 0], [150, 0, 1, 0, 0],
+    [245, 0, 1, 0, 0.15], [290, 1, 1, 0, 0.55], [305, 1, 0.9, 0, 0.7], [340, 1, 0.05, 0, 1], [366, 0, 0, 0, 1]];
+  var SEASON_DAY = { spring: 110, summer: 200, autumn: 300, fall: 300, winter: 20 };
+  var season = { turn: 0, cover: 1, bloom: 0, dry: 0 };
+  function seasonAt(ms) {
+    var d = new Date(ms), y = d.getUTCFullYear();
+    var doy = (Date.UTC(y, d.getUTCMonth(), d.getUTCDate()) - Date.UTC(y, 0, 1)) / 86400000;
+    if (lat < 0) doy = (doy + 182.5) % 365;
+    if (SEASON_DAY[param('season')] != null) doy = SEASON_DAY[param('season')];
+    for (var i = 1; i < SEASON_KEYS.length - 1; i++) if (doy <= SEASON_KEYS[i][0]) break;
+    var a = SEASON_KEYS[i - 1], b = SEASON_KEYS[i], f = clamp((doy - a[0]) / (b[0] - a[0]), 0, 1);
+    function at(j) { return a[j] + (b[j] - a[j]) * f; }
+    return { turn: at(1), cover: at(2), bloom: at(3), dry: at(4) };
+  }
+  var FALL = {   // turned leaves
+    day: { tree: '#b65a2c', treeHi: '#eaa43c', leaf: ['#c2492b', '#dd7d2a', '#e8b33f', '#9e3d26'] },
+    golden: { tree: '#a9461f', treeHi: '#f4a63e', leaf: ['#c03f22', '#e07526', '#f0ad3a', '#97361e'] },
+    night: { tree: '#2b1e17', treeHi: '#47301f', leaf: ['#3b2a20', '#4b3322', '#33251c', '#2a2019'] } };
+  var DRY = {    // a tawny late-year field
+    day: { mid: '#aba25c', midHi: '#dccb86', near: '#8f8f45', nearLo: '#5d6131', bladeHi: '#e6d47c',
+      blade: ['#56652c', '#6c7834', '#848a3c'], back: ['#99974f', '#ada358'] },
+    golden: { mid: '#b39a4c', midHi: '#efc477', near: '#877d36', nearLo: '#575327', bladeHi: '#f9cd6c',
+      blade: ['#4f5421', '#636528', '#78772f'], back: ['#a0923f', '#b39f46'] },
+    night: { mid: '#26352e', midHi: '#33443a', near: '#1d2d22', nearLo: '#111f17', bladeHi: '#4f6656',
+      blade: ['#14251a', '#1b2e1e', '#223622'], back: ['#203424', '#27392a'] } };
+  var BLOSSOM = { day: ['#f7c9d6', '#fde4ec', '#ffffff'], golden: ['#f9c2b8', '#fddcc8', '#fff0de'], night: ['#8d8fa8', '#a3a3b8'] };
+
   function palette(phase, kind) {
     var b = BASE[phase], p = {}, k, oc = OVERCAST[kind] || 0, grey = GREY[phase];
     for (k in b) p[k] = b[k];
+    var S = season, dry = DRY[phase], fall = FALL[phase], dm = S.dry * 0.85;
+    ['mid', 'midHi', 'near', 'nearLo', 'bladeHi'].forEach(function (n) { p[n] = mix(b[n], dry[n], dm); });
+    p.blade = b.blade.map(function (c, i) { return mix(c, dry.blade[i], dm); });
+    p.back = b.back.map(function (c, i) { return mix(c, dry.back[i], dm); });
+    p.tree = mix(b.tree, fall.tree, S.turn); p.treeHi = mix(b.treeHi, fall.treeHi, S.turn);
+    p.leaf = fall.leaf.map(function (c) { return mix(b.treeHi, c, S.turn); });
     p.skyTop = mix(b.skyTop, grey, oc); p.skyMid = mix(b.skyMid, grey, oc); p.skyLow = mix(b.skyLow, grey, oc * 0.8);
     p.far = mix(b.far, grey, oc * 0.6); p.farHi = mix(b.farHi, grey, oc * 0.6);
     p.cloud = mix(b.cloud, grey, oc * 0.55); p.cloudSh = mix(b.cloudSh, '#6d7686', oc * 0.6);
     var dull = oc * 0.28;
-    ['mid', 'midHi', 'near', 'nearLo', 'tree', 'treeHi'].forEach(function (n) { p[n] = mix(b[n], grey, dull); });
+    ['mid', 'midHi', 'near', 'nearLo', 'tree', 'treeHi'].forEach(function (n) { p[n] = mix(p[n], grey, dull); });
+    p.leaf = p.leaf.map(function (c) { return mix(c, grey, dull); });
     if (kind === 'snow' || kind === 'blizzard') {
       var snow = phase === 'night' ? '#7d8aa3' : '#eef2f5';
       ['mid', 'midHi', 'near', 'nearLo'].forEach(function (n) { p[n] = mix(p[n], snow, 0.78); });
-      p.back = [mix(b.back[0], snow, 0.5), mix(b.back[1], snow, 0.5)];
+      p.back = [mix(p.back[0], snow, 0.5), mix(p.back[1], snow, 0.5)];
     }
     p.oc = oc;
     return p;
@@ -155,27 +194,64 @@
   }
 
   function tree(g, x, y, s, R) {
-    g.fillStyle = 'rgba(0,0,0,0.13)'; ellipse(g, x + 16 * s, y + 3, 70 * s, 8 * s); g.fill();
-    g.fillStyle = phase === 'night' ? '#1a1712' : '#5a4330';
+    var S = season, cov = S.cover, i, j, c;
+    g.fillStyle = 'rgba(0,0,0,' + (0.05 + 0.08 * cov) + ')'; ellipse(g, x + 16 * s, y + 3, (40 + 30 * cov) * s, 8 * s); g.fill();
+    if (S.turn > 0.2) {   // leaves already down, mostly downwind of the trunk
+      var nl = Math.round(70 * S.turn * (1.15 - cov));
+      for (i = 0; i < nl; i++) {
+        var lx = x + (R() - 0.35 + 0.15 * dirSign) * 190 * s, ly = y - 3 + R() * 10 * s;
+        g.fillStyle = rgba(pal.leaf[i % pal.leaf.length], 0.85); ellipse(g, lx, ly, (1.4 + R() * 1.4) * s, 0.9 * s); g.fill();
+      }
+    }
+    var bark = phase === 'night' ? '#1a1712' : '#5a4330';
+    g.fillStyle = bark;
     g.beginPath(); g.moveTo(x - 8 * s, y); g.quadraticCurveTo(x - 3 * s, y - 30 * s, x - 5 * s, y - 62 * s);
     g.lineTo(x + 5 * s, y - 62 * s); g.quadraticCurveTo(x + 3 * s, y - 30 * s, x + 9 * s, y); g.closePath(); g.fill();
     var cl = [[0, -84, 44], [-40, -66, 33], [40, -68, 35], [-20, -106, 32], [24, -108, 33], [2, -128, 25], [-58, -48, 22], [60, -50, 23], [-2, -60, 30]];
-    var i;
-    g.fillStyle = pal.tree; g.beginPath();
-    for (i = 0; i < cl.length; i++) { var cx = x + cl[i][0] * s, cy = y + cl[i][1] * s, r = cl[i][2] * s; g.moveTo(cx + r, cy); g.arc(cx, cy, r, 0, 6.2832); }
-    g.fill();
-    g.fillStyle = rgba(pal.treeHi, 0.8); g.beginPath();
-    for (i = 0; i < cl.length; i++) {
-      var hx = x + (cl[i][0] - cl[i][2] * 0.28) * s, hy = y + (cl[i][1] - cl[i][2] * 0.32) * s, hr = cl[i][2] * 0.62 * s;
-      g.moveTo(hx + hr, hy); g.arc(hx, hy, hr, 0, 6.2832);
+    // limbs and twigs: hidden under a full summer canopy, showing through as it thins
+    g.strokeStyle = bark; g.lineCap = 'round';
+    function branch(x0, y0, ang, len, wd, depth) {
+      var x1 = x0 + Math.cos(ang) * len, y1 = y0 + Math.sin(ang) * len, bend = (R() - 0.5) * 0.5;
+      g.lineWidth = wd; g.beginPath(); g.moveTo(x0, y0);
+      g.quadraticCurveTo(x0 + Math.cos(ang + bend) * len * 0.5, y0 + Math.sin(ang + bend) * len * 0.5, x1, y1); g.stroke();
+      if (depth <= 0) return;
+      var n = R() < 0.4 ? 3 : 2;
+      for (var k = 0; k < n; k++)   // forks spread out and lean a little upward
+        branch(x1, y1, ang + (k - (n - 1) / 2) * 0.6 + (R() - 0.5) * 0.3 - 0.12 * Math.cos(ang), len * (0.55 + R() * 0.15), wd * 0.6, depth - 1);
     }
-    g.fill();
-    g.fillStyle = rgba(mix(pal.treeHi, '#ffffff', 0.25), 0.5); g.beginPath();
-    for (i = 0; i < 40; i++) {
-      var a = R() * 6.28, d = R() * 70 * s, sx = x + Math.cos(a) * d - 14 * s, sy = y - 90 * s + Math.sin(a) * d * 0.7 - 10 * s;
-      g.moveTo(sx + 3 * s, sy); g.arc(sx, sy, (2 + R() * 3) * s, 0, 6.2832);
+    for (i = 0; i < cl.length - 1; i++) {
+      c = cl[i]; var dx = c[0], dy = c[1] + 56;
+      branch(x, y - 56 * s, Math.atan2(dy, dx), Math.sqrt(dx * dx + dy * dy) * 0.6 * s, (c[2] > 30 ? 4.5 : 3.4) * s, 2);
     }
-    g.fill();
+    if (cov < 0.02 && S.bloom < 0.05) return;
+    // canopy: clusters shrink and drop out as the leaves come down
+    var keep = [], rs = 0.68 + 0.32 * cov;
+    for (i = 0; i < cl.length; i++) if (i === 0 || i === 8 || R() < cov + 0.3) keep.push(cl[i]);
+    if (cov > 0.02) {
+      g.fillStyle = pal.tree; g.beginPath();
+      for (i = 0; i < keep.length; i++) { var cx = x + keep[i][0] * s, cy = y + keep[i][1] * s, r = keep[i][2] * rs * s; g.moveTo(cx + r, cy); g.arc(cx, cy, r, 0, 6.2832); }
+      g.fill();
+      g.fillStyle = rgba(pal.treeHi, 0.8 - 0.25 * S.turn); g.beginPath();
+      for (i = 0; i < keep.length; i++) {
+        var hx = x + (keep[i][0] - keep[i][2] * 0.28) * s, hy = y + (keep[i][1] - keep[i][2] * 0.32) * s, hr = keep[i][2] * 0.62 * rs * s;
+        g.moveTo(hx + hr, hy); g.arc(hx, hy, hr, 0, 6.2832);
+      }
+      g.fill();
+    }
+    // dabs of separate leaves: sunlit speckle in summer, mixed reds and golds once they turn
+    var nd = Math.round(40 * cov + 200 * cov * S.turn);
+    for (i = 0; i < nd; i++) {
+      c = keep[Math.floor(R() * keep.length)];
+      var a = R() * 6.28, d = Math.sqrt(R()) * c[2] * rs * 1.1 * s, sx = x + c[0] * s + Math.cos(a) * d, sy = y + c[1] * s + Math.sin(a) * d;
+      g.fillStyle = i < 40 * cov && S.turn < 0.5 ? rgba(mix(pal.treeHi, '#ffffff', 0.25), 0.5) : rgba(pal.leaf[i % pal.leaf.length], 0.9);
+      g.beginPath(); g.arc(sx, sy, (1.3 + R() * (S.turn > 0.5 ? 1.6 : 2.4)) * s, 0, 6.2832); g.fill();
+    }
+    var nb = Math.round(110 * S.bloom), bl = BLOSSOM[phase];
+    for (i = 0; i < nb; i++) {   // spring blossom
+      c = keep[Math.floor(R() * keep.length)];
+      var ba = R() * 6.28, bd = Math.sqrt(R()) * c[2] * 1.05 * s;
+      g.fillStyle = bl[i % bl.length]; g.beginPath(); g.arc(x + c[0] * s + Math.cos(ba) * bd, y + c[1] * s + Math.sin(ba) * bd, (1.4 + R() * 1.6) * s, 0, 6.2832); g.fill();
+    }
   }
 
   function cottage(g, x, y) {
@@ -346,12 +422,19 @@
     texture(g, nearY, R, 2600, 460, H, [rgba(pal.nearLo, 0.55), rgba(mix(pal.near, pal.midHi, 0.5), 0.5), rgba(pal.near, 0.6)], 3, 20, 1.6);
     // wildflowers scattered through the field
     var fl = phase === 'night' ? ['#9fb0c8', '#c4c9a8'] : ['#ffffff', '#ffe27a', '#f5b3c4', '#cfe0ff'];
-    for (i = 0; i < 90; i++) {
+    var nf = Math.round(90 * (1 - season.dry * 0.85) + 60 * season.bloom);
+    for (i = 0; i < nf; i++) {
       var fx = R() * W, top = nearY(fx), fy = top + 8 + Math.pow(R(), 1.3) * (H - top - 8);
       var fr = 0.8 + (fy - 460) / 300 * 2.6;
       g.fillStyle = fl[i % fl.length]; g.globalAlpha = 0.85; g.beginPath(); g.arc(fx, fy, fr, 0, 6.2832); g.fill();
     }
     g.globalAlpha = 1;
+    var litter = kind === 'snow' || kind === 'blizzard' ? 0 : Math.round(80 * season.turn * (1.2 - season.cover * 0.6));
+    for (i = 0; i < litter; i++) {   // fallen leaves blown into the field
+      var qx = R() * W, qt = nearY(qx), qy = qt + 10 + Math.pow(R(), 1.2) * (H - qt - 10), qs = 1 + (qy - 460) / 300 * 3;
+      g.save(); g.translate(qx, qy); g.rotate(R() * 6.28); g.fillStyle = rgba(pal.leaf[i % pal.leaf.length], 0.8);
+      ellipse(g, 0, 0, 2.2 * qs, 1.1 * qs); g.fill(); g.restore();
+    }
     if (kind === 'fog') {
       gr = g.createLinearGradient(0, 250, 0, 560);
       gr.addColorStop(0, rgba(GREY[phase], 0)); gr.addColorStop(0.5, rgba(mix(GREY[phase], '#ffffff', 0.3), 0.55)); gr.addColorStop(1, rgba(GREY[phase], 0.15));
@@ -724,7 +807,10 @@
         g.save(); g.translate(tips[i][1][0], tips[i][1][1]); g.rotate(b.rest); g.scale(3.2, 11); g.beginPath(); g.arc(0, -0.6, 1, 0, 6.2832); g.restore(); g.fill();
       }
     }
-    if (opts.daisy) {
+    if (opts.daisy && season.dry > 0.55) {   // gone to seed
+      var t0 = tips[0][1];
+      g.fillStyle = phase === 'night' ? '#38342a' : '#7a5a34'; ellipse(g, t0[0], t0[1], 4.5, 3.8); g.fill();
+    } else if (opts.daisy) {
       var night = phase === 'night', t = tips[0][1];
       g.save(); g.translate(t[0], t[1]);
       g.fillStyle = night ? '#9aa6bd' : '#fbfaf3';
@@ -787,7 +873,8 @@
     else { gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); }
     gg.fillStyle = gr; gg.fillRect(0, 0, 24, 24);
     motes = [];
-    var n = rainy() || kind === 'snow' || kind === 'blizzard' ? 0 : night ? 16 : 7;
+    var summer = season.dry < 0.35 && season.turn < 0.3;   // fireflies only on summer nights
+    var n = rainy() || kind === 'snow' || kind === 'blizzard' ? 0 : night ? (summer ? 16 : 0) : 7;
     for (i = 0; i < n; i++) {
       var m = mk(24, 24), sz = night ? 16 : rnd(6, 11);
       m.getContext('2d').drawImage(glow, 0, 0);
@@ -824,6 +911,90 @@
       if (m.x > W + 20) m.x = -20; if (m.x < -20) m.x = W + 20;
       if (m.y < 340) m.y = H - 60; if (m.y > H - 20) m.y = 380;
       setXY(m.el, m.x, m.y);
+    }
+  }
+
+  /* ---------------- falling leaves ----------------
+   * Gusts shake small leaves off the far tree; they flutter down onto the hill. Strong gusts
+   * also carry a few big leaves across the foreground, from some tree just out of frame.
+   * Each leaf is drawn once and moved with a CSS transform, like the grass. */
+  var leafBox = document.createElement('div'), leafFar = [], leafNear = [], gustWas = 0, burst = 0, nextLeaf = 0;
+  leafBox.style.cssText = 'position:absolute;left:0;top:0;width:' + W + 'px;height:' + H + 'px;overflow:hidden;pointer-events:none';
+  figBox.parentNode.insertBefore(leafBox, figBox);   // behind the painter, in front of the hills
+  var TREE_X = 172, TREE_Y = 384;
+  function leafSprite(color, px, res, box) {
+    var n = Math.ceil(px * res), c = mk(n, n), g = c.getContext('2d'), h = n;
+    g.translate(h / 2, h / 2);
+    g.fillStyle = color; g.beginPath();
+    g.moveTo(-h * 0.42, 0); g.quadraticCurveTo(-h * 0.02, -h * 0.34, h * 0.42, 0); g.quadraticCurveTo(-h * 0.02, h * 0.34, -h * 0.42, 0); g.fill();
+    g.fillStyle = 'rgba(255,240,200,0.22)'; g.beginPath();   // the lit half
+    g.moveTo(-h * 0.42, 0); g.quadraticCurveTo(-h * 0.02, -h * 0.34, h * 0.42, 0); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(70,30,12,0.5)'; g.lineWidth = Math.max(0.6, h * 0.035);
+    g.beginPath(); g.moveTo(-h * 0.5, h * 0.03); g.lineTo(h * 0.4, 0); g.stroke();
+    c.style.position = 'absolute'; c.style.left = '0'; c.style.top = '0'; c.style.width = px + 'px'; c.style.height = px + 'px';
+    c.style.display = 'none';
+    box.appendChild(c);
+    return { el: c, on: false };
+  }
+  function buildLeaves() {
+    leafBox.innerHTML = ''; leafFar = []; leafNear = []; burst = 0;
+    if (season.turn < 0.3 || kind === 'snow' || kind === 'blizzard') return;
+    var i, cs = pal.leaf;
+    if (season.cover > 0.03) for (i = 0; i < 10; i++) leafFar.push(leafSprite(cs[i % cs.length], 7 + (i % 3), 2, leafBox));
+    for (i = 0; i < 3; i++) leafNear.push(leafSprite(cs[(i + 1) % cs.length], 44 + i * 8, GS * 2, fg));
+  }
+  function spawnFar() {
+    for (var i = 0; i < leafFar.length; i++) {
+      var L = leafFar[i]; if (L.on) continue;
+      var a = Math.random() * 6.28, d = Math.sqrt(Math.random()) * 52;
+      L.on = true; L.x = TREE_X + Math.cos(a) * d * 1.2; L.y = TREE_Y - 88 + Math.sin(a) * d * 0.8;
+      L.vx = rnd(0.6, 1.2); L.vy = rnd(9, 15); L.p = rnd(0, 6.28); L.ps = rnd(2, 4); L.a = rnd(0, 6.28); L.spin = rnd(-3, 3); L.fade = 1;
+      L.el.style.opacity = '1'; L.el.style.display = 'block';
+      return;
+    }
+  }
+  function spawnNear() {
+    for (var i = 0; i < leafNear.length; i++) {
+      var L = leafNear[i]; if (L.on) continue;
+      L.on = true; L.x = dirSign > 0 ? -60 : W + 20; L.y = rnd(170, 520);
+      L.vx = rnd(0.8, 1.25); L.vy = rnd(10, 40); L.p = rnd(0, 6.28); L.ps = rnd(2.5, 4.5); L.a = rnd(0, 6.28); L.spin = rnd(-5, 5);
+      L.el.style.display = 'block';
+      return;
+    }
+  }
+  function moveLeaf(L) {
+    var tr = 'translate3d(' + L.x.toFixed(1) + 'px,' + L.y.toFixed(1) + 'px,0) rotate(' + L.a.toFixed(2) + 'rad) scale(' + Math.cos(L.p).toFixed(2) + ',1)';
+    L.el.style.webkitTransform = tr; L.el.style.transform = tr;
+  }
+  function drawLeaves(t, dt) {
+    if (!leafFar.length && !leafNear.length) return;
+    var w = windNow(), g = Math.max(0, Math.sin(gustPhase - dirSign * TREE_X * 0.004)), i, L;
+    if (g > 0.8 && gustWas <= 0.8) burst = Math.round((1 + w / 8) * (0.3 + season.cover));   // a gust reaches the tree
+    gustWas = g;
+    if (burst > 0 && t > nextLeaf) { spawnFar(); burst--; nextLeaf = t + rnd(0.2, 0.7); }
+    else if (Math.random() < dt * 0.04) spawnFar();   // now and then one lets go on its own
+    if (w > 9 && g > 0.85 && Math.random() < dt * 0.35 * Math.min(1, w / 25)) spawnNear();
+    for (i = 0; i < leafFar.length; i++) {
+      L = leafFar[i]; if (!L.on) continue;
+      L.p += dt * L.ps; L.a += dt * L.spin;
+      if (L.fade < 1) {   // landed: lie still and fade into the grass
+        L.fade -= dt * 0.5; L.el.style.opacity = Math.max(0, L.fade).toFixed(2);
+        if (L.fade <= 0) { L.on = false; L.el.style.display = 'none'; }
+        continue;
+      }
+      L.x += (dirSign * (4 + w * 0.6) * L.vx * (0.6 + 0.6 * g) + Math.sin(L.p * 0.7) * 8) * dt;
+      L.y += (L.vy * (1 - 0.45 * g) + Math.cos(L.p * 0.9) * 6) * dt;
+      if (L.y > midY(L.x) + 6) L.fade = 0.999;
+      if (L.x < -20 || L.x > W + 20) { L.on = false; L.el.style.display = 'none'; continue; }
+      moveLeaf(L);
+    }
+    for (i = 0; i < leafNear.length; i++) {
+      L = leafNear[i]; if (!L.on) continue;
+      L.p += dt * L.ps; L.a += dt * L.spin;
+      L.x += dirSign * (110 + w * 5) * L.vx * (0.7 + 0.5 * g) * dt;
+      L.y += (L.vy + Math.sin(L.p * 0.8) * 60) * dt;
+      if (L.x < -80 || L.x > W + 80 || L.y > H + 40) { L.on = false; L.el.style.display = 'none'; continue; }
+      moveLeaf(L);
     }
   }
 
@@ -869,7 +1040,7 @@
   /* ---------------- build + main loop ---------------- */
   function rebuild() {
     pal = palette(phase || 'day', kind || 'clear');
-    drawBackdrop(); buildSun(); placeMoon(); buildClouds(); buildFigure(); buildGrass(); buildWx();
+    drawBackdrop(); buildSun(); placeMoon(); buildClouds(); buildFigure(); buildGrass(); buildLeaves(); buildWx();
     builtAt = Date.now();
   }
   function minutesOf(iso) { var p = iso.split('T')[1].split(':'); return +p[0] * 60 + +p[1]; }
@@ -897,13 +1068,16 @@
     windDir = w.wind_dir == null ? 270 : w.wind_dir;
     // wind blowing from the west pushes the grass to the right of the screen
     dirSign = windDir > 180 || windDir === 0 ? 1 : -1;
-    var key = k + '/' + ph;
+    season = seasonAt(Date.now() + timeShift);
+    var key = k + '/' + ph + '/' + [season.turn, season.cover, season.bloom, season.dry].map(function (v) { return Math.round(v * 20); }).join(',');
     if (key !== builtKey || Date.now() - builtAt > 5 * 60 * 1000) { kind = k; phase = ph; builtKey = key; rebuild(); }
   }
 
+  // ?timer=1 drives frames with timers: headless browsers barely run requestAnimationFrame
+  var nextFrame = param('timer') ? function (f) { setTimeout(function () { f(Date.now()); }, 33); } : function (f) { requestAnimationFrame(f); };
   var last = 0, acc = 0, dimmed = false, figSkip = 0, drawn = 0, fpsAt = 0;
   function frame(now) {
-    requestAnimationFrame(frame);
+    nextFrame(frame);
     if (!last) { last = now; return; }
     var dt = (now - last) / 1000; last = now;
     if (dt > 0.25) dt = 0.25;
@@ -934,6 +1108,7 @@
     figSkip = (figSkip + 1) % 3;
     if (job || !figSkip) drawFigure(t, dt);   // the painter only needs full frame rate while painting
     drawGrass(t, dt);
+    drawLeaves(t, dt);
     drawWx(t);
     if (DEBUG) { frames++; document.title = 'frames ' + frames + ' job ' + (job ? job.i + '/' + job.s.length + ' ' + job.mode : 'idle') + ' photos ' + list.length; }
   }
@@ -982,6 +1157,7 @@
     snapshot: function () { return painting.toDataURL('image/jpeg', 0.9); },
     // hours since local midnight (e.g. 16.5), or null for the real time
     setTime: function (h) { timeOverride = h; if (lastW) setWeather(lastW); placeSun(); placeMoon(); },
+    season: function () { return season; },   // turn, cover, bloom, dry: each 0 to 1
     // whole days ahead (or back) of today, to watch the moon go through its phases
     setDays: function (n) { dayShift = n || 0; if (lastW) setWeather(lastW); placeSun(); placeMoon(); },
     // the moon as drawn: el (degrees above the horizon), lit (0 new to 1 full), waxing, x on the stage
@@ -998,5 +1174,5 @@
   };
   if (forced.wx || forced.phase) { kind = kind || 'clear'; phase = phase || 'day'; }
   loadList();
-  requestAnimationFrame(frame);
+  nextFrame(frame);
 })();
