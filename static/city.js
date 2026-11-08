@@ -513,6 +513,7 @@
     g.save(); g.beginPath(); g.moveTo(v.x, v.y + v.h + 18); g.lineTo(v.x + v.w, v.y + v.h + 18); g.lineTo(W - 10, 640); g.lineTo(v.x, 640); g.closePath();
     g.fillStyle = night ? 'rgba(120,140,220,0.10)' : phase === 'golden' ? 'rgba(255,170,100,0.22)' : 'rgba(255,255,255,0.12)'; g.fill(); g.restore();
     if (night) light(g, 117, 460, 140, '#ffb36b', 0.14);
+    sleepingDog(g);
 
   }
 
@@ -522,7 +523,7 @@
   function buildPeople() {
     var bd = V.desk.box, bb = V.bed.box, rim = room.rim, night = phase === 'night';
     steamEls.forEach(function (e) { if (e.parentNode) e.parentNode.removeChild(e); }); steamEls = [];
-    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
+    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat, guy.legs, guy.armPet].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
     var awake = view === 'desk';
     if (awake) {
       guy.armL = sprite(bd, 236, 440, 110, 110, function (g) { arm(g, 300, 452, 262, 528, 304, 520); });
@@ -546,18 +547,31 @@
         if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 396, 31, -1.4, 0.4); g.stroke(); }
       });
       guy.head.style.webkitTransformOrigin = guy.head.style.transformOrigin = '52px 90px';
+      guy.legs = sprite(bd, 290, 600, 170, 90, function (g) {   // jeans and sneakers under the seat
+        var jean = night ? '#1c2438' : '#34476b', shoe = night ? '#8a8f9c' : '#f1f0ea';
+        g.lineCap = 'round'; g.strokeStyle = jean; g.lineWidth = 22;
+        g.beginPath(); g.moveTo(332, 618); g.lineTo(320, 662); g.moveTo(414, 618); g.lineTo(428, 662); g.stroke();
+        g.strokeStyle = rgba(room.dark, 0.3); g.lineWidth = 2; g.beginPath(); g.moveTo(326, 630); g.lineTo(318, 660); g.moveTo(420, 630); g.lineTo(428, 660); g.stroke();
+        g.fillStyle = shoe; ellipse(g, 318, 670, 17, 8); g.fill(); ellipse(g, 430, 670, 17, 8); g.fill();
+        g.fillStyle = night ? '#2a2c34' : '#3a3d46'; g.fillRect(302, 674, 32, 3); g.fillRect(414, 674, 32, 3);
+        g.fillStyle = '#ff7a59'; g.fillRect(310, 666, 8, 2); g.fillRect(422, 666, 8, 2);
+      });
       guy.chair = sprite(bd, 260, 450, 230, 318, function (g) {
         g.fillStyle = room.chair; rrect(g, 290, 470, 164, 150, 26); g.fill();
         g.strokeStyle = 'rgba(255,255,255,0.05)'; g.lineWidth = 1; g.beginPath();
         for (var i = 0; i < 14; i++) { g.moveTo(300 + i * 11, 478); g.lineTo(300 + i * 11, 612); } g.stroke();
         g.fillStyle = mix(room.chair, '#ffffff', 0.08); rrect(g, 296, 476, 152, 16, 8); g.fill();
-        g.fillStyle = room.chair; g.fillRect(366, 620, 12, 76);
+        g.fillStyle = mix(room.chair, '#ffffff', 0.05); rrect(g, 280, 612, 184, 20, 8); g.fill();   // the seat
+        g.fillStyle = room.chair; g.fillRect(366, 630, 12, 66);
         g.fillRect(300, 700, 144, 8); g.fillRect(368, 696, 8, 30);
         g.fillStyle = '#08090c'; ellipse(g, 302, 714, 7, 6); g.fill(); ellipse(g, 442, 714, 7, 6); g.fill(); ellipse(g, 372, 732, 7, 6); g.fill();
         if (rim) { g.strokeStyle = rgba(rim, 0.25); g.lineWidth = 2; g.beginPath(); g.moveTo(454, 496); g.lineTo(454, 600); g.stroke(); }
       });
       guy.bedEmpty = sprite(bb, 340, 470, 680, 180, function (g) { duvetShape(g, false); });
       guy.deskCat = null;
+      bd.appendChild(dogEl); bd.appendChild(ballEl);   // the dog runs in front of the chair
+      guy.armPet = sprite(bd, 200, 440, 120, 180, function (g) { arm(g, 300, 452, 270, 522, 244, 566); });   // reaching down to the dog
+      guy.armPet.style.display = 'none'; guy.petting = false;
       for (var k = 0; k < 2; k++) {   // steam off his coffee
         var st = mk(22, 40), sg = st.getContext('2d');
         for (var j = 0; j < 6; j++) { var gx = 11 + Math.sin(j * 1.1) * 4, gy = 36 - j * 6, rg = sg.createRadialGradient(gx, gy, 0, gx, gy, 5 + j); rg.addColorStop(0, 'rgba(255,255,255,' + (night ? 0.14 : 0.3) + ')'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = rg; sg.fillRect(0, 0, 22, 40); }
@@ -597,6 +611,158 @@
     g.fillStyle = room.hood; g.beginPath();   // his hoodie, thrown over the end of the bed
     g.moveTo(958, 532); g.quadraticCurveTo(984, 520, 1000, 540); g.lineTo(1002, 610); g.quadraticCurveTo(990, 620, 980, 606); g.quadraticCurveTo(966, 570, 958, 532); g.fill();
     g.strokeStyle = rgba(room.hoodHi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
+  }
+
+  /* ---------------- the dog ----------------
+   * A golden retriever who comes and goes: wanders through, chases a ball (and brings it
+   * back), chases his own tail, or comes to sit by the chair to be petted. All its poses are
+   * drawn once into one strip; a frame is picked by sliding the strip, the dog is moved and
+   * flipped with a transform. Preview with ?dog=visit (or chase, walk, tail). */
+  var FW = 170, FH = 120, DOGF = 15, DOGP = param('dog');
+  var dogEl = document.createElement('div'), dogSheet = null, ballEl = mk(16, 16);
+  dogEl.style.cssText = 'position:absolute;left:0;top:0;width:' + FW + 'px;height:' + FH + 'px;overflow:hidden;display:none;-webkit-transform-origin:50% 100%;transform-origin:50% 100%';
+  ballEl.style.cssText = 'position:absolute;left:0;top:0;display:none';
+  (function () { var g = ballEl.getContext('2d'); g.fillStyle = '#d4e157'; g.beginPath(); g.arc(8, 8, 7, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.arc(4, 8, 6, -1, 1); g.stroke(); })();
+  // [front near, front far, hind near, hind far, pitch, bob]
+  var WALK = [[0.35, -0.3, -0.3, 0.35, 0, 0], [0.1, 0.05, 0.05, 0.1, 0, -1.2], [-0.3, 0.35, 0.35, -0.3, 0, 0], [0.05, 0.1, 0.1, 0.05, 0, -1.2]];
+  var RUN = [[0.8, 0.65, -0.6, -0.45, 0, -5], [0.1, 0, 0.35, 0.5, -0.06, 0], [-0.6, -0.45, 0.85, 0.7, 0.06, 1.5], [0.45, 0.3, -0.2, -0.35, -0.04, -2]];
+  function dogCols() {
+    var n = phase === 'night', gd = phase === 'golden';
+    return { coat: n ? '#6e5842' : gd ? '#db9550' : '#dba45c', shade: n ? '#4c3c2d' : gd ? '#a86a3a' : '#b27b3f',
+      light: n ? '#8b7359' : gd ? '#f5c98a' : '#f3d39a', dark: '#22170f', tongue: n ? '#8a4a55' : '#e8788a' };
+  }
+  function dogLeg(g, x, y, a, hind, col, w) {
+    var l1 = hind ? 21 : 22, l2 = hind ? 26 : 23, a1 = hind ? a + 0.35 : a;
+    var kx = x + Math.sin(a1) * l1, ky = y + Math.cos(a1) * l1, a2 = hind ? a - 0.35 : a < 0 ? a * 1.8 : a * 0.6;
+    var px = kx + Math.sin(a2) * l2, py = ky + Math.cos(a2) * l2;
+    g.strokeStyle = col; g.lineCap = 'round';
+    g.lineWidth = w + (hind ? 6 : 2); g.beginPath(); g.moveTo(x, y); g.lineTo(kx, ky); g.stroke();
+    g.lineWidth = w; g.beginPath(); g.moveTo(kx, ky); g.lineTo(px, py); g.stroke();
+    g.fillStyle = col; ellipse(g, px + 3, py + 1, 6, 3.5); g.fill();
+  }
+  function dogHead(g, x, y, C, o) {
+    g.fillStyle = C.shade; g.save(); g.translate(x - 7, y + 1); g.rotate(o.run ? -0.6 : 0.2); ellipse(g, 0, 7, 7, 13); g.fill(); g.restore();   // far ear
+    g.fillStyle = C.coat; g.beginPath(); g.arc(x, y, 15, 0, 6.2832); g.fill();
+    ellipse(g, x + 14, y + 6, 13, 8.5); g.fill();   // muzzle
+    g.fillStyle = rgba(C.light, 0.7); ellipse(g, x + 2, y - 8, 9, 4.5); g.fill();
+    if (o.tongue || o.run) { g.fillStyle = C.tongue; ellipse(g, x + 16, y + 16, 3.5, 5.5); g.fill(); }
+    g.fillStyle = C.dark; ellipse(g, x + 26, y + 3, 3.6, 3); g.fill();   // nose
+    g.beginPath(); g.arc(x + 5, y - 3, 2.1, 0, 6.2832); g.fill();   // eye
+    g.strokeStyle = C.dark; g.lineWidth = 1.1; g.beginPath(); g.moveTo(x + 24, y + 10); g.quadraticCurveTo(x + 17, y + 13, x + 9, y + 10); g.stroke();
+    if (o.ball) { g.fillStyle = '#d4e157'; g.beginPath(); g.arc(x + 21, y + 12, 6.5, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1; g.beginPath(); g.arc(x + 18, y + 12, 5, -1, 1); g.stroke(); }
+    g.fillStyle = mix(C.shade, C.coat, 0.3); g.save(); g.translate(x - 3, y - 2); g.rotate(o.run ? -0.7 : 0.15); ellipse(g, 0, 8, 7.5, 14); g.fill(); g.restore();   // near ear, floppy
+  }
+  function drawDog(g, p, o) {
+    var C = dogCols(), i, tl = o.run ? -8 : 0;
+    g.save(); g.translate(0, p[5]); g.translate(82, 60); g.rotate(p[4]); g.translate(-82, -60);
+    dogLeg(g, 112, 62, p[1], false, C.shade, 7); dogLeg(g, 58, 60, p[3], true, C.shade, 7);
+    g.strokeStyle = C.coat; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(40, 52); g.quadraticCurveTo(22, 38 + tl, 6, 46 + tl * 2); g.stroke();   // tail
+    g.strokeStyle = rgba(C.light, 0.55); g.lineWidth = 3; g.beginPath(); g.moveTo(38, 56); g.quadraticCurveTo(22, 46 + tl, 8, 51 + tl * 2); g.stroke();   // feathered underside
+    g.fillStyle = C.coat; ellipse(g, 80, 58, 40, 20); g.fill(); ellipse(g, 106, 60, 18, 21); g.fill(); ellipse(g, 52, 56, 18, 18); g.fill();
+    g.fillStyle = rgba(C.light, 0.4); ellipse(g, 78, 45, 30, 6); g.fill();
+    g.fillStyle = C.light; ellipse(g, 106, 70, 11, 12); g.fill();   // chest
+    g.fillStyle = rgba(C.light, 0.5); g.beginPath(); g.moveTo(60, 72); g.quadraticCurveTo(80, 84, 100, 74); g.quadraticCurveTo(80, 78, 60, 72); g.fill();   // belly fur
+    dogLeg(g, 104, 64, p[0], false, C.coat, 8); dogLeg(g, 50, 62, p[2], true, C.coat, 8);
+    var hy = o.run ? 7 : 0;
+    g.fillStyle = C.coat; g.save(); g.translate(117, 45 + hy * 0.5); g.rotate(o.run ? 0.95 : 0.55); ellipse(g, 0, 0, 13, 19); g.fill(); g.restore();   // neck
+    dogHead(g, 130, 29 + hy, C, o);
+    g.restore();
+  }
+  function drawSit(g, wag) {
+    var C = dogCols();
+    g.strokeStyle = C.coat; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(46, 100); g.quadraticCurveTo(28, 103, 10, wag ? 90 : 106); g.stroke();   // tail, sweeping the floor
+    g.strokeStyle = C.shade; g.lineWidth = 8; g.beginPath(); g.moveTo(108, 66); g.lineTo(110, 102); g.stroke(); g.fillStyle = C.shade; ellipse(g, 113, 104, 6, 3.5); g.fill();
+    g.fillStyle = C.coat; ellipse(g, 62, 88, 25, 17); g.fill();   // haunch
+    g.save(); g.translate(84, 68); g.rotate(-1.0); ellipse(g, 0, 0, 34, 19); g.fill(); g.restore();
+    ellipse(g, 100, 60, 16, 22); g.fill(); ellipse(g, 84, 104, 11, 4); g.fill();
+    g.fillStyle = C.light; ellipse(g, 102, 66, 10, 15); g.fill();
+    g.strokeStyle = rgba(C.shade, 0.6); g.lineWidth = 1.5; g.beginPath(); g.arc(62, 86, 14, 3.6, 5.6); g.stroke();
+    g.strokeStyle = C.coat; g.lineWidth = 9; g.beginPath(); g.moveTo(97, 68); g.lineTo(97, 102); g.stroke(); g.fillStyle = C.coat; ellipse(g, 100, 104, 6.5, 3.5); g.fill();
+    g.fillStyle = C.coat; g.save(); g.translate(104, 38); g.rotate(0.25); ellipse(g, 0, 0, 12, 18); g.fill(); g.restore();
+    dogHead(g, 112, 20, C, { tongue: true });
+  }
+  function sleepingDog(g) {   // curled up on its bed by ours
+    var C = dogCols();
+    g.save(); g.translate(-200, 0);
+    g.fillStyle = phase === 'night' ? '#2c3a44' : '#5f8a8b'; ellipse(g, 820, 704, 78, 20); g.fill();
+    g.fillStyle = mix(phase === 'night' ? '#2c3a44' : '#5f8a8b', '#ffffff', 0.15); ellipse(g, 820, 698, 66, 14); g.fill();
+    g.fillStyle = C.coat; ellipse(g, 826, 684, 52, 19); g.fill();
+    g.strokeStyle = C.coat; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(874, 690); g.quadraticCurveTo(862, 708, 800, 702); g.stroke();
+    g.fillStyle = rgba(C.light, 0.5); ellipse(g, 830, 672, 36, 6); g.fill();
+    g.fillStyle = C.coat; g.beginPath(); g.arc(784, 690, 14, 0, 6.2832); g.fill(); ellipse(g, 772, 698, 11, 7); g.fill();
+    g.fillStyle = C.shade; ellipse(g, 792, 690, 7, 12); g.fill();
+    g.fillStyle = C.dark; ellipse(g, 762, 697, 3, 2.5); g.fill();
+    g.strokeStyle = C.dark; g.lineWidth = 1.2; g.beginPath(); g.arc(780, 688, 3, 0.3, 2.8); g.stroke();
+    g.restore();
+  }
+  function buildDog() {
+    var sheet = mk(FW * DOGF, FH), g = sheet.getContext('2d'), i;
+    for (i = 0; i < DOGF; i++) {
+      g.save(); g.translate(i * FW, 0); g.beginPath(); g.rect(0, 0, FW, FH); g.clip();
+      if (i < 4) drawDog(g, WALK[i], {});
+      else if (i < 8) drawDog(g, RUN[i - 4], { run: true });
+      else if (i < 10) drawSit(g, i - 8);
+      else if (i < 14) drawDog(g, WALK[i - 10], { ball: true });
+      else drawDog(g, [0.05, -0.05, -0.05, 0.05, 0, 0], { tongue: true });
+      g.restore();
+    }
+    dogEl.innerHTML = ''; dogEl.appendChild(sheet); dogSheet = sheet; dog.f = -1;
+  }
+  var dog = { on: false, x: 0, y: 712, dir: 1, f: -1, steps: [], si: 0, ph: 0, next: 0, pet: false }, ball = { on: false };
+  function startEpisode(k, t) {
+    var L = -120, Rt = W + 120, from = Math.random() < 0.5 ? L : Rt, to = from === L ? Rt : L, mid = rnd(420, 700), st;
+    dog.x = from; dog.y = rnd(706, 724);
+    if (k === 'visit') st = [{ m: 'walk', x: 204, y: 708 }, { m: 'stand', d: 0.7, dir: 1 }, { m: 'sit', d: 15, pet: true, dir: 1 }, { m: 'stand', d: 0.8 }, { m: 'walk', x: L, y: 714 }];
+    else if (k === 'chase') {
+      dog.x = L - 40; dog.y = 716; ball = { on: true, x: -20, t0: t, a: 0 }; ballEl.style.display = 'block';
+      st = [{ m: 'run', x: Rt + 40, y: 714 }, { m: 'wait', d: 3.5 }, { m: 'jump', x: Rt, y: 718 }, { m: 'ballwalk', x: mid, y: 718 }, { m: 'stand', d: 1.5, dir: -1 }, { m: 'ballwalk', x: L, y: 716 }];
+    }
+    else if (k === 'tail') { dog.x = Rt; st = [{ m: 'run', x: 640, y: 716 }, { m: 'spin', d: 3.4, cx: 606, cy: 716 }, { m: 'stand', d: 1 }, { m: 'walk', x: Rt, y: 716 }]; }
+    else st = [{ m: 'walk', x: mid, y: dog.y }, { m: 'stand', d: rnd(1.5, 3) }, { m: 'walk', x: to, y: dog.y + rnd(-6, 6) }];
+    dog.steps = st; dog.si = 0; dog.on = true; dogEl.style.display = 'block';
+  }
+  function endEpisode(t) {
+    dog.on = false; dog.pet = false; dogEl.style.display = 'none'; ballEl.style.display = 'none'; ball.on = false;
+    dog.next = t + (DOGP ? 5 : rnd(50, 160));
+  }
+  function updateDog(t, dt) {
+    if (ball.on) {   // the ball bounces across the floor, the dog right behind it
+      var bt = t - ball.t0; ball.x += 300 * dt; ball.a += dt * 14;
+      var by = 726 - Math.abs(Math.sin(bt * 5.5)) * 46 * Math.exp(-bt * 0.6);
+      tr(ballEl, 'translate3d(' + ball.x.toFixed(1) + 'px,' + (by - 16).toFixed(1) + 'px,0) rotate(' + ball.a.toFixed(2) + 'rad)');
+      if (ball.x > W + 30) { ball.on = false; ballEl.style.display = 'none'; }
+    }
+    if (!dog.on) {
+      if (!dog.next) dog.next = t + (DOGP ? 2 : rnd(25, 90));
+      if (t > dog.next && view === 'desk') {
+        var r = Math.random(), k = DOGP || (r < 0.45 ? 'visit' : r < 0.72 ? 'chase' : r < 0.9 ? 'walk' : 'tail');
+        startEpisode(k, t);
+      }
+      return;
+    }
+    var s = dog.steps[dog.si], f = 14;
+    if (!s || view !== 'desk') { endEpisode(t); return; }
+    if (s.st == null) s.st = t;
+    if (s.m === 'walk' || s.m === 'run' || s.m === 'ballwalk') {
+      var sp = s.m === 'run' ? 340 : 78, dx = s.x - dog.x, dy = s.y - dog.y, d = Math.sqrt(dx * dx + dy * dy);
+      if (d < sp * dt + 1) { dog.x = s.x; dog.y = s.y; dog.si++; }
+      else { dog.x += dx / d * sp * dt; dog.y += dy / d * sp * dt; if (Math.abs(dx) > 1) dog.dir = dx > 0 ? 1 : -1; }
+      dog.ph += dt * (s.m === 'run' ? 11 : 6);
+      f = (s.m === 'run' ? 4 : s.m === 'ballwalk' ? 10 : 0) + Math.floor(dog.ph) % 4;
+    } else if (s.m === 'spin') {   // chasing his own tail
+      var a = (t - s.st) * 7; dog.x = s.cx + Math.cos(a) * 34; dog.y = s.cy + Math.sin(a) * 8; dog.dir = Math.sin(a) > 0 ? -1 : 1;
+      dog.ph += dt * 11; f = 4 + Math.floor(dog.ph) % 4;
+      if (t - s.st > s.d) dog.si++;
+    } else if (s.m === 'jump') { dog.x = s.x; dog.y = s.y; dog.si++; }
+    else {   // sit, stand, wait
+      if (s.dir) dog.dir = s.dir;
+      f = s.m === 'sit' ? 8 + Math.floor(t * 5) % 2 : 14;
+      dog.pet = s.m === 'sit' && s.pet && t - s.st > 1;
+      if (t - s.st > s.d) { dog.si++; dog.pet = false; }
+    }
+    var sc = 1.3 * (0.8 + (dog.y - 650) / 100 * 0.3), bob = dog.pet ? Math.max(0, Math.sin(t * 5)) * 1.5 : 0;
+    if (f !== dog.f) { tr(dogSheet, 'translate3d(' + (-f * FW) + 'px,0,0)'); dog.f = f; }
+    tr(dogEl, 'translate3d(' + (dog.x - FW / 2).toFixed(1) + 'px,' + (dog.y - FH + bob).toFixed(1) + 'px,0) scale(' + (sc * dog.dir).toFixed(3) + ',' + sc.toFixed(3) + ')');
   }
 
   /* ---------------- the code on his screen ----------------
@@ -833,7 +999,7 @@
     room.rim = ROOM[phase].rim && (phase === 'night' || o < 0.5) ? ROOM[phase].rim : null;
     clouds = []; fxList = [];
     ['bed', 'desk'].forEach(function (n) { var v = V[n]; drawSky(v); buildSun(v); buildCity(v, n); buildLights(v); buildClouds(v); buildFx(v); placeSky(v); });
-    drawDeskRoom(); drawBedRoom(); buildPeople(); buildWx();
+    drawDeskRoom(); drawBedRoom(); buildDog(); buildPeople(); buildWx();
     builtAt = Date.now();
   }
   function setView(v, animate) {
@@ -906,7 +1072,13 @@
     if (view === 'desk') {
       codeTick(t); editTick(t);
       // he looks at whichever screen is busy, leans back to think, and his hands type
-      var aim = !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = code.think && t < code.think ? -3 : 0;
+      updateDog(t, dt);
+      if (guy.armPet) {   // when the dog sits by him, his left hand comes down to pet it
+        var petting = dog.pet;
+        if (petting !== guy.petting) { guy.petting = petting; guy.armPet.style.display = petting ? 'block' : 'none'; guy.armL.style.display = petting ? 'none' : 'block'; }
+        if (petting) tr(guy.armPet, 'translate3d(' + (Math.sin(t * 2.5) * 3).toFixed(1) + 'px,' + (Math.max(0, Math.sin(t * 5)) * 3).toFixed(1) + 'px,0)');
+      }
+      var aim = dog.pet ? -9 : !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = dog.pet ? 3 : code.think && t < code.think ? -3 : 0;
       headA += (aim - headA) * Math.min(1, dt * 2); headY += (ay - headY) * Math.min(1, dt * 2);
       if (guy.head) tr(guy.head, 'translate3d(' + (headA * 0.5).toFixed(2) + 'px,' + headY.toFixed(2) + 'px,0) rotate(' + headA.toFixed(2) + 'deg)');
       if (guy.armR && t > jitterAt) {

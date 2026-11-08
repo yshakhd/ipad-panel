@@ -45,7 +45,10 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
   typing the scene's own code on one monitor and editing your photos on the
   other, while the real sunset drops behind the Hudson and the towers light up.
   The time and weather sit over the scene as in the meadow, and the time also
-  glows on a digital clock on his desk and by the bed. The camera pans across
+  glows on a digital clock on his desk and by the bed. Every so often a golden
+  retriever wanders through, chases a ball (and brings it back), chases its
+  tail, or comes to sit by his chair to be petted; at night it sleeps on its
+  bed by his. The camera pans across
   the apartment when he gets up or turns in.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
   a time-of-day tint and animated weather.
@@ -134,7 +137,8 @@ for trying the tiles without real hardware.
   headless browsers barely animate. The
   photo scene takes `/?wx=…&phase=…`.
 - The city takes the same options plus `view=bed` or `view=desk`:
-  `/city.html?view=bed&time=6:40&wx=rain&wind=30`.
+  `/city.html?view=bed&time=6:40&wx=rain&wind=30`. `dog=visit` (or `chase`,
+  `walk`, `tail`) sends the dog in every few seconds.
 - Jump straight to a screen: `/#home` or `/#system`.
 - The iPad has no developer console, so the page reports page loads, JavaScript
   errors and (in the meadow) its frame rate to the server log:
