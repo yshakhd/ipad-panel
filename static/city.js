@@ -349,7 +349,8 @@
     g.strokeStyle = mix(rug, '#f0d9b5', 0.35); g.lineWidth = 2; ellipse(g, 380, 716, 270, 36); g.stroke(); ellipse(g, 380, 716, 240, 29); g.stroke();
     g.fillStyle = rgba(room.dark, 0.35); ellipse(g, 372, 730, 120, 18); g.fill();   // the chair's shadow
     // desk: walnut top seen from just above, black steel legs
-    g.fillStyle = room.dark; g.fillRect(30, 560, 12, H - 560); g.fillRect(W - 46, 560, 12, H - 560);
+    g.fillStyle = room.dark; g.fillRect(30, 560, 12, 122); g.fillRect(W - 46, 560, 12, 122);   // the desk stands just beyond his feet
+    g.fillStyle = rgba(room.dark, 0.35); ellipse(g, 36, 683, 14, 3); g.fill(); ellipse(g, W - 40, 683, 14, 3); g.fill();
     var gr = g.createLinearGradient(0, 498, 0, 548); gr.addColorStop(0, room.desk); gr.addColorStop(1, room.deskHi);
     g.fillStyle = gr; g.fillRect(0, 498, W, 50);
     g.strokeStyle = rgba(room.deskEdge, 0.35); g.lineWidth = 1; g.beginPath();
@@ -570,7 +571,7 @@
       guy.bedEmpty = sprite(bb, 340, 470, 680, 180, function (g) { duvetShape(g, false); });
       guy.deskCat = null;
       bd.appendChild(dogEl); bd.appendChild(ballEl);   // the dog runs in front of the chair
-      guy.armPet = sprite(bd, 200, 440, 120, 180, function (g) { arm(g, 300, 452, 270, 522, 244, 566); });   // reaching down to the dog
+      guy.armPet = sprite(bd, 200, 440, 120, 180, function (g) { arm(g, 300, 452, 272, 516, 246, 552); });   // reaching down to the dog
       guy.armPet.style.display = 'none'; guy.petting = false;
       for (var k = 0; k < 2; k++) {   // steam off his coffee
         var st = mk(22, 40), sg = st.getContext('2d');
@@ -699,6 +700,7 @@
     var sheet = mk(FW * DOGF, FH), g = sheet.getContext('2d'), i;
     for (i = 0; i < DOGF; i++) {
       g.save(); g.translate(i * FW, 0); g.beginPath(); g.rect(0, 0, FW, FH); g.clip();
+      g.fillStyle = 'rgba(20,12,8,0.22)'; ellipse(g, i >= 8 && i < 10 ? 72 : 84, 108, i >= 8 && i < 10 ? 44 : 54, 5); g.fill();
       if (i < 4) drawDog(g, WALK[i], {});
       else if (i < 8) drawDog(g, RUN[i - 4], { run: true });
       else if (i < 10) drawSit(g, i - 8);
@@ -710,15 +712,18 @@
   }
   var dog = { on: false, x: 0, y: 712, dir: 1, f: -1, steps: [], si: 0, ph: 0, next: 0, pet: false }, ball = { on: false };
   function startEpisode(k, t) {
-    var L = -120, Rt = W + 120, from = Math.random() < 0.5 ? L : Rt, to = from === L ? Rt : L, mid = rnd(420, 700), st;
-    dog.x = from; dog.y = rnd(706, 724);
-    if (k === 'visit') st = [{ m: 'walk', x: 204, y: 708 }, { m: 'stand', d: 0.7, dir: 1 }, { m: 'sit', d: 15, pet: true, dir: 1 }, { m: 'stand', d: 0.8 }, { m: 'walk', x: L, y: 714 }];
+    // The floor between the chair and the desk is taken by his legs, so the dog crosses the
+    // room in front of the chair (lower on screen, nearer the camera) and sits beside it.
+    var L = -160, Rt = W + 160, from = Math.random() < 0.5 ? L : Rt, to = from === L ? Rt : L, mid = rnd(560, 760), lane = rnd(748, 760), st;
+    dog.x = from; dog.y = lane;
+    var SIT = [{ m: 'stand', d: 0.7, dir: 1 }, { m: 'sit', d: 15, pet: true, dir: 1 }, { m: 'stand', d: 0.8 }, { m: 'walk', x: L, y: 726 }];
+    if (k === 'visit') st = (from === L ? [{ m: 'jump', x: L, y: 726 }, { m: 'walk', x: 200, y: 716 }] : [{ m: 'walk', x: 210, y: lane }, { m: 'walk', x: 200, y: 716 }]).concat(SIT);
     else if (k === 'chase') {
-      dog.x = L - 40; dog.y = 716; ball = { on: true, x: -20, t0: t, a: 0 }; ballEl.style.display = 'block';
-      st = [{ m: 'run', x: Rt + 40, y: 714 }, { m: 'wait', d: 3.5 }, { m: 'jump', x: Rt, y: 718 }, { m: 'ballwalk', x: mid, y: 718 }, { m: 'stand', d: 1.5, dir: -1 }, { m: 'ballwalk', x: L, y: 716 }];
+      dog.x = L - 40; ball = { on: true, x: -20, t0: t, a: 0, y: lane + 8 }; ballEl.style.display = 'block';
+      st = [{ m: 'run', x: Rt + 40, y: lane }, { m: 'wait', d: 3.5 }, { m: 'jump', x: Rt, y: lane - 4 }, { m: 'ballwalk', x: mid, y: lane - 4 }, { m: 'stand', d: 1.5, dir: -1 }, { m: 'ballwalk', x: L, y: lane }];
     }
-    else if (k === 'tail') { dog.x = Rt; st = [{ m: 'run', x: 640, y: 716 }, { m: 'spin', d: 3.4, cx: 606, cy: 716 }, { m: 'stand', d: 1 }, { m: 'walk', x: Rt, y: 716 }]; }
-    else st = [{ m: 'walk', x: mid, y: dog.y }, { m: 'stand', d: rnd(1.5, 3) }, { m: 'walk', x: to, y: dog.y + rnd(-6, 6) }];
+    else if (k === 'tail') { dog.x = Rt; st = [{ m: 'run', x: 660, y: 744 }, { m: 'spin', d: 3.4, cx: 626, cy: 744 }, { m: 'stand', d: 1 }, { m: 'walk', x: Rt, y: 748 }]; }
+    else st = [{ m: 'walk', x: mid, y: lane }, { m: 'stand', d: rnd(1.5, 3) }, { m: 'walk', x: to, y: lane + rnd(-6, 6) }];
     dog.steps = st; dog.si = 0; dog.on = true; dogEl.style.display = 'block';
   }
   function endEpisode(t) {
@@ -728,7 +733,7 @@
   function updateDog(t, dt) {
     if (ball.on) {   // the ball bounces across the floor, the dog right behind it
       var bt = t - ball.t0; ball.x += 300 * dt; ball.a += dt * 14;
-      var by = 726 - Math.abs(Math.sin(bt * 5.5)) * 46 * Math.exp(-bt * 0.6);
+      var by = ball.y - Math.abs(Math.sin(bt * 5.5)) * 60 * Math.exp(-bt * 0.6);
       tr(ballEl, 'translate3d(' + ball.x.toFixed(1) + 'px,' + (by - 16).toFixed(1) + 'px,0) rotate(' + ball.a.toFixed(2) + 'rad)');
       if (ball.x > W + 30) { ball.on = false; ballEl.style.display = 'none'; }
     }
@@ -760,7 +765,8 @@
       dog.pet = s.m === 'sit' && s.pet && t - s.st > 1;
       if (t - s.st > s.d) { dog.si++; dog.pet = false; }
     }
-    var sc = 1.3 * (0.8 + (dog.y - 650) / 100 * 0.3), bob = dog.pet ? Math.max(0, Math.sin(t * 5)) * 1.5 : 0;
+    // nearer the camera = lower on the floor = bigger
+    var sc = 0.6 + (dog.y - 560) * 0.0057, bob = dog.pet ? Math.max(0, Math.sin(t * 5)) * 1.5 : 0;
     if (f !== dog.f) { tr(dogSheet, 'translate3d(' + (-f * FW) + 'px,0,0)'); dog.f = f; }
     tr(dogEl, 'translate3d(' + (dog.x - FW / 2).toFixed(1) + 'px,' + (dog.y - FH + bob).toFixed(1) + 'px,0) scale(' + (sc * dog.dir).toFixed(3) + ',' + sc.toFixed(3) + ')');
   }
