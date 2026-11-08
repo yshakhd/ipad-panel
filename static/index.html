@@ -17,8 +17,8 @@
   };
 </script>
 <script>
-  // The meadow is the other scene; go there if it was picked on this iPad (hash links like #home stay here).
-  try { if (localStorage.getItem('scene') === 'meadow' && !location.hash) location.replace('/meadow.html' + location.search); } catch (e) {}
+  // The meadow and the city are the other scenes; go to the one picked on this iPad (hash links like #home stay here).
+  try { var sc = { meadow: '/meadow.html', city: '/city.html' }[localStorage.getItem('scene')]; if (sc && !location.hash) location.replace(sc + location.search); } catch (e) {}
 </script>
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
@@ -194,6 +194,7 @@
     <div id="date" class="grow shadow"></div>
     <div id="nav" class="flex">
       <div class="link tap" id="go-meadow">Meadow scene</div>
+      <div class="link tap" id="go-city">City scene</div>
       <div class="link tap" id="go-home">Home controls</div>
       <div id="units" class="num tap shadow"><span data-u="F">°F</span><span data-u="C">°C</span></div>
     </div>
@@ -582,9 +583,10 @@
 
   /* ---------------- views + idle return ---------------- */
   var view = 'overview', idleTimer = null;
+  var SCENES = { meadow: '/meadow.html', city: '/city.html' };
   function wantScene() { return store('scene') || (lastState && lastState.default_scene) || 'photos'; }
   function showView(name) {
-    if (name === 'overview' && wantScene() === 'meadow') { location.replace('/meadow.html'); return; }
+    if (name === 'overview' && SCENES[wantScene()]) { location.replace(SCENES[wantScene()]); return; }
     view = name;
     setBodyClass('v-home', name === 'home');
     setBodyClass('v-sheet', name === 'sheet');
@@ -599,6 +601,7 @@
   }
   onTap($('go-home'), function () { showView('home'); });
   onTap($('go-meadow'), function () { store('scene', 'meadow'); location.href = '/meadow.html'; });
+  onTap($('go-city'), function () { store('scene', 'city'); location.href = '/city.html'; });
   onTap($('h-close'), function () { showView('overview'); });
   onTap($('inst'), function () { showView('sheet'); });
   onTap($('d-close'), function () { showView('overview'); });
@@ -608,7 +611,7 @@
   function render(s) {
     if (build && s.build && s.build !== build) { location.reload(); return; }  // page files changed
     build = s.build || build;
-    if (!store('scene') && s.default_scene === 'meadow' && view === 'overview' && !location.hash) { location.replace('/meadow.html'); return; }
+    if (!store('scene') && SCENES[s.default_scene] && view === 'overview' && !location.hash) { location.replace(SCENES[s.default_scene]); return; }
     lastState = s;
     night = s.night || night;
     if (!unit) { unit = s.default_unit || 'F'; paintUnits(); }

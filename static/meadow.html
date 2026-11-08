@@ -14,7 +14,7 @@
       x.send(msg + ' @ ' + (src || '').split('/').pop() + ':' + line + ':' + (col || 0) + ' | ' + navigator.userAgent);
     } catch (e) {}
   };
-  try { if (localStorage.getItem('scene') === 'photos') location.replace('/' + location.search); } catch (e) {}
+  try { var sc = localStorage.getItem('scene'); if (sc === 'photos') location.replace('/' + location.search); else if (sc === 'city') location.replace('/city.html' + location.search); } catch (e) {}
 </script>
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
@@ -115,6 +115,7 @@
     </div>
     <div id="nav" class="flex sky">
       <div class="link tap" id="go-photos">Photo scene</div>
+      <div class="link tap" id="go-city">City scene</div>
       <div class="link tap" id="go-home">Home controls</div>
       <div id="units" class="tap"><span data-u="F">°F</span><span data-u="C">°C</span></div>
     </div>
@@ -134,6 +135,7 @@
     <div id="viewer" class="tap"><div id="viewer-img"></div><p>Tap anywhere to go back to the meadow</p></div>
   </div>
 </div>
+<script src="sky.js"></script>
 <script src="meadow.js"></script>
 <script>
 (function () {
@@ -161,6 +163,7 @@
   }
   onTap($('units'), function () { unit = unit === 'F' ? 'C' : 'F'; store('unit', unit); paintUnits(); if (lastState) render(lastState); });
   onTap($('go-photos'), function () { store('scene', 'photos'); location.href = '/'; });
+  onTap($('go-city'), function () { store('scene', 'city'); location.href = '/city.html'; });
   onTap($('go-home'), function () { location.href = '/#home'; });
   onTap($('sys'), function () { location.href = '/#system'; });
   onTap($('painting-hit'), function () {
@@ -227,6 +230,7 @@
     if (build && s.build && s.build !== build) { location.reload(); return; }
     build = s.build || build;
     if (!store('scene') && s.default_scene === 'photos') { location.replace('/'); return; }
+    if (!store('scene') && s.default_scene === 'city') { location.replace('/city.html'); return; }
     lastState = s; night = s.night || night;
     if (!unit) { unit = s.default_unit || 'F'; paintUnits(); }
     renderWeather(s.weather);

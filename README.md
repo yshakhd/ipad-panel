@@ -39,6 +39,13 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
     field in winter.
   - Golden hour, night (lantern, fireflies, a lit cottage window), rain (an
     umbrella), fog, snow and storms each look different.
+- **City scene.** A corner apartment high above Manhattan. From 1 am to 8 am
+  he's asleep by the east window (with the cat), and the real sunrise comes up
+  over the East River. The rest of the day he's at his desk by the west window,
+  typing the scene's own code on one monitor and editing your photos on the
+  other, while the real sunset drops behind the Hudson and the towers light up.
+  The time, weather and wind are on a display on his desk, and on the clock by
+  the bed. The camera pans across the apartment when he gets up or turns in.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
   a time-of-day tint and animated weather.
 - **Both scenes** show the time, date, temperature, feels-like, humidity,
@@ -79,10 +86,11 @@ To start the server on boot with systemd:
 |---|---|
 | `place_name`, `latitude`, `longitude` | Weather location (from [Open-Meteo](https://open-meteo.com/), no key needed) and the sun's position |
 | `units` | `"fahrenheit"` or `"celsius"`. The iPad can switch too, and remembers it |
-| `scene` | Starting scene: `"meadow"` or `"photos"`. A link at the top switches scenes on the iPad |
+| `scene` | Starting scene: `"meadow"`, `"city"` or `"photos"`. Links at the top switch scenes on the iPad |
+| `city.sleep_hour`, `city.wake_hour` | When he's in bed in the city scene (default 1 and 8, local hours) |
 | `photos.dirs` | Folders of JPG, PNG or WebP photos. Images under 800px are skipped; HEIC isn't supported |
 | `photos.seconds_per_photo` | Slideshow speed in the photo scene (default 5) |
-| `photos.seconds_per_painting` | How long each painting stays up in the meadow (default 120) |
+| `photos.seconds_per_painting` | How long each painting stays up in the meadow, and each photo edit in the city (default 120) |
 | `night_dim_start_hour`, `night_dim_end_hour` | Dims the screen overnight (and slows the animation to save power) |
 | `disks` | Which drives the computer stats show, e.g. `{"path": "/home", "label": "Home"}` |
 | `home_assistant` | `enabled`, `url`, `token_file`, and the `entities` to show as tiles |
@@ -124,6 +132,8 @@ for trying the tiles without real hardware.
   `&timer=1` keeps the animation running, both useful for screenshots since
   headless browsers barely animate. The
   photo scene takes `/?wx=…&phase=…`.
+- The city takes the same options plus `view=bed` or `view=desk`:
+  `/city.html?view=bed&time=6:40&wx=rain&wind=30`.
 - Jump straight to a screen: `/#home` or `/#system`.
 - The iPad has no developer console, so the page reports page loads, JavaScript
   errors and (in the meadow) its frame rate to the server log:

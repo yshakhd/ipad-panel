@@ -49,5 +49,9 @@
       "label": "System"
     }
   ],
-  "scene": "meadow"
+  "scene": "meadow",
+  "city": {
+    "sleep_hour": 1,
+    "wake_hour": 8
+  }
 }

@@ -5,7 +5,7 @@
  * Preview any look with URL params, e.g. /meadow.html?wx=rain&phase=night&wind=40
  * (wx: clear partly cloudy fog drizzle rain heavy snow blizzard storm; phase: day golden night;
  *  wind in km/h; time=HH:MM for another time of day; days=N to look N days ahead)
- * Embedding without the panel server (see demo/): set window.MEADOW_STANDALONE = true before
+ * Needs sky.js loaded first. Embedding without the panel server (see demo/): set window.MEADOW_STANDALONE = true before
  * loading this file, then feed it with Meadow.setWeather(), Meadow.setTime() and Meadow.paint().
  */
 (function () {
@@ -54,21 +54,8 @@
    * A smooth year rather than four switches: how far the leaves have turned, how much canopy
    * is left, spring blossom, and how dry the field is, keyed by day of the year (north of the
    * equator; shifted half a year south of it). Preview with ?season=autumn or ?days=N. */
-  var SEASON_KEYS = [   // [day of year, turn, cover, bloom, dry]
-    [0, 0, 0, 0, 1], [65, 0, 0, 0, 1], [95, 0, 0.55, 1, 0.35], [130, 0, 1, 0.15, 0], [150, 0, 1, 0, 0],
-    [245, 0, 1, 0, 0.15], [290, 1, 1, 0, 0.55], [305, 1, 0.9, 0, 0.7], [340, 1, 0.05, 0, 1], [366, 0, 0, 0, 1]];
-  var SEASON_DAY = { spring: 110, summer: 200, autumn: 300, fall: 300, winter: 20 };
   var season = { turn: 0, cover: 1, bloom: 0, dry: 0 };
-  function seasonAt(ms) {
-    var d = new Date(ms), y = d.getUTCFullYear();
-    var doy = (Date.UTC(y, d.getUTCMonth(), d.getUTCDate()) - Date.UTC(y, 0, 1)) / 86400000;
-    if (lat < 0) doy = (doy + 182.5) % 365;
-    if (SEASON_DAY[param('season')] != null) doy = SEASON_DAY[param('season')];
-    for (var i = 1; i < SEASON_KEYS.length - 1; i++) if (doy <= SEASON_KEYS[i][0]) break;
-    var a = SEASON_KEYS[i - 1], b = SEASON_KEYS[i], f = clamp((doy - a[0]) / (b[0] - a[0]), 0, 1);
-    function at(j) { return a[j] + (b[j] - a[j]) * f; }
-    return { turn: at(1), cover: at(2), bloom: at(3), dry: at(4) };
-  }
+  function seasonAt(ms) { return Sky.season(ms, lat, param('season')); }
   var FALL = {   // turned leaves
     day: { tree: '#b65a2c', treeHi: '#eaa43c', leaf: ['#c2492b', '#dd7d2a', '#e8b33f', '#9e3d26'] },
     golden: { tree: '#a9461f', treeHi: '#f4a63e', leaf: ['#c03f22', '#e07526', '#f0ad3a', '#97361e'] },
@@ -273,33 +260,8 @@
    * NOAA formulas, well under a degree off). We look south, so east is on the left.
    * Bearing maps to x (due south = centre), elevation to height above the hills. */
   var RAD = Math.PI / 180;
-  function days(ms) { return ms / 86400000 - 10957.5; }   // since J2000
-  function horizontal(ra, dec, ms) {   // sky position -> elevation and compass bearing here
-    var n = days(ms), gmst = (18.697374558 + 24.06570982441908 * n) % 24;
-    var H = (gmst * 15 + lon) * RAD - ra, la = lat * RAD;
-    var el = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(H));
-    var az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(la) - Math.sin(la) * Math.cos(H)) / RAD;
-    return { el: el / RAD, az: (az + 360) % 360 };
-  }
-  function eclToEq(lam, beta, n) {
-    var eps = (23.439 - 0.0000004 * n) * RAD;
-    return { ra: Math.atan2(Math.sin(lam) * Math.cos(eps) - Math.tan(beta) * Math.sin(eps), Math.cos(lam)),
-      dec: Math.asin(Math.sin(beta) * Math.cos(eps) + Math.cos(beta) * Math.sin(eps) * Math.sin(lam)) };
-  }
-  function sunLon(n) {
-    var g = (357.528 + 0.9856003 * n) * RAD;
-    return (280.46 + 0.9856474 * n + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * RAD;
-  }
-  function moonLon(n) {   // low-precision lunar theory, about a degree off: plenty for a picture
-    var L = (218.316 + 13.176396 * n) * RAD, M = (134.963 + 13.064993 * n) * RAD, F = (93.272 + 13.22935 * n) * RAD;
-    return { lam: L + 6.289 * RAD * Math.sin(M), beta: 5.128 * RAD * Math.sin(F) };
-  }
-  function sunPosition(ms) { var n = days(ms), q = eclToEq(sunLon(n), 0, n); return horizontal(q.ra, q.dec, ms); }
-  function moonPosition(ms) {
-    var n = days(ms), m = moonLon(n), q = eclToEq(m.lam, m.beta, n), p = horizontal(q.ra, q.dec, ms);
-    p.lit = (1 - Math.cos(m.lam - sunLon(n))) / 2;   // fraction of the disc lit, 0 new to 1 full
-    return p;
-  }
+  function sunPosition(ms) { return Sky.sun(ms, lat, lon); }
+  function moonPosition(ms) { return Sky.moon(ms, lat, lon); }
   function toScreen(p) {
     // North of the equator the midday sun is due south, so we face south (east on the left);
     // south of it we face north, so east is on the right.
@@ -1162,8 +1124,7 @@
     setDays: function (n) { dayShift = n || 0; if (lastW) setWeather(lastW); placeSun(); placeMoon(); },
     // the moon as drawn: el (degrees above the horizon), lit (0 new to 1 full), waxing, x on the stage
     moon: function () {
-      var ms = Date.now() + timeShift, m = moonPosition(ms), n = days(ms);
-      m.waxing = Math.sin(moonLon(n).lam - sunLon(n)) > 0;
+      var m = moonPosition(Date.now() + timeShift);
       m.x = toScreen(m)[0];   // stage x; off either edge when it's far east or west
       return m;
     },

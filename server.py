@@ -238,6 +238,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "default_unit": "F" if cfg.get("units", "fahrenheit") == "fahrenheit" else "C",
                 "night": [cfg.get("night_dim_start_hour", 23), cfg.get("night_dim_end_hour", 7)],
                 "default_scene": cfg.get("scene", "photos"),
+                "city": {"sleep_hour": (cfg.get("city") or {}).get("sleep_hour", 1),
+                         "wake_hour": (cfg.get("city") or {}).get("wake_hour", 8)},
             })
         return super().do_GET()
 

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>City</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Panel">
+<script>
+  window.onerror = function (msg, src, line, col) {
+    try {
+      var x = new XMLHttpRequest(); x.open('POST', '/api/clientlog', true);
+      x.send(msg + ' @ ' + (src || '').split('/').pop() + ':' + line + ':' + (col || 0) + ' | ' + navigator.userAgent);
+    } catch (e) {}
+  };
+  try { var sc = localStorage.getItem('scene'); if (sc === 'photos') location.replace('/' + location.search); else if (sc === 'meadow') location.replace('/meadow.html' + location.search); } catch (e) {}
+</script>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  /*
+   * "The city": a high corner apartment in Manhattan. The time, weather and wind live on
+   * screens inside the picture: a display on his desk, and the clock by the bed.
+   * Display ink #e9eef5 on near-black, amber accent #ffb36b, cyan #6fd0ff.
+   * Type: Big Shoulders Display for the screens, Newsreader for the rest.
+   * iOS 9 Safari: no CSS variables, no grid, prefixed flexbox.
+   */
+  html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden;
+    font-family: 'Newsreader', Georgia, serif; -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: rgba(0,0,0,0); }
+  #stage { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; overflow: hidden;
+    -webkit-transform-origin: 0 0; transform-origin: 0 0; -webkit-transition: opacity 2s; transition: opacity 2s; }
+  #world { position: absolute; left: 0; top: 0; width: 2048px; height: 768px; }
+  .half { position: absolute; top: 0; width: 1024px; height: 768px; overflow: hidden; }
+  .half > div { position: absolute; left: 0; top: 0; }
+  #bed { left: 0; } #desk { left: 1024px; }
+  .flex { display: -webkit-flex; display: flex; }
+  .tap { cursor: pointer; }
+  .tap:active { opacity: 0.6; }
+
+  /* the display on his desk */
+  .disp { color: #e9eef5; font-family: 'Big Shoulders Display', 'Newsreader', sans-serif; font-weight: 400; }
+  #dd { left: 50px; top: 324px; width: 236px; height: 156px; }
+  #dd .row { -webkit-justify-content: space-between; justify-content: space-between; -webkit-align-items: baseline; align-items: baseline; }
+  #dd-time { font-size: 60px; font-weight: 600; line-height: 0.9; letter-spacing: 0.5px; }
+  #dd-ampm { font-size: 20px; margin-left: 4px; color: #9fb0c8; }
+  #dd-temp { font-size: 36px; font-weight: 600; color: #ffb36b; line-height: 0.9; }
+  #dd-desc { font-size: 15px; color: #c7d2e2; margin-top: 5px; letter-spacing: 0.3px; }
+  #dd-wind { font-size: 15px; color: #6fd0ff; margin-top: 3px; letter-spacing: 0.3px; }
+  #dd-arrow { display: inline-block; margin-right: 5px; -webkit-transition: -webkit-transform 1s; transition: transform 1s; }
+  #dd-days { margin-top: 7px; font-size: 13px; color: #9fb0c8; -webkit-justify-content: space-between; justify-content: space-between; }
+  #dd-days b { font-weight: 600; color: #e9eef5; }
+  #dd-msg { display: none; margin-top: 7px; font-size: 14px; color: #ffb36b; line-height: 1.15; }
+
+  /* the clock by the bed: dim amber, as bedside clocks are */
+  #bc { left: 54px; top: 428px; width: 126px; height: 66px; text-align: center; color: #ffb36b; }
+  #bc-time { font-size: 38px; font-weight: 600; line-height: 1; }
+  #bc-time small { font-size: 14px; margin-left: 2px; }
+  #bc-line { font-size: 12px; color: #c9a074; margin-top: 2px; }
+  #bc-sun { font-size: 11px; color: #a8845e; }
+  #phone { left: 66px; top: 494px; width: 60px; height: 30px; opacity: 0;
+    background: -webkit-radial-gradient(center, ellipse, rgba(140,200,255,0.55), rgba(140,200,255,0) 70%);
+    background: radial-gradient(ellipse at center, rgba(140,200,255,0.55), rgba(140,200,255,0) 70%);
+    -webkit-transition: opacity 0.8s; transition: opacity 0.8s; }
+
+  #photo-hit { left: 748px; top: 272px; width: 220px; height: 160px; }
+
+  /* overlay: scene links, computer stats */
+  #nav { position: absolute; right: 22px; top: 18px; -webkit-align-items: center; align-items: center; }
+  #nav .link, #units { font-size: 15px; color: #e9eef5; padding: 6px 13px; margin-left: 8px; border-radius: 16px;
+    background: rgba(8,10,18,0.5); }
+  #units span { display: inline-block; padding: 0 4px; opacity: 0.5; }
+  #units span.on { opacity: 1; }
+  #sys { position: absolute; right: 24px; bottom: 16px; font-size: 16px; padding: 6px; color: #e7e3dc;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+  #sys span { margin-left: 16px; }
+  #sys b { font-weight: 500; }
+  #status { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-size: 16px; color: #f7f0dc; text-shadow: 0 1px 2px #000; }
+  #viewer { display: none; position: absolute; left: 0; top: 0; width: 1024px; height: 768px; background: rgba(6,8,12,0.9); }
+  #viewer.on { display: block; }
+  #viewer div { position: absolute; left: 92px; top: 64px; width: 840px; height: 630px; background-size: cover; background-position: center;
+    box-shadow: 0 0 0 10px #101216, 0 20px 60px rgba(0,0,0,0.6); }
+  #viewer p { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; color: #e9eef5; font-style: italic; font-size: 18px; opacity: 0.8; }
+  body.night #stage { opacity: 0.45; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="bed" class="half">
+      <div></div>
+      <div id="bc" class="disp"><div id="bc-time">--:--</div><div id="bc-line"></div><div id="bc-sun"></div></div>
+      <div id="phone"></div>
+    </div>
+    <div id="desk" class="half">
+      <div></div>
+      <div id="dd" class="disp">
+        <div class="row flex"><div><span id="dd-time">--:--</span><span id="dd-ampm"></span></div><div id="dd-temp"></div></div>
+        <div id="dd-desc"></div>
+        <div id="dd-wind"></div>
+        <div id="dd-days" class="flex"></div>
+        <div id="dd-msg"></div>
+      </div>
+      <div id="photo-hit" class="tap"></div>
+    </div>
+  </div>
+  <div id="nav" class="flex">
+    <div class="link tap" id="go-photos">Photo scene</div>
+    <div class="link tap" id="go-meadow">Meadow scene</div>
+    <div class="link tap" id="go-home">Home controls</div>
+    <div id="units" class="tap"><span data-u="F">°F</span><span data-u="C">°C</span></div>
+  </div>
+  <div id="sys" class="tap"></div>
+  <div id="status"></div>
+  <div id="viewer" class="tap"><div id="viewer-img"></div><p>Tap anywhere to go back to the city</p></div>
+</div>
+<script src="sky.js"></script>
+<script src="city.js"></script>
+<script>
+(function () {
+  var DSHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MSHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var COMPASS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+  var night = [23, 7], lastOk = 0, lastState = null, build = null;
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function setBodyClass(name, on) {
+    var c = (' ' + document.body.className + ' ').replace(' ' + name + ' ', ' ');
+    if (on) c += ' ' + name;
+    document.body.className = c.replace(/^\s+|\s+$/g, '').replace(/\s+/g, ' ');
+  }
+  function onTap(el, fn) { el.addEventListener('click', fn, false); }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+  var unit = store('unit') || null;
+  function T(c) { return c == null ? '--' : Math.round(unit === 'F' ? c * 9 / 5 + 32 : c); }
+  function paintUnits() {
+    var s = $('units').getElementsByTagName('span');
+    for (var i = 0; i < s.length; i++) s[i].className = s[i].getAttribute('data-u') === unit ? 'on' : '';
+  }
+  onTap($('units'), function () { unit = unit === 'F' ? 'C' : 'F'; store('unit', unit); paintUnits(); if (lastState) render(lastState); });
+  onTap($('go-photos'), function () { store('scene', 'photos'); location.href = '/'; });
+  onTap($('go-meadow'), function () { store('scene', 'meadow'); location.href = '/meadow.html'; });
+  onTap($('go-home'), function () { location.href = '/#home'; });
+  onTap($('sys'), function () { location.href = '/#system'; });
+  onTap($('photo-hit'), function () {
+    var src = City.photo();
+    $('viewer-img').style.backgroundImage = 'url(' + (src || City.snapshot()) + ')';
+    $('viewer').className = 'on tap';
+    clearTimeout(onTap.v); onTap.v = setTimeout(function () { $('viewer').className = 'tap'; }, 30000);
+  });
+  onTap($('viewer'), function () { $('viewer').className = 'tap'; });
+
+  function clock12(iso) { var p = iso.split('T')[1].split(':'), h = +p[0]; return (h % 12 || 12) + ':' + p[1] + (h < 12 ? ' am' : ' pm'); }
+  function windWords(kmh, dir, short) {
+    var from = dir == null ? '' : (short ? ' ' : ' from the ') + (short ? ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] : COMPASS)[Math.round(dir / 45) % 8];
+    var speed = unit === 'F' ? Math.round(kmh * 0.621) + ' mph' : Math.round(kmh) + ' km/h';
+    if (kmh < 2) return short ? 'calm' : 'Calm air';
+    if (short) return 'wind ' + speed + from;
+    var kind = kmh < 12 ? 'light breeze' : kmh < 29 ? 'steady breeze' : kmh < 39 ? 'fresh wind' : kmh < 50 ? 'strong wind' : 'gale';
+    return speed + from + ', a ' + kind;
+  }
+  function tick() {
+    var d = new Date(City.now()), h = d.getHours(), t = (h % 12 || 12) + ':' + pad(d.getMinutes()), ap = h < 12 ? 'am' : 'pm';
+    $('dd-time').textContent = t; $('dd-ampm').textContent = ap;
+    $('bc-time').innerHTML = t + '<small>' + ap + '</small>';
+    var real = new Date().getHours();
+    var isNight = night[0] > night[1] ? (real >= night[0] || real < night[1]) : (real >= night[0] && real < night[1]);
+    setBodyClass('night', isNight);
+    City.dim(isNight);
+    $('status').textContent = lastOk && Date.now() - lastOk > 30000 ? 'Lost connection to the panel server' : '';
+  }
+  setInterval(function () {   // a message lights up his phone now and then
+    if (City.view() !== 'bed' || Math.random() > 0.25) return;
+    $('phone').style.opacity = 1; setTimeout(function () { $('phone').style.opacity = 0; }, 4000);
+  }, 20000);
+
+  function renderWeather(w) {
+    City.setWeather(w);
+    if (!w || w.error) { $('dd-desc').textContent = 'Weather unavailable'; $('dd-temp').textContent = ''; $('dd-wind').textContent = ''; return; }
+    $('dd-temp').textContent = T(w.temp) + '°';
+    $('dd-desc').textContent = w.desc + ' in ' + (w.place || 'town') + (Math.abs(T(w.feels) - T(w.temp)) >= 3 ? ', feels ' + T(w.feels) + '°' : '');
+    var kmh = City.wind(), arrow = w.wind_dir == null ? '' : '<span id="dd-arrow" style="-webkit-transform:rotate(' + (w.wind_dir + 180) + 'deg);transform:rotate(' + (w.wind_dir + 180) + 'deg)">&#8593;</span>';
+    $('dd-wind').innerHTML = (kmh < 2 ? '' : arrow) + esc(windWords(kmh, w.wind_dir));
+    var html = '';
+    for (var i = 0; i < Math.min(4, w.days.length); i++) {
+      var dd = w.days[i], p = dd.date.split('-'), name = i === 0 ? 'Today' : DSHORT[new Date(+p[0], +p[1] - 1, +p[2]).getDay()];
+      html += '<div>' + name + ' <b>' + T(dd.hi) + '°</b> ' + T(dd.lo) + '°</div>';
+    }
+    $('dd-days').innerHTML = html;
+    var d = new Date(City.now() + (w.utc_offset || 0) * 1000), hm = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
+    var riseNext = hm < w.sunrise.split('T')[1] || hm >= w.sunset.split('T')[1];
+    $('bc-line').textContent = T(w.temp) + '° ' + w.desc.toLowerCase() + ', ' + windWords(kmh, w.wind_dir, true);
+    $('bc-sun').textContent = riseNext ? 'Sunrise ' + clock12(w.sunrise) : 'Sunset ' + clock12(w.sunset);
+  }
+  function renderSys(s) {
+    var sys = s.system, home = sys.disks && sys.disks[0];
+    $('sys').innerHTML = '<b>' + esc(s.host) + '</b><span>CPU ' + Math.round(sys.cpu || 0) + '%</span><span>Memory ' + Math.round(sys.mem.percent) + '%</span>' +
+      (home ? '<span>' + esc(home.label) + ' disk ' + Math.round(home.percent) + '%</span>' : '');
+  }
+  function render(s) {
+    if (build && s.build && s.build !== build) { location.reload(); return; }
+    build = s.build || build;
+    if (!store('scene') && !location.search && s.default_scene === 'photos') { location.replace('/'); return; }   // preview links stay here
+    if (!store('scene') && !location.search && s.default_scene === 'meadow') { location.replace('/meadow.html'); return; }
+    lastState = s; night = s.night || night;
+    if (!unit) { unit = s.default_unit || 'F'; paintUnits(); }
+    if (s.city) City.setHours(s.city.sleep_hour, s.city.wake_hour);
+    renderWeather(s.weather);
+    renderSys(s);
+    var m = $('dd-msg');
+    if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; $('dd-days').style.display = 'none'; }
+    else { m.style.display = 'none'; $('dd-days').style.display = ''; }
+    tick();
+  }
+  function poll() {
+    var x = new XMLHttpRequest();
+    x.open('GET', '/api/state?v=2&t=' + Date.now(), true);
+    x.timeout = 8000;
+    x.onload = function () {
+      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = Date.now(); } catch (e) { window.onerror(String(e), 'city.html', 0, 0); } }
+    };
+    x.send();
+  }
+  if (unit) paintUnits();
+  poll();
+  setInterval(tick, 1000);
+  setInterval(poll, 5000);
+  setTimeout(function () { location.reload(); }, 6 * 3600 * 1000);
+  try { var x = new XMLHttpRequest(); x.open('POST', '/api/clientlog', true); x.send('status: city scene loaded, screen ' + screen.width + 'x' + screen.height); } catch (e) {}
+})();
+</script>
+</body>
+</html>
