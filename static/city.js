@@ -175,7 +175,8 @@
     var x = o.x, t = o.top, w = o.w, b = o.bottom, s = o.s, R = o.R, col = o.col;
     var steps = o.tall && w > 18 && R() < 0.55;
     var body = [[x, t, w]];
-    if (steps) { var t1 = t + (b - t) * rnd(0.18, 0.32), t2 = t1 + (b - t1) * rnd(0.15, 0.3); body = [[x + w * 0.24, t, w * 0.52], [x + w * 0.1, t1, w * 0.8], [x, t2, w]]; }
+    // setbacks come from the seeded random too, so every device draws the same skyline
+    if (steps) { var t1 = t + (b - t) * (0.18 + R() * 0.14), t2 = t1 + (b - t1) * (0.15 + R() * 0.15); body = [[x + w * 0.24, t, w * 0.52], [x + w * 0.1, t1, w * 0.8], [x, t2, w]]; }
     g.fillStyle = col;
     for (var i = 0; i < body.length; i++) g.fillRect(body[i][0], body[i][1], body[i][2], b - body[i][1]);
     var top0 = body[0], cx = top0[0] + top0[2] / 2;
@@ -275,7 +276,7 @@
         var leaf = mix(mix('#4f7f3a', '#d0782e', S.turn), city.mid, phase === 'night' ? 0.7 : phase === 'golden' ? 0.3 : 0.15);
         g.fillStyle = leaf; g.beginPath(); g.arc(tx, y0 - 10, r, 0, 6.2832); g.fill();
       }
-      if (S.bloom > 0.1) { g.fillStyle = phase === 'night' ? '#8d8fa8' : '#f7c9d6'; for (var j = 0; j < 6; j++) { g.beginPath(); g.arc(tx + rnd(-r, r) * 0.8, y0 - 10 + rnd(-r, r) * 0.8, 1.1, 0, 6.2832); g.fill(); } }
+      if (S.bloom > 0.1) { g.fillStyle = phase === 'night' ? '#8d8fa8' : '#f7c9d6'; for (var j = 0; j < 6; j++) { g.beginPath(); g.arc(tx + (R() * 2 - 1) * r * 0.8, y0 - 10 + (R() * 2 - 1) * r * 0.8, 1.1, 0, 6.2832); g.fill(); } }
     }
   }
   function litFraction() {   // more windows lit in the evening, few in the small hours
