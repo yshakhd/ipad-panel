@@ -119,6 +119,9 @@
   <label for="time-range">Time of day <span id="time-val"></span></label>
   <input id="time-range" type="range" min="0" max="23.75" step="0.25" value="12">
 
+  <label for="day-range">Date <span id="day-val"></span></label>
+  <input id="day-range" type="range" min="0" max="29" step="1" value="0">
+
   <label for="place">Place</label>
   <div class="row"><input id="place" type="text" placeholder="Search a town" autocomplete="off"><button id="find" type="button">Go</button></div>
   <div class="row" style="margin-top:6px"><button id="find-here" type="button">Near me</button><button id="live" type="button">Live weather</button><button id="units" type="button">°F</button></div>
@@ -145,7 +148,7 @@
 
   var unit = /^en-US/.test(navigator.language || '') ? 'F' : 'C';
   var place = { name: q('place') || 'Kyoto', lat: +(q('lat') || 35.0116), lon: +(q('lon') || 135.7681) };
-  var live = null, manual = { code: null, wind: null }, timeH = q('time') ? (function (t) { var p = t.split(':'); return +p[0] + p[1] / 60; })(q('time')) : null;
+  var live = null, manual = { code: null, wind: null }, dayN = +(q('days') || 0), timeH = q('time') ? (function (t) { var p = t.split(':'); return +p[0] + p[1] / 60; })(q('time')) : null;
 
   function T(c) { return Math.round(unit === 'F' ? c * 9 / 5 + 32 : c); }
   function current() {   // live weather with any manual changes on top
@@ -190,10 +193,19 @@
   function tick() {
     var h = localNow(), f = fmt(h);
     $('time').textContent = f.t; $('ampm').textContent = f.ap;
-    var d = new Date(Date.now() + (live ? live.utc_offset : 0) * 1000);
+    var d = new Date(Date.now() + dayN * 86400000 + (live ? live.utc_offset : 0) * 1000);
     $('date').textContent = DAYS[d.getUTCDay()] + ', ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate();
     $('time-range').value = h;
+    $('day-range').value = dayN;
+    $('day-val').textContent = (dayN ? MONTHS[d.getUTCMonth()].slice(0, 3) + ' ' + d.getUTCDate() : 'today') + ', ' + moonWords();
     var tf = fmt(h); $('time-val').textContent = timeH === null ? 'now, ' + tf.t + ' ' + tf.ap : tf.t + ' ' + tf.ap;
+  }
+
+  function moonWords() {
+    var m = Meadow.moon(), side = m.waxing ? 'waxing' : 'waning';
+    var name = m.lit < 0.03 ? 'new moon' : m.lit < 0.4 ? side + ' crescent' : m.lit < 0.6 ? 'half moon' :
+      m.lit < 0.97 ? side + ' gibbous' : 'full moon';
+    return name + (m.lit < 0.03 ? '' : m.el < -4 ? ', below the horizon' : m.x < 0 || m.x > 1024 ? ', out of view' : ', in the sky');
   }
 
   function fetchWeather() {
@@ -231,7 +243,8 @@
   $('wind-range').oninput = function () { manual.wind = +this.value; render(); };
   $('kinds').onclick = function (e) { var c = e.target.getAttribute('data-code'); if (c === null) return; manual.code = +c; render(); };
   $('time-range').oninput = function () { timeH = +this.value; Meadow.setTime(timeH); render(); };
-  $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; Meadow.setTime(null); fetchWeather(); };
+  $('day-range').oninput = function () { dayN = +this.value; Meadow.setDays(dayN); render(); };
+  $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; dayN = 0; Meadow.setDays(0); Meadow.setTime(null); fetchWeather(); };
   $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; render(); };
   function search() {
     var name = $('place').value.replace(/^\s+|\s+$/g, ''); if (!name) return;

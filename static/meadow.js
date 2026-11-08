@@ -873,6 +873,7 @@
     builtAt = Date.now();
   }
   function minutesOf(iso) { var p = iso.split('T')[1].split(':'); return +p[0] * 60 + +p[1]; }
+  var dayShift = +param('days') || 0;   // preview another day, e.g. ?days=9
   var lastW = null, timeOverride = (function () { var m = /^(\d+):(\d+)$/.exec(param('time') || ''); return m ? +m[1] + m[2] / 60 : null; })();
   function setWeather(w) {
     if (!w || w.error) { if (!builtKey) { builtKey = 'none'; rebuild(); } return; }
@@ -882,7 +883,7 @@
       var off = (w.utc_offset || 0) * 1000, loc = new Date(Date.now() + off);
       timeShift = Date.UTC(loc.getUTCFullYear(), loc.getUTCMonth(), loc.getUTCDate()) + timeOverride * 3600000 - off - Date.now();
     } else timeShift = 0;
-    timeShift += (+param('days') || 0) * 86400000;   // preview another day, e.g. ?days=9
+    timeShift += dayShift * 86400000;
     var k = forced.wx ? kind : (KIND[w.code] || 'cloudy'), ph = phase;
     if (!forced.phase) {
       ph = w.is_day ? 'day' : 'night';
@@ -981,6 +982,15 @@
     snapshot: function () { return painting.toDataURL('image/jpeg', 0.9); },
     // hours since local midnight (e.g. 16.5), or null for the real time
     setTime: function (h) { timeOverride = h; if (lastW) setWeather(lastW); placeSun(); placeMoon(); },
+    // whole days ahead (or back) of today, to watch the moon go through its phases
+    setDays: function (n) { dayShift = n || 0; if (lastW) setWeather(lastW); placeSun(); placeMoon(); },
+    // the moon as drawn: el (degrees above the horizon), lit (0 new to 1 full), waxing, x on the stage
+    moon: function () {
+      var ms = Date.now() + timeShift, m = moonPosition(ms), n = days(ms);
+      m.waxing = Math.sin(moonLon(n).lam - sunLon(n)) > 0;
+      m.x = toScreen(m)[0];   // stage x; off either edge when it's far east or west
+      return m;
+    },
     // start painting an <img> (already loaded) right away; src is what a tap on the painting shows
     paint: function (img, src) { clearTimeout(cycle); current = src || null; paintFrom(img); cycle = setTimeout(nextPainting, paintSecs * 1000); },
     // photo URLs to cycle through, and seconds per painting
