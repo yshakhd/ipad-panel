@@ -333,16 +333,20 @@
   }
   function light(g, cx, cy, r, col, a) { var gr = g.createRadialGradient(cx, cy, 0, cx, cy, r); gr.addColorStop(0, rgba(col, a)); gr.addColorStop(1, rgba(col, 0)); g.fillStyle = gr; g.fillRect(cx - r, cy - r, r * 2, r * 2); }
 
-  var D = { code: { x: 446, y: 266, w: 280, h: 164 }, photo: { x: 748, y: 272, w: 236, h: 158 }, disp: { x: 36, y: 312, w: 264, h: 180 } };
+  var D = { code: { x: 446, y: 266, w: 280, h: 164 }, photo: { x: 748, y: 272, w: 236, h: 158 }, clock: { x: 134, y: 436, w: 122, h: 48 } };
   function drawDeskRoom() {
     var v = V.desk, g = v.room.getContext('2d'), night = phase === 'night', gold = phase === 'golden', i;
     g.clearRect(0, 0, W, H);
     wallAndWindow(g, v, 'desk');
+    stringLights(g, v);
     // floor and the dark under the desk
     var fg_ = g.createLinearGradient(0, 560, 0, H); fg_.addColorStop(0, room.dark); fg_.addColorStop(0.45, mix(room.dark, room.floor, 0.55)); fg_.addColorStop(1, room.floor);
     g.fillStyle = fg_; g.fillRect(0, 560, W, H - 560);
     g.strokeStyle = rgba(room.dark, 0.25); g.lineWidth = 1; g.beginPath();
     for (i = 0; i < 6; i++) { var py = 640 + i * i * 4.5; g.moveTo(0, py); g.lineTo(W, py); } g.stroke();   // floorboards
+    var rug = night ? '#3a2430' : '#9a4a3c';   // a rug under the chair
+    g.fillStyle = rug; ellipse(g, 380, 716, 300, 44); g.fill();
+    g.strokeStyle = mix(rug, '#f0d9b5', 0.35); g.lineWidth = 2; ellipse(g, 380, 716, 270, 36); g.stroke(); ellipse(g, 380, 716, 240, 29); g.stroke();
     g.fillStyle = rgba(room.dark, 0.35); ellipse(g, 372, 730, 120, 18); g.fill();   // the chair's shadow
     // desk: walnut top seen from just above, black steel legs
     g.fillStyle = room.dark; g.fillRect(30, 560, 12, H - 560); g.fillRect(W - 46, 560, 12, H - 560);
@@ -364,10 +368,7 @@
     g.fillStyle = '#222630'; g.fillRect(D.code.x + 70, D.code.y - 13, D.code.w - 140, 5);
     // second monitor's stand (the screen itself is a tilted element)
     g.fillStyle = '#16181d'; g.fillRect(852, 428, 11, 72); ellipse(g, 858, 503, 40, 5); g.fill();
-    // desk display (time, weather, wind) on a small stand
-    rrect(g, D.disp.x, D.disp.y, D.disp.w, D.disp.h, 10); g.fillStyle = '#0d0f13'; g.fill();
-    rrect(g, D.disp.x + 8, D.disp.y + 8, D.disp.w - 16, D.disp.h - 16, 5); g.fillStyle = '#05070b'; g.fill();
-    g.fillStyle = '#1a1c22'; g.fillRect(D.disp.x + D.disp.w / 2 - 30, D.disp.y + D.disp.h, 60, 8);
+    deskThings(g, R);
     // keyboard, mouse, mug, plant
     rrect(g, 396, 512, 170, 18, 4); g.fillStyle = '#1b1d23'; g.fill();
     g.fillStyle = night ? 'rgba(120,200,255,0.35)' : 'rgba(255,255,255,0.12)'; for (i = 0; i < 12; i++) g.fillRect(402 + i * 13.5, 515, 10, 3);
@@ -387,23 +388,109 @@
     if (night) {
       light(g, D.code.x + D.code.w / 2, D.code.y + 80, 330, '#4aa8ff', 0.22);
       light(g, D.code.x + D.code.w / 2, 506, 200, '#ffd7a0', 0.25);
-      light(g, D.disp.x + D.disp.w / 2, D.disp.y + 90, 190, '#ffb36b', 0.12);
+      light(g, 290, 512, 150, '#ffcf8a', 0.38);   // the desk lamp's pool
+      light(g, 278, 372, 26, '#fff0c8', 0.9);
+      light(g, D.clock.x + D.clock.w / 2, D.clock.y + 24, 90, '#ff8a3d', 0.16);
       light(g, 860, 360, 200, '#8fd0ff', 0.12);
     }
+  }
+  /* string lights along the top of the window: warm when the light goes */
+  function stringLights(g, v) {
+    var on = phase !== 'day' || oc > 0.5, n = Math.floor(v.w / 32), i, pts = [];
+    g.strokeStyle = rgba(room.dark, 0.7); g.lineWidth = 1; g.beginPath();
+    for (i = 0; i <= n; i++) {
+      var f = i / n, x = v.x + 8 + f * (v.w - 16), y = v.y + 4 + Math.abs(Math.sin(f * Math.PI * 3)) * 15;
+      pts.push([x, y]); if (i) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.stroke();
+    for (i = 1; i < pts.length - 1; i++) {
+      if (on) light(g, pts[i][0], pts[i][1] + 5, 15, '#ffc96e', phase === 'night' ? 0.6 : 0.4);
+      g.fillStyle = on ? '#fff1c8' : 'rgba(255,244,214,0.7)'; ellipse(g, pts[i][0], pts[i][1] + 5, 2.4, 3.4); g.fill();
+    }
+  }
+  function leafCol() { return phase === 'night' ? '#173322' : phase === 'golden' ? '#56702f' : '#3f7a3a'; }
+  function vine(g, x, y, len, sway, R) {   // a trailing pothos stem
+    var i, n = Math.floor(len / 11);
+    g.strokeStyle = mix(leafCol(), '#000000', 0.2); g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y);
+    for (i = 1; i <= n; i++) g.lineTo(x + Math.sin(i * 0.5) * sway, y + i * 11);
+    g.stroke();
+    for (i = 1; i <= n; i++) {
+      var lx = x + Math.sin(i * 0.5) * sway, ly = y + i * 11, side = i % 2 ? 1 : -1;
+      g.fillStyle = mix(leafCol(), i % 3 ? '#000000' : '#d8e8a0', 0.15 + R() * 0.15);
+      g.save(); g.translate(lx + side * 5, ly); g.rotate(side * 0.7 + 1.57); ellipse(g, 0, 0, 7 - i * 0.25, 4.5 - i * 0.12); g.fill(); g.restore();
+    }
+  }
+  function cat(g, hx, hy) {   // curled up asleep, head tucked by the tail
+    var c = phase === 'night' ? '#3a3d4a' : '#7b7f8b', d = mix(c, '#000000', 0.25);
+    g.fillStyle = c; ellipse(g, hx + 26, hy + 4, 30, 15); g.fill(); g.beginPath(); g.arc(hx, hy, 11, 0, 6.2832); g.fill();
+    g.beginPath(); g.moveTo(hx - 8, hy - 8); g.lineTo(hx - 6, hy - 18); g.lineTo(hx, hy - 10); g.moveTo(hx + 2, hy - 10); g.lineTo(hx + 8, hy - 19); g.lineTo(hx + 10, hy - 8); g.fill();
+    g.fillStyle = d; g.fillRect(hx + 14, hy - 8, 2, 7); g.fillRect(hx + 22, hy - 10, 2, 8); g.fillRect(hx + 30, hy - 9, 2, 7);   // tabby stripes
+    g.strokeStyle = c; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx + 54, hy + 8); g.quadraticCurveTo(hx + 50, hy + 22, hx + 18, hy + 18); g.stroke();
+    g.strokeStyle = d; g.lineWidth = 1.2; g.beginPath(); g.arc(hx - 4, hy + 1, 2.5, 0.3, 2.8); g.stroke();
+  }
+  function deskThings(g, R) {
+    var night = phase === 'night', i;
+    cat(g, 46, 488);   // the cat naps on the desk while he works
+    // books, with the clock on top
+    g.fillStyle = night ? '#1f2a44' : '#2f4a73'; g.fillRect(124, 484, 142, 8);
+    g.fillStyle = night ? '#4a3b22' : '#d0a24a'; g.fillRect(130, 492, 132, 8);
+    g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(130, 487, 120, 1); g.fillRect(136, 495, 110, 1);
+    rrect(g, D.clock.x, D.clock.y, D.clock.w, D.clock.h, 6); g.fillStyle = night ? '#241d1a' : '#5b4231'; g.fill();
+    rrect(g, D.clock.x + 6, D.clock.y + 6, D.clock.w - 12, D.clock.h - 12, 3); g.fillStyle = '#0b0807'; g.fill();
+    // an anglepoise lamp leaning over the desk
+    var lc = night ? '#2a2d36' : '#d9573e';
+    g.fillStyle = lc; ellipse(g, 286, 500, 18, 4.5); g.fill();
+    g.strokeStyle = lc; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(286, 498); g.lineTo(262, 404); g.lineTo(292, 352); g.stroke();
+    g.fillStyle = lc; g.beginPath(); g.arc(262, 404, 4, 0, 6.2832); g.fill();
+    g.save(); g.translate(292, 352); g.rotate(0.45);
+    g.beginPath(); g.moveTo(-6, -4); g.lineTo(6, -4); g.lineTo(16, 20); g.lineTo(-16, 20); g.closePath(); g.fill(); g.restore();
+    // a rubber duck on the monitor, and sticky notes on its edge
+    var dx = D.code.x + D.code.w - 40, dy = D.code.y - 8;
+    g.fillStyle = '#ffd23f'; ellipse(g, dx, dy, 9, 6); g.fill(); g.beginPath(); g.arc(dx + 6, dy - 7, 5, 0, 6.2832); g.fill();
+    g.fillStyle = '#ff8c2e'; g.beginPath(); g.moveTo(dx + 10, dy - 7); g.lineTo(dx + 15, dy - 5); g.lineTo(dx + 10, dy - 4); g.fill();
+    g.fillStyle = '#1b1b1b'; g.fillRect(dx + 7, dy - 9, 1.5, 1.5);
+    var notes = [['#ffe36e', 0.06, 300], ['#ff9fb4', -0.08, 322], ['#9fe0ff', 0.04, 346]];
+    for (i = 0; i < notes.length; i++) {
+      g.save(); g.translate(D.code.x + D.code.w + 12, notes[i][2]); g.rotate(notes[i][1]);
+      g.fillStyle = night ? mix(notes[i][0], '#1a1c2c', 0.55) : notes[i][0]; g.fillRect(-8, -8, 17, 17);
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(-5, -3, 11, 1); g.fillRect(-5, 1, 8, 1); g.restore();
+    }
+    // a plant hanging from the ceiling in front of the glass
+    g.strokeStyle = rgba(room.dark, 0.55); g.lineWidth = 1; g.beginPath();
+    var px = 548, py = 84;
+    g.moveTo(px, 0); g.lineTo(px - 16, py); g.moveTo(px, 0); g.lineTo(px + 16, py); g.moveTo(px, 0); g.lineTo(px, py - 2); g.stroke();
+    g.fillStyle = night ? '#4a2c22' : '#c46a45'; g.beginPath(); g.moveTo(px - 22, py); g.lineTo(px + 22, py); g.quadraticCurveTo(px + 20, py + 26, px, py + 28); g.quadraticCurveTo(px - 20, py + 26, px - 22, py); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(px - 20, py + 2, 40, 2);
+    var vines = [[-16, 96, 6], [-8, 124, -5], [4, 60, 4], [14, 104, 7], [20, 44, -3]];
+    for (i = 0; i < vines.length; i++) vine(g, px + vines[i][0], py + 6, vines[i][1], vines[i][2], R);
+    g.fillStyle = leafCol(); for (i = 0; i < 7; i++) { g.save(); g.translate(px - 18 + i * 6, py - 4 - (i % 3) * 4); g.rotate(-0.9 + i * 0.3); ellipse(g, 0, 0, 9, 5); g.fill(); g.restore(); }
+  }
+
+  function stack(g) {   // books on the windowsill and a little plant
+    var x = V.bed.x + V.bed.w - 120, y = V.bed.y + V.bed.h + 8, cols = ['#7a4a6a', '#2f6a73', '#c9a24a', '#a8473c'];
+    for (var i = 0; i < 4; i++) { g.fillStyle = phase === 'night' ? mix(cols[i], '#10142a', 0.6) : cols[i]; g.fillRect(x + i * 9, y - 26 - (i % 2) * 4, 8, 26 + (i % 2) * 4); }
+    g.fillStyle = phase === 'night' ? '#3a2a24' : '#d9cfc2'; g.fillRect(x + 54, y - 14, 18, 14);
+    g.fillStyle = leafCol(); for (i = 0; i < 6; i++) { g.save(); g.translate(x + 63, y - 14); g.rotate(-1.1 + i * 0.45); ellipse(g, 0, -9, 3, 9); g.fill(); g.restore(); }
   }
   function drawBedRoom() {
     var v = V.bed, g = v.room.getContext('2d'), night = phase === 'night', i;
     g.clearRect(0, 0, W, H);
     wallAndWindow(g, v, 'bed');
+    stringLights(g, v);
     g.fillStyle = mix(room.wall, '#ffffff', night ? 0.05 : 0.35); g.fillRect(v.x - 16, v.y + v.h + 8, v.w + 32, 10);   // sill
     g.fillStyle = room.floor; g.fillRect(0, 640, W, H - 640);
     g.fillStyle = rgba(mix(room.duvet, room.floor, 0.5), 0.6); ellipse(g, 600, 712, 380, 40); g.fill();
     g.fillStyle = mix(room.wallLo, '#000000', 0.2); g.fillRect(W - 22, 0, 22, H);   // the wall between the rooms
     // a print on the wall
-    g.fillStyle = room.frame; g.fillRect(56, 112, 140, 180);
-    var gr = g.createLinearGradient(0, 122, 0, 282); gr.addColorStop(0, night ? '#2a3150' : '#e7b48f'); gr.addColorStop(1, night ? '#151a30' : '#5f6f95');
-    g.fillStyle = gr; g.fillRect(64, 120, 124, 164);
-    g.fillStyle = night ? '#0e1122' : '#2f3550'; for (i = 0; i < 9; i++) { var bh = 20 + ((i * 37) % 60); g.fillRect(68 + i * 13, 284 - bh, 10, bh); }
+    g.fillStyle = room.frame; g.fillRect(64, 236, 124, 160);
+    var gr = g.createLinearGradient(0, 244, 0, 388); gr.addColorStop(0, night ? '#2a3150' : '#e7b48f'); gr.addColorStop(1, night ? '#151a30' : '#5f6f95');
+    g.fillStyle = gr; g.fillRect(71, 243, 110, 146);
+    g.fillStyle = night ? '#f3e7c8' : '#fff4d8'; g.beginPath(); g.arc(150, 278, 9, 0, 6.2832); g.fill();
+    g.fillStyle = night ? '#0e1122' : '#2f3550'; for (i = 0; i < 8; i++) { var bh = 18 + ((i * 37) % 54); g.fillRect(74 + i * 13.5, 389 - bh, 11, bh); }
+    g.fillStyle = night ? '#4a3a32' : '#c9a27e';   // slippers by the bed
+    ellipse(g, 300, 672, 22, 8); g.fill(); ellipse(g, 342, 684, 22, 8); g.fill();
+    g.fillStyle = rgba(room.dark, 0.2); ellipse(g, 292, 670, 10, 4); g.fill(); ellipse(g, 334, 682, 10, 4); g.fill();
+    stack(g);
     // nightstand and clock
     g.fillStyle = room.wood; g.fillRect(30, 504, 172, 14); g.fillStyle = mix(room.wood, '#000000', 0.2); g.fillRect(38, 518, 156, 132);
     g.fillStyle = mix(room.wood, '#ffffff', 0.12); g.fillRect(48, 560, 136, 2); g.fillRect(104, 536, 24, 4);
@@ -426,14 +513,16 @@
     g.save(); g.beginPath(); g.moveTo(v.x, v.y + v.h + 18); g.lineTo(v.x + v.w, v.y + v.h + 18); g.lineTo(W - 10, 640); g.lineTo(v.x, 640); g.closePath();
     g.fillStyle = night ? 'rgba(120,140,220,0.10)' : phase === 'golden' ? 'rgba(255,170,100,0.22)' : 'rgba(255,255,255,0.12)'; g.fill(); g.restore();
     if (night) light(g, 117, 460, 140, '#ffb36b', 0.14);
+
   }
 
   /* he sits with his back to us, headphones on, like the painter */
-  var guy = {}, duvet = null;
+  var guy = {}, duvet = null, steamEls = [];
   function sprite(box, x, y, w, h, draw) { var c = mk(w, h), g = c.getContext('2d'); g.translate(-x, -y); draw(g); return place(box, c, x, y); }
   function buildPeople() {
     var bd = V.desk.box, bb = V.bed.box, rim = room.rim, night = phase === 'night';
-    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
+    steamEls.forEach(function (e) { if (e.parentNode) e.parentNode.removeChild(e); }); steamEls = [];
+    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
     var awake = view === 'desk';
     if (awake) {
       guy.armL = sprite(bd, 236, 440, 110, 110, function (g) { arm(g, 300, 452, 262, 528, 304, 520); });
@@ -468,6 +557,12 @@
         if (rim) { g.strokeStyle = rgba(rim, 0.25); g.lineWidth = 2; g.beginPath(); g.moveTo(454, 496); g.lineTo(454, 600); g.stroke(); }
       });
       guy.bedEmpty = sprite(bb, 340, 470, 680, 180, function (g) { duvetShape(g, false); });
+      guy.deskCat = null;
+      for (var k = 0; k < 2; k++) {   // steam off his coffee
+        var st = mk(22, 40), sg = st.getContext('2d');
+        for (var j = 0; j < 6; j++) { var gx = 11 + Math.sin(j * 1.1) * 4, gy = 36 - j * 6, rg = sg.createRadialGradient(gx, gy, 0, gx, gy, 5 + j); rg.addColorStop(0, 'rgba(255,255,255,' + (night ? 0.14 : 0.3) + ')'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = rg; sg.fillRect(0, 0, 22, 40); }
+        steamEls.push(place(bd, st, 692, 452));
+      }
     } else {
       // asleep: the desk is empty and dark; the duvet breathes
       guy.empty = sprite(bd, 260, 450, 230, 318, function (g) {
@@ -498,11 +593,10 @@
     g.fillStyle = mix(room.skin, room.duvet, 0.1); g.lineCap = 'round'; g.strokeStyle = room.skin; g.lineWidth = 11;   // an arm over the covers
     g.beginPath(); g.moveTo(386, 512); g.quadraticCurveTo(430, 524, 470, 520); g.stroke();
     g.fillStyle = '#6f7480'; ellipse(g, 384, 512, 12, 9); g.fill();
-    // the cat, curled up by his feet
-    var cat = phase === 'night' ? '#3a3d4a' : '#7b7f8b';
-    g.fillStyle = cat; ellipse(g, 892, 488, 30, 15); g.fill(); g.beginPath(); g.arc(866, 484, 11, 0, 6.2832); g.fill();
-    g.beginPath(); g.moveTo(858, 476); g.lineTo(860, 466); g.lineTo(866, 474); g.moveTo(868, 474); g.lineTo(874, 465); g.lineTo(876, 476); g.fill();
-    g.strokeStyle = cat; g.lineWidth = 6; g.beginPath(); g.moveTo(920, 492); g.quadraticCurveTo(916, 506, 884, 502); g.stroke();
+    cat(g, 866, 484);   // the cat, curled up by his feet
+    g.fillStyle = room.hood; g.beginPath();   // his hoodie, thrown over the end of the bed
+    g.moveTo(958, 532); g.quadraticCurveTo(984, 520, 1000, 540); g.lineTo(1002, 610); g.quadraticCurveTo(990, 620, 980, 606); g.quadraticCurveTo(966, 570, 958, 532); g.fill();
+    g.strokeStyle = rgba(room.hoodHi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
   }
 
   /* ---------------- the code on his screen ----------------
@@ -557,7 +651,8 @@
     if (code.row >= ROWS) {   // scroll the editor up a line
       code.row = ROWS - 1;
       cg.drawImage(cs, 0, rowY(1) - 1, D.code.w, LH * (ROWS - 1), 0, rowY(0) - 1, D.code.w, LH * (ROWS - 1));
-      cg.fillStyle = '#0d1320'; cg.fillRect(0, rowY(code.row) - 1, D.code.w, LH);
+      cg.fillStyle = '#0d1320'; cg.fillRect(0, rowY(code.row) - 1, D.code.w, D.code.h - 11 - rowY(code.row) + 1);
+      cg.fillRect(0, 14, D.code.w, rowY(0) - 15);   // glyph edges that bled past the rows
     }
     gutter(code.row, code.li + 1);
     var lead = /^\s*/.exec(code.lines[code.li])[0].length;   // the editor indents for him
@@ -819,6 +914,11 @@
         tr(guy.armL, 'translate3d(' + (typing ? rnd(-1, 1) : 0).toFixed(1) + 'px,' + (typing ? rnd(-1.2, 0.6) : 0).toFixed(1) + 'px,0)');
         tr(guy.armR, 'translate3d(' + (typing ? rnd(-1, 1) : 0).toFixed(1) + 'px,' + (typing ? rnd(-1.2, 0.6) : 0).toFixed(1) + 'px,0)');
         jitterAt = t + 0.08;
+      }
+      for (i = 0; i < steamEls.length; i++) {
+        var sp = (t / 3.2 + i * 0.5) % 1;
+        steamEls[i].style.opacity = (Math.sin(sp * Math.PI) * 0.9).toFixed(2);
+        tr(steamEls[i], 'translate3d(' + (Math.sin(t + i) * 2).toFixed(1) + 'px,' + (-sp * 22).toFixed(1) + 'px,0)');
       }
     } else if (duvet) {
       tr(duvet, 'scaleY(' + (1 + 0.022 * (0.5 + 0.5 * Math.sin(t * 6.2832 / 4.6))).toFixed(4) + ')');   // slow breathing

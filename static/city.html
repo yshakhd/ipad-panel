@@ -19,10 +19,10 @@
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
   /*
-   * "The city": a high corner apartment in Manhattan. The time, weather and wind live on
-   * screens inside the picture: a display on his desk, and the clock by the bed.
-   * Display ink #e9eef5 on near-black, amber accent #ffb36b, cyan #6fd0ff.
-   * Type: Big Shoulders Display for the screens, Newsreader for the rest.
+   * "The city": a high corner apartment in Manhattan. The time and weather sit over the
+   * picture as in the meadow; the time also glows on the clock on his desk and by the bed.
+   * Sky ink: day #16202e, golden and night #fbf3e6. Clocks: amber #ff9a4a.
+   * Type: Newsreader for the words, Big Shoulders Display for the clocks.
    * iOS 9 Safari: no CSS variables, no grid, prefixed flexbox.
    */
   html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden;
@@ -38,25 +38,42 @@
   .tap { cursor: pointer; }
   .tap:active { opacity: 0.6; }
 
-  /* the display on his desk */
-  .disp { color: #e9eef5; font-family: 'Big Shoulders Display', 'Newsreader', sans-serif; font-weight: 400; }
-  #dd { left: 50px; top: 324px; width: 236px; height: 156px; }
-  #dd .row { -webkit-justify-content: space-between; justify-content: space-between; -webkit-align-items: baseline; align-items: baseline; }
-  #dd-time { font-size: 60px; font-weight: 600; line-height: 0.9; letter-spacing: 0.5px; }
-  #dd-ampm { font-size: 20px; margin-left: 4px; color: #9fb0c8; }
-  #dd-temp { font-size: 36px; font-weight: 600; color: #ffb36b; line-height: 0.9; }
-  #dd-desc { font-size: 15px; color: #c7d2e2; margin-top: 5px; letter-spacing: 0.3px; }
-  #dd-wind { font-size: 15px; color: #6fd0ff; margin-top: 3px; letter-spacing: 0.3px; }
-  #dd-arrow { display: inline-block; margin-right: 5px; -webkit-transition: -webkit-transform 1s; transition: transform 1s; }
-  #dd-days { margin-top: 7px; font-size: 13px; color: #9fb0c8; -webkit-justify-content: space-between; justify-content: space-between; }
-  #dd-days b { font-weight: 600; color: #e9eef5; }
-  #dd-msg { display: none; margin-top: 7px; font-size: 14px; color: #ffb36b; line-height: 1.15; }
+  /* words over the picture, as in the meadow: ink follows the light */
+  #info { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; pointer-events: none;
+    -webkit-transition: -webkit-transform 2s; transition: transform 2s; }
+  #info .tap { pointer-events: auto; }
+  .sky { color: #16202e; text-shadow: 0 0 16px rgba(255,255,255,0.6), 0 0 3px rgba(255,255,255,0.45); }
+  body.ph-golden .sky, body.ph-night .sky { color: #fbf3e6; text-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 18px rgba(10,6,20,0.6); }
+  .ground { color: #f7f0e6; text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 14px rgba(0,0,0,0.6); }
+  #clock { position: absolute; left: 50px; top: 26px; }
+  #time { font-size: 150px; line-height: 1; letter-spacing: -4px; }
+  #ampm { font-size: 40px; font-style: italic; margin-left: 10px; }
+  #date { font-size: 28px; font-style: italic; margin-top: 2px; margin-left: 6px; }
+  #msg { display: none; font-size: 24px; margin: 14px 0 0 6px; max-width: 380px; line-height: 1.3; }
+  #msg:before { content: ''; display: inline-block; width: 26px; height: 2px; background: currentColor; vertical-align: middle; margin-right: 10px; opacity: 0.7; }
+  #weather { position: absolute; right: 44px; top: 62px; width: 420px; text-align: right; }
+  #w-temp { font-size: 80px; line-height: 0.95; letter-spacing: -3px; }
+  #w-text { font-size: 21px; line-height: 1.3; margin-top: 4px; }
+  #w-sun { font-size: 18px; font-style: italic; margin-top: 1px; opacity: 0.85; }
+  #w-days { margin-top: 4px; -webkit-justify-content: flex-end; justify-content: flex-end; }
+  .day { margin-left: 16px; font-size: 18px; line-height: 1.25; }
+  .day i { font-size: 17px; opacity: 0.85; margin-right: 4px; }
+  .day .lo { opacity: 0.6; }
+  #wind { position: absolute; left: 44px; top: 640px; }
+  #wind-speed { font-size: 56px; line-height: 1; }
+  #wind-speed small { font-size: 24px; margin-left: 6px; font-style: italic; }
+  #wind-words { font-size: 20px; font-style: italic; margin-top: 2px; }
+
+  /* the digital clock on his desk */
+  #dclock { left: 140px; top: 442px; width: 110px; height: 36px; text-align: center; color: #ff9a4a;
+    font-family: 'Big Shoulders Display', sans-serif; font-weight: 600; font-size: 30px; line-height: 36px; letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(255,140,60,0.8); }
+  #dclock small { font-size: 13px; margin-left: 3px; letter-spacing: 0; }
 
   /* the clock by the bed: dim amber, as bedside clocks are */
   #bc { left: 54px; top: 428px; width: 126px; height: 66px; text-align: center; color: #ffb36b; }
   #bc-time { font-size: 38px; font-weight: 600; line-height: 1; }
   #bc-time small { font-size: 14px; margin-left: 2px; }
-  #bc-line { font-size: 12px; color: #c9a074; margin-top: 2px; }
   #bc-sun { font-size: 11px; color: #a8845e; }
   #phone { left: 66px; top: 494px; width: 60px; height: 30px; opacity: 0;
     background: -webkit-radial-gradient(center, ellipse, rgba(140,200,255,0.55), rgba(140,200,255,0) 70%);
@@ -65,7 +82,7 @@
 
   #photo-hit { left: 748px; top: 272px; width: 220px; height: 160px; }
 
-  /* overlay: scene links, computer stats */
+  /* scene links, computer stats */
   #nav { position: absolute; right: 22px; top: 18px; -webkit-align-items: center; align-items: center; }
   #nav .link, #units { font-size: 15px; color: #e9eef5; padding: 6px 13px; margin-left: 8px; border-radius: 16px;
     background: rgba(8,10,18,0.5); }
@@ -89,19 +106,30 @@
   <div id="world">
     <div id="bed" class="half">
       <div></div>
-      <div id="bc" class="disp"><div id="bc-time">--:--</div><div id="bc-line"></div><div id="bc-sun"></div></div>
+      <div id="bc" class="disp"><div id="bc-time">--:--</div><div id="bc-sun"></div></div>
       <div id="phone"></div>
     </div>
     <div id="desk" class="half">
       <div></div>
-      <div id="dd" class="disp">
-        <div class="row flex"><div><span id="dd-time">--:--</span><span id="dd-ampm"></span></div><div id="dd-temp"></div></div>
-        <div id="dd-desc"></div>
-        <div id="dd-wind"></div>
-        <div id="dd-days" class="flex"></div>
-        <div id="dd-msg"></div>
-      </div>
+      <div id="dclock">--:--</div>
       <div id="photo-hit" class="tap"></div>
+    </div>
+  </div>
+  <div id="info">
+    <div id="clock" class="sky">
+      <div><span id="time">--:--</span><span id="ampm"></span></div>
+      <div id="date"></div>
+      <div id="msg"></div>
+    </div>
+    <div id="weather" class="sky">
+      <div id="w-temp"></div>
+      <div id="w-text"></div>
+      <div id="w-sun"></div>
+      <div id="w-days" class="flex"></div>
+    </div>
+    <div id="wind" class="ground">
+      <div id="wind-speed"></div>
+      <div id="wind-words"></div>
     </div>
   </div>
   <div id="nav" class="flex">
@@ -118,8 +146,9 @@
 <script src="city.js"></script>
 <script>
 (function () {
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var DSHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  var MSHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var COMPASS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
   var night = [23, 7], lastOk = 0, lastState = null, build = null;
   function $(id) { return document.getElementById(id); }
@@ -153,18 +182,20 @@
   onTap($('viewer'), function () { $('viewer').className = 'tap'; });
 
   function clock12(iso) { var p = iso.split('T')[1].split(':'), h = +p[0]; return (h % 12 || 12) + ':' + p[1] + (h < 12 ? ' am' : ' pm'); }
-  function windWords(kmh, dir, short) {
-    var from = dir == null ? '' : (short ? ' ' : ' from the ') + (short ? ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] : COMPASS)[Math.round(dir / 45) % 8];
-    var speed = unit === 'F' ? Math.round(kmh * 0.621) + ' mph' : Math.round(kmh) + ' km/h';
-    if (kmh < 2) return short ? 'calm' : 'Calm air';
-    if (short) return 'wind ' + speed + from;
-    var kind = kmh < 12 ? 'light breeze' : kmh < 29 ? 'steady breeze' : kmh < 39 ? 'fresh wind' : kmh < 50 ? 'strong wind' : 'gale';
-    return speed + from + ', a ' + kind;
+  function windWords(kmh, dir) {
+    var from = dir == null ? '' : ' from the ' + COMPASS[Math.round(dir / 45) % 8];
+    if (kmh < 2) return 'Still air over the city.';
+    var kind = kmh < 12 ? 'A light breeze' : kmh < 29 ? 'A steady breeze' : kmh < 39 ? 'A fresh wind' : kmh < 50 ? 'A strong wind' : kmh < 62 ? 'Near-gale winds' : 'Gale-force winds';
+    return kind + from + '.';
   }
   function tick() {
     var d = new Date(City.now()), h = d.getHours(), t = (h % 12 || 12) + ':' + pad(d.getMinutes()), ap = h < 12 ? 'am' : 'pm';
-    $('dd-time').textContent = t; $('dd-ampm').textContent = ap;
+    $('time').textContent = t; $('ampm').textContent = ap;
+    $('date').textContent = DAYS[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate();
+    $('dclock').innerHTML = t + '<small>' + ap + '</small>';
     $('bc-time').innerHTML = t + '<small>' + ap + '</small>';
+    var ph = City.phase();
+    setBodyClass('ph-day', ph === 'day'); setBodyClass('ph-golden', ph === 'golden'); setBodyClass('ph-night', ph === 'night');
     var real = new Date().getHours();
     var isNight = night[0] > night[1] ? (real >= night[0] || real < night[1]) : (real >= night[0] && real < night[1]);
     setBodyClass('night', isNight);
@@ -178,21 +209,27 @@
 
   function renderWeather(w) {
     City.setWeather(w);
-    if (!w || w.error) { $('dd-desc').textContent = 'Weather unavailable'; $('dd-temp').textContent = ''; $('dd-wind').textContent = ''; return; }
-    $('dd-temp').textContent = T(w.temp) + '°';
-    $('dd-desc').textContent = w.desc + ' in ' + (w.place || 'town') + (Math.abs(T(w.feels) - T(w.temp)) >= 3 ? ', feels ' + T(w.feels) + '°' : '');
-    var kmh = City.wind(), arrow = w.wind_dir == null ? '' : '<span id="dd-arrow" style="-webkit-transform:rotate(' + (w.wind_dir + 180) + 'deg);transform:rotate(' + (w.wind_dir + 180) + 'deg)">&#8593;</span>';
-    $('dd-wind').innerHTML = (kmh < 2 ? '' : arrow) + esc(windWords(kmh, w.wind_dir));
-    var html = '';
-    for (var i = 0; i < Math.min(4, w.days.length); i++) {
-      var dd = w.days[i], p = dd.date.split('-'), name = i === 0 ? 'Today' : DSHORT[new Date(+p[0], +p[1] - 1, +p[2]).getDay()];
-      html += '<div>' + name + ' <b>' + T(dd.hi) + '°</b> ' + T(dd.lo) + '°</div>';
+    if (!w || w.error) {
+      $('w-temp').textContent = ''; $('w-text').textContent = 'Weather is unavailable right now.';
+      $('w-sun').textContent = ''; $('w-days').innerHTML = ''; return;
     }
-    $('dd-days').innerHTML = html;
+    $('w-temp').textContent = T(w.temp) + '°';
+    var feels = Math.abs(T(w.feels) - T(w.temp)) >= 3;
+    $('w-text').textContent = w.desc + ' in ' + (w.place || 'town') + (feels ? ', feels like ' + T(w.feels) + '°.' : '.');
     var d = new Date(City.now() + (w.utc_offset || 0) * 1000), hm = pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
-    var riseNext = hm < w.sunrise.split('T')[1] || hm >= w.sunset.split('T')[1];
-    $('bc-line').textContent = T(w.temp) + '° ' + w.desc.toLowerCase() + ', ' + windWords(kmh, w.wind_dir, true);
+    var setHm = w.sunset.split('T')[1], riseHm = w.sunrise.split('T')[1], riseNext = hm < riseHm || hm >= setHm;
+    $('w-sun').textContent = riseNext ? 'Sunrise at ' + clock12(w.sunrise) : 'Sunset at ' + clock12(w.sunset);
     $('bc-sun').textContent = riseNext ? 'Sunrise ' + clock12(w.sunrise) : 'Sunset ' + clock12(w.sunset);
+    var html = '';
+    for (var i = 1; i < Math.min(4, w.days.length); i++) {
+      var dd = w.days[i], p = dd.date.split('-');
+      var name = i === 0 ? 'Today' : DSHORT[new Date(+p[0], +p[1] - 1, +p[2]).getDay()];
+      html += '<div class="day"><i>' + name + '</i>' + T(dd.hi) + '° <span class="lo">' + T(dd.lo) + '°</span></div>';
+    }
+    $('w-days').innerHTML = html;
+    var kmh = City.wind();
+    $('wind-speed').innerHTML = kmh < 2 ? 'Calm' : (unit === 'F' ? Math.round(kmh * 0.621) + '<small>mph</small>' : Math.round(kmh) + '<small>km/h</small>');
+    $('wind-words').textContent = windWords(kmh, w.wind_dir);
   }
   function renderSys(s) {
     var sys = s.system, home = sys.disks && sys.disks[0];
@@ -209,9 +246,8 @@
     if (s.city) City.setHours(s.city.sleep_hour, s.city.wake_hour);
     renderWeather(s.weather);
     renderSys(s);
-    var m = $('dd-msg');
-    if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; $('dd-days').style.display = 'none'; }
-    else { m.style.display = 'none'; $('dd-days').style.display = ''; }
+    var m = $('msg');
+    if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; } else m.style.display = 'none';
     tick();
   }
   function poll() {
@@ -223,6 +259,12 @@
     };
     x.send();
   }
+  var shift = 0;   // move the words a few pixels every 5 min against LCD image retention
+  setInterval(function () {
+    shift = (shift + 1) % 4;
+    var t = 'translate(' + [0, 4, 4, 0][shift] + 'px,' + [0, 0, -4, -4][shift] + 'px)';
+    $('info').style.webkitTransform = t; $('info').style.transform = t;
+  }, 300000);
   if (unit) paintUnits();
   poll();
   setInterval(tick, 1000);

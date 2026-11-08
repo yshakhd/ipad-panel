@@ -44,8 +44,9 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
   over the East River. The rest of the day he's at his desk by the west window,
   typing the scene's own code on one monitor and editing your photos on the
   other, while the real sunset drops behind the Hudson and the towers light up.
-  The time, weather and wind are on a display on his desk, and on the clock by
-  the bed. The camera pans across the apartment when he gets up or turns in.
+  The time and weather sit over the scene as in the meadow, and the time also
+  glows on a digital clock on his desk and by the bed. The camera pans across
+  the apartment when he gets up or turns in.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
   a time-of-day tint and animated weather.
 - **Both scenes** show the time, date, temperature, feels-like, humidity,
