@@ -712,13 +712,13 @@
   }
   function herHead(g, rim, night) {   // the back of her head: all black curls, headphones over them
     var hair = room.hair, R = seeded(23), i;
-    g.fillStyle = hair; ellipse(g, 372, 391, 31, 35); g.fill();
+    g.fillStyle = hair; ellipse(g, 372, 394, 31, 33); g.fill();   // the crown stays under the headphone band
     g.beginPath(); g.moveTo(342, 396); g.bezierCurveTo(334, 418, 334, 436, 338, 444); g.lineTo(406, 444); g.bezierCurveTo(410, 436, 410, 418, 402, 396); g.closePath(); g.fill();
-    curls(g, R, 344, 368, 338, 440, 6); curls(g, R, 400, 368, 406, 440, 6); curls(g, R, 352, 360, 392, 360, 5);
+    curls(g, R, 341, 384, 338, 440, 6); curls(g, R, 403, 384, 406, 440, 6);   // curls below the band, down the sides
     g.fillStyle = rgba(room.hairHi, night ? 0.2 : 0.35); ellipse(g, 366, 371, 13, 5); g.fill();   // a soft sheen
     wavy(g, R, 342, 376, 402, 444, night);
     headphones(g, 3);
-    if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 391, 34, -1.4, 0.3); g.stroke(); }
+    if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 394, 31, -0.9, 0.3); g.stroke(); }
   }
   function backView(g, rim, night) {   // the neck and an olive overshirt: collar, back yoke, a box pleat and soft folds
     if (person === 'her') return herBack(g, rim, night);
