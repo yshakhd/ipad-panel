@@ -71,7 +71,19 @@
   #panel { display: none; position: fixed; right: 16px; bottom: 16px; z-index: 6; width: 340px; max-width: calc(100% - 32px);
     max-height: calc(100% - 32px); overflow-y: auto; box-sizing: border-box; padding: 18px 20px 16px;
     background: #11141c; color: #e9eef5; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(233,238,245,0.08); }
-  body.panel #panel { display: block; }
+  body.panel #panel { display: block; -webkit-animation: rise 0.18s ease-out; animation: rise 0.18s ease-out; }
+  @-webkit-keyframes rise { from { opacity: 0; -webkit-transform: translateY(10px); } to { opacity: 1; -webkit-transform: none; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  #scrim { display: none; position: fixed; left: 0; top: 0; right: 0; bottom: 0; z-index: 5; }
+  body.panel #scrim { display: block; }
+  /* a short line over the scene saying what just happened */
+  #caption { position: fixed; left: 16px; bottom: 16px; z-index: 4; max-width: calc(100% - 32px); box-sizing: border-box;
+    font-size: 17px; font-style: italic; padding: 9px 18px; border-radius: 22px; pointer-events: none;
+    background: rgba(14,17,26,0.92); color: #e9eef5; box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+    opacity: 0; -webkit-transform: translateY(8px); transform: translateY(8px); -webkit-transition: opacity 0.25s, -webkit-transform 0.25s; transition: opacity 0.25s, transform 0.25s; }
+  #caption.on { opacity: 1; -webkit-transform: none; transform: none; }
+  .chips button { -webkit-tap-highlight-color: transparent; -webkit-transition: background-color 0.15s, color 0.15s, opacity 0.2s, -webkit-transform 0.08s; transition: background-color 0.15s, color 0.15s, opacity 0.2s, transform 0.08s; }
+  .chips button:active { -webkit-transform: scale(0.93); transform: scale(0.93); }
   body.panel .pills { display: none; }
   #panel h2 { margin: 0 0 4px; font-weight: 500; font-size: 22px; }
   #panel p { margin: 0 0 12px; font-size: 15px; line-height: 1.4; color: #a6afbf; }
@@ -82,6 +94,8 @@
   .chips button, .row button, #panel .file, .seg a { font: inherit; font-size: 15px; color: #e9eef5; background: transparent; cursor: pointer;
     border: 1px solid rgba(233,238,245,0.25); border-radius: 16px; padding: 4px 11px; text-decoration: none; }
   .chips button.on, .seg a.on { background: #ff9a4a; color: #16100a; border-color: #ff9a4a; }
+  #pets button.wait { opacity: 0.4; }
+  #pet-status { font-size: 14px; font-style: italic; color: #ffb36b; margin-top: 6px; min-height: 18px; }
   .seg { display: flex; gap: 6px; margin: 2px 0 14px; }
   .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .row button { white-space: nowrap; }
@@ -122,6 +136,8 @@
 
 <div id="turn">Turn your phone sideways for the whole apartment.</div>
 <div class="pills"><a class="pill" id="to-meadow" href="./">Visit the meadow</a><button class="pill" id="open" type="button">Change the weather</button></div>
+<div id="scrim"></div>
+<div id="caption" role="status"></div>
 <div id="panel" role="dialog" aria-label="Scene controls">
   <button id="close" type="button" aria-label="Close">Close</button>
   <div class="seg" aria-label="Scene"><a id="seg-meadow" href="./">Meadow</a><a class="on" href="#" aria-current="page">City</a></div>
@@ -136,6 +152,7 @@
 
   <label>Animals <span>they also come by on their own</span></label>
   <div class="chips" id="pets"><button type="button" data-dog="visit">Dog, come here</button><button type="button" data-dog="fetch">Fetch</button><button type="button" data-dog="tail">Chase your tail</button><button type="button" data-cat="1">Wake the cat</button><button type="button" data-bell="1">Ring the doorbell</button><button type="button" data-note="1">Leave him a note</button></div>
+  <div id="pet-status"></div>
 
   <label for="wind-range">Wind <span id="wind-val"></span></label>
   <input id="wind-range" type="range" min="0" max="80" step="1" value="10">
@@ -304,7 +321,7 @@
       try {
         var a = Math.round(JSON.parse(x.responseText).current.us_aqi), words = a <= 50 ? 'good' : a <= 100 ? 'moderate' : a <= 150 ? 'unhealthy for sensitive groups' : a <= 200 ? 'unhealthy' : a <= 300 ? 'very unhealthy' : 'hazardous';
         City.setAir(a);
-        $('w-more').textContent = a > 50 ? 'Air quality ' + a + ', ' + words + '.' : '';
+        $('w-more').textContent = 'Air quality ' + a + ', ' + words + '.';
       } catch (e) {}
     };
     x.send();
@@ -342,21 +359,48 @@
   }
 
   // controls
-  $('open').onclick = function () { document.body.className += ' panel'; };
-  $('close').onclick = function () { document.body.className = document.body.className.replace(' panel', ''); };
+  function closePanel() { document.body.className = document.body.className.replace(/ panel\b/g, ''); }
+  var capTimer;
+  function caption(text) {   // a short line over the scene, for when the panel is out of the way
+    var c = $('caption'); c.textContent = text; c.className = 'on';
+    clearTimeout(capTimer); capTimer = setTimeout(function () { c.className = ''; }, 3500);
+  }
+  $('open').onclick = function () { $('caption').className = ''; document.body.className += ' panel'; };
+  $('close').onclick = closePanel;
+  $('scrim').onclick = closePanel;   // a click anywhere outside the panel closes it
+  document.addEventListener('keydown', function (e) { if (e.keyCode === 27) closePanel(); });
   $('wind-range').oninput = function () { manual.wind = +this.value; render(); };
   $('kinds').onclick = function (e) { var c = e.target.getAttribute('data-code'); if (c === null) return; manual.code = +c; render(); };
   $('views').onclick = function (e) { var v = e.target.getAttribute('data-v'); if (v === null) return; viewPick = v; City.showView(v); render(); };
+  // Animal buttons: the panel steps aside so you can watch, a caption says what's happening,
+  // and the button stays lit while the animal is at it (dog buttons dim while the dog is busy).
+  var dogJob = null, dogAt = 0, flash = {};
+  function petButtons() {
+    var b = $('pets').getElementsByTagName('button'), busy = City.busy(), i;
+    if (!busy.dog && Date.now() - dogAt > 1500) dogJob = null;   // the dog takes a moment to get going
+    for (i = 0; i < b.length; i++) {
+      var dk = b[i].getAttribute('data-dog'), k = dk ? 'dog' : b[i].getAttribute('data-cat') ? 'cat' : b[i].getAttribute('data-bell') ? 'bell' : 'note';
+      var go = dk ? dk === dogJob : k === 'cat' ? busy.cat : flash[k] > Date.now();
+      var wait = !go && (dk ? busy.dog : k === 'cat' && busy.cat);
+      b[i].className = go ? 'on' : wait ? 'wait' : '';
+    }
+  }
+  setInterval(petButtons, 250);
   $('pets').onclick = function (e) {
-    var dk = e.target.getAttribute('data-dog'), ct = e.target.getAttribute('data-cat'), bell = e.target.getAttribute('data-bell'), nt = e.target.getAttribute('data-note');
+    var t = e.target, dk = t.getAttribute('data-dog'), ct = t.getAttribute('data-cat'), bell = t.getAttribute('data-bell'), nt = t.getAttribute('data-note');
     if (!dk && !ct && !bell && !nt) return;
-    if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }   // they live by the desk
-    if (bell) { City.door('doorbell'); $('place-status').textContent = 'Someone’s at the door.'; return; }
-    if (nt) { City.note(['Laundry is done', 'Dinner at 7', 'Call Mom back', 'Package at the door'][Math.floor(Math.random() * 4)], true); $('place-status').textContent = 'A note on his monitor.'; return; }
     var busy = City.busy();
-    if (dk) { if (busy.dog) { $('place-status').textContent = 'The dog is busy. Try again in a moment.'; return; } City.callDog(dk); }
-    if (ct) { if (busy.cat) { $('place-status').textContent = 'The cat is already up.'; return; } City.wakeCat(); }
-    $('place-status').textContent = dk ? (dk === 'fetch' ? 'Here comes the ball.' : 'Here comes the dog.') : 'The cat is waking up.';
+    if (dk && busy.dog) { $('pet-status').textContent = 'The dog is busy. Try again in a moment.'; return; }
+    if (ct && busy.cat) { $('pet-status').textContent = 'The cat is already up.'; return; }
+    if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }   // they live by the desk
+    var said;
+    if (bell) { City.door('doorbell'); flash.bell = Date.now() + 4000; said = 'Ding dong. The dog runs to the door.'; }
+    else if (nt) { City.note(['Laundry is done', 'Dinner at 7', 'Call Mom back', 'Package at the door'][Math.floor(Math.random() * 4)], true); flash.note = Date.now() + 2500; said = 'A note on his monitor.'; }
+    else if (dk) { City.callDog(dk); dogJob = dk; dogAt = Date.now(); said = dk === 'fetch' ? 'Here comes the ball.' : dk === 'tail' ? 'Round and round he goes.' : 'Here comes the dog.'; }
+    else { City.wakeCat(); said = 'The cat is waking up.'; }
+    $('pet-status').textContent = said;
+    petButtons();
+    closePanel(); caption(said);   // out of the way, so the animals can be seen
   };
   $('time-range').oninput = function () { timeH = +this.value; City.setTime(timeH); render(); };
   $('day-range').oninput = function () { dayN = +this.value; City.setDays(dayN); render(); };

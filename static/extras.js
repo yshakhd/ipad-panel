@@ -1,7 +1,7 @@
 /*
  * The extra lines every scene shows, from /api/state:
  *   under the date (#notes): weather warnings, the doorbell, and the next calendar event;
- *   under the sunrise (#w-more): a rain heads-up, and the air quality when it isn't good.
+ *   under the sunrise (#w-more): a rain heads-up, and the air quality.
  * Also says when everyone's away (the scene dims) and hands doorbell and door events,
  * and new messages, to the scene. ES5, for the iPad's iOS 9 Safari.
  *
@@ -52,7 +52,7 @@ var Extras = (function () {
 
     var more = [];
     if (s.outlook) more.push(esc(s.outlook) + '.');
-    if (s.air && s.air.aqi > 50) more.push('Air quality ' + s.air.aqi + ', ' + esc(s.air.words.toLowerCase()) + '.');
+    if (s.air) more.push('Air quality ' + s.air.aqi + ', ' + esc(s.air.words.toLowerCase()) + '.');
     var m = $('w-more');
     if (m) { var mh = more.join('<br>'); if (m.innerHTML !== mh) m.innerHTML = mh; }
 
