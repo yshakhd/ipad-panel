@@ -946,8 +946,9 @@
     updateBall(dt);
     if (!dog.on) {
       if (!dog.next) dog.next = t + (DOGP ? 2 : rnd(25, 90));
-      if (t > dog.next && view === 'desk') {
-        var r = Math.random(), k = DOGP === 'chase' ? 'fetch' : DOGP || (r < 0.42 ? 'visit' : r < 0.7 ? 'fetch' : r < 0.9 ? 'walk' : 'tail');
+      if ((t > dog.next || dog.ask) && view === 'desk') {
+        var r = Math.random(), k = dog.ask || (DOGP === 'chase' ? 'fetch' : DOGP) || (r < 0.42 ? 'visit' : r < 0.7 ? 'fetch' : r < 0.9 ? 'walk' : 'tail');
+        dog.ask = null;
         startEpisode(k, t);
       }
       return;
@@ -1192,7 +1193,7 @@
     if (view !== 'desk') { k.steps = null; k.x = HOME[0]; k.y = HOME[1]; k.dir = 1; k.pet = false; k.keys = false; }
     else if (!k.steps) {
       if (!k.next) k.next = t + (CATP ? 2 : rnd(60, 180));
-      if (t > k.next) { k.steps = catEpisode(); k.si = 0; }
+      if (t > k.next || k.ask) { k.steps = catEpisode(); k.si = 0; k.ask = false; }
     }
     k.pet = false; k.keys = false; k.walking = false;
     if (k.steps) {
@@ -1668,7 +1669,13 @@
     setHours: function (s, w) { if (s === sleepH && w === wakeH) return; sleepH = s; wakeH = w; if (lastW) setWeather(lastW); },
     setTime: function (h) { timeOverride = h; if (lastW) setWeather(lastW); },
     now: function () { return now(); },   // the moment the scene shows (shifted by ?time= and ?days=)
-    setPhotos: function (urls, secs) { list = urls.slice(); li = 0; if (secs) paintSecs = secs; }
+    setPhotos: function (urls, secs) { list = urls.slice(); li = 0; if (secs) paintSecs = secs; if (built) nextPhoto(); },
+    // for the browser demo: pick the room, move through the year, send for the animals
+    showView: function (v) { forced.view = v || null; if (lastW) setWeather(lastW); },
+    setDays: function (n) { dayShift = n; if (lastW) setWeather(lastW); },
+    callDog: function (k) { dog.ask = k || 'visit'; },
+    wakeCat: function () { kitty.ask = true; },
+    busy: function () { return { dog: dog.on, cat: !!kitty.steps }; }
   };
   if (forced.view) setView(forced.view, false);
   loadList();

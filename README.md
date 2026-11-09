@@ -8,8 +8,11 @@ real wind outside.
 
 ![The painter's meadow in the afternoon](docs/images/meadow-day.jpg)
 
-**[Try the meadow in your browser](demo/)**: change the wind, the weather, the
-time of day and the date, or give him your own photos (they never leave your device).
+**[Try the meadow in your browser](demo/)**, or **[the city](demo/city.html)**:
+change the wind, the weather, the time of day and the date, or give them your
+own photos (they never leave your device). In the city you can also call the
+dog, play fetch and wake the cat. Each page links to the other and keeps your
+settings when you switch.
 How it came together, and how it runs on a 2012 iPad, is in
 [docs/STORY.md](docs/STORY.md).
 
@@ -151,11 +154,12 @@ for trying the tiles without real hardware.
 - The iPad reloads by itself within 5 seconds when files in `static/` change.
 
 ## The demo
-`demo/` is the meadow without the server: it fetches live weather in the
-browser and paints photos you pick. Run it locally with
-`python3 -m http.server` from this folder and open
+`demo/` (the meadow) and `demo/city.html` (the city) run the scenes without the
+server: they fetch live weather in the browser and use photos you pick. Run
+them locally with `python3 -m http.server` from this folder and open
 `http://localhost:8000/demo/`, or publish the repo with GitHub Pages
-(deploy from the main branch, root folder) and visit `/demo/`.
+(deploy from the main branch, root folder) and visit `/demo/`. The two pages
+share `?wx=`, `?wind=`, `?time=`, `?days=`, `?place=&lat=&lon=` and `?unit=`.
 `static/meadow.js` explains how to embed the scene elsewhere.
 
 ## Writing for old Safari

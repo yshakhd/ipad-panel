@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The City Apartment</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A coder's corner apartment high over Manhattan: a golden retriever, a cat on the desk, the real sunrise and sunset, live weather. Drawn entirely in code.">
+<link rel="stylesheet" href="../static/fonts/fonts.css">
+<style>
+  /* Standalone demo of the iPad panel's city scene. Same scene code (../static/city.js),
+     with live weather fetched in the browser instead of from the panel server. */
+  html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden;
+    font-family: 'Newsreader', Georgia, serif; -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; overflow: hidden; -webkit-transform-origin: 0 0; transform-origin: 0 0; }
+  #world { position: absolute; left: 0; top: 0; width: 2048px; height: 768px; }
+  .half { position: absolute; top: 0; width: 1024px; height: 768px; overflow: hidden; }
+  .half > div { position: absolute; left: 0; top: 0; }
+  #bed { left: 0; } #desk { left: 1024px; }
+
+  #info { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; pointer-events: none; }
+  .sky { color: #16202e; text-shadow: 0 0 16px rgba(255,255,255,0.6), 0 0 3px rgba(255,255,255,0.45); }
+  body.ph-golden .sky, body.ph-night .sky { color: #fbf3e6; text-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 18px rgba(10,6,20,0.6); }
+  .ground { color: #f7f0e6; text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 14px rgba(0,0,0,0.6); }
+  #clock { position: absolute; left: 50px; top: 26px; }
+  #time { font-size: 150px; line-height: 1; letter-spacing: -4px; }
+  #ampm { font-size: 40px; font-style: italic; margin-left: 10px; }
+  #date { font-size: 28px; font-style: italic; margin: 2px 0 0 6px; }
+  #weather { position: absolute; right: 44px; top: 40px; width: 420px; text-align: right; }
+  #w-temp { font-size: 80px; line-height: 0.95; letter-spacing: -3px; }
+  #w-text { font-size: 21px; line-height: 1.3; margin-top: 4px; }
+  #w-sun { font-size: 18px; font-style: italic; margin-top: 1px; opacity: 0.85; }
+  #w-days { margin-top: 4px; display: flex; justify-content: flex-end; }
+  .day { margin-left: 16px; font-size: 18px; line-height: 1.25; }
+  .day i { font-size: 17px; opacity: 0.85; margin-right: 4px; }
+  .day .lo { opacity: 0.6; }
+  #wind { position: absolute; right: 44px; top: 640px; text-align: right; }
+  #wind-speed { font-size: 56px; line-height: 1; }
+  #wind-speed small { font-size: 24px; margin-left: 6px; font-style: italic; }
+  #wind-words { font-size: 20px; font-style: italic; margin-top: 2px; }
+
+  #dclock { left: 140px; top: 442px; width: 110px; height: 36px; text-align: center; color: #ff9a4a;
+    font-family: 'Big Shoulders Display', sans-serif; font-weight: 600; font-size: 30px; line-height: 36px; letter-spacing: 1px;
+    text-shadow: 0 0 8px rgba(255,140,60,0.8); }
+  #dclock small { font-size: 13px; margin-left: 3px; letter-spacing: 0; }
+  #bc { left: 54px; top: 428px; width: 126px; height: 66px; text-align: center; color: #ffb36b; font-family: 'Big Shoulders Display', sans-serif; }
+  #bc-time { font-size: 38px; font-weight: 600; line-height: 1; }
+  #bc-time small { font-size: 14px; margin-left: 2px; }
+  #bc-sun { font-size: 11px; color: #a8845e; font-family: 'Newsreader', Georgia, serif; }
+  #phone { left: 66px; top: 494px; width: 60px; height: 30px; opacity: 0; transition: opacity 0.8s;
+    background: radial-gradient(ellipse at center, rgba(140,200,255,0.55), rgba(140,200,255,0) 70%); }
+  #photo-hit { left: 748px; top: 272px; width: 220px; height: 160px; cursor: zoom-in; }
+  #viewer { display: none; position: absolute; left: 0; top: 0; width: 1024px; height: 768px; background: rgba(6,8,12,0.9); cursor: zoom-out; }
+  #viewer.on { display: block; }
+  #viewer div { position: absolute; left: 92px; top: 64px; width: 840px; height: 630px; background-size: cover; background-position: center;
+    box-shadow: 0 0 0 10px #101216, 0 20px 60px rgba(0,0,0,0.6); }
+
+  /* controls: a dark glass card outside the scene, amber like the desk clock */
+  .pills { position: fixed; right: 16px; bottom: 16px; z-index: 5; display: flex; gap: 8px; }
+  .pill { font: inherit; font-size: 17px; color: #e9eef5; background: rgba(14,17,26,0.92); border: 1px solid rgba(233,238,245,0.18);
+    border-radius: 22px; padding: 9px 18px; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.35); text-decoration: none; }
+  #panel { display: none; position: fixed; right: 16px; bottom: 16px; z-index: 6; width: 340px; max-width: calc(100% - 32px);
+    max-height: calc(100% - 32px); overflow-y: auto; box-sizing: border-box; padding: 18px 20px 16px;
+    background: #11141c; color: #e9eef5; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid rgba(233,238,245,0.08); }
+  body.panel #panel { display: block; }
+  body.panel .pills { display: none; }
+  #panel h2 { margin: 0 0 4px; font-weight: 500; font-size: 22px; }
+  #panel p { margin: 0 0 12px; font-size: 15px; line-height: 1.4; color: #a6afbf; }
+  #panel label { display: block; font-size: 15px; margin: 14px 0 6px; font-weight: 500; }
+  #panel label span { font-weight: 400; font-style: italic; color: #a6afbf; }
+  #panel input[type=range] { width: 100%; accent-color: #ff9a4a; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button, .row button, #panel .file, .seg a { font: inherit; font-size: 15px; color: #e9eef5; background: transparent; cursor: pointer;
+    border: 1px solid rgba(233,238,245,0.25); border-radius: 16px; padding: 4px 11px; text-decoration: none; }
+  .chips button.on, .seg a.on { background: #ff9a4a; color: #16100a; border-color: #ff9a4a; }
+  .seg { display: flex; gap: 6px; margin: 2px 0 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .row button { white-space: nowrap; }
+  .row input[type=text] { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 5px 10px; border: 1px solid rgba(233,238,245,0.25); border-radius: 16px; background: #1a1f2b; color: #e9eef5; }
+  #panel .file { display: inline-block; }
+  #panel .file input { display: none; }
+  #place-status { font-size: 14px; color: #a6afbf; margin-top: 6px; min-height: 18px; }
+  #close { position: absolute; right: 12px; top: 10px; font: inherit; font-size: 15px; background: none; border: 0; color: #a6afbf; cursor: pointer; padding: 6px; }
+  #panel .foot { margin-top: 16px; font-size: 14px; color: #a6afbf; }
+  #panel a.link { color: #ffb36b; }
+  #turn { display: none; position: fixed; left: 16px; right: 16px; top: calc(75vw + 14px); text-align: center; color: #e9eef5; font-style: italic; font-size: 16px; }
+  @media (orientation: portrait) and (max-width: 700px) { #turn { display: block; } body.panel #turn { display: none; } #panel { max-height: calc(100% - 75vw - 32px); } }
+  button:focus-visible, input:focus-visible, a:focus-visible, .file:focus-within { outline: 2px solid #ff9a4a; outline-offset: 2px; }
+</style>
+</head>
+<body class="ph-day">
+<div id="stage">
+  <div id="world">
+    <div id="bed" class="half">
+      <div></div>
+      <div id="bc"><div id="bc-time">--:--</div><div id="bc-sun"></div></div>
+      <div id="phone"></div>
+    </div>
+    <div id="desk" class="half">
+      <div></div>
+      <div id="dclock">--:--</div>
+      <div id="photo-hit" title="See the photo up close"></div>
+    </div>
+  </div>
+  <div id="info">
+    <div id="clock" class="sky"><div><span id="time">--:--</span><span id="ampm"></span></div><div id="date"></div></div>
+    <div id="weather" class="sky"><div id="w-temp"></div><div id="w-text">Fetching the weather</div><div id="w-sun"></div><div id="w-days"></div></div>
+    <div id="wind" class="ground"><div id="wind-speed"></div><div id="wind-words"></div></div>
+  </div>
+  <div id="viewer"><div id="viewer-img"></div></div>
+</div>
+
+<div id="turn">Turn your phone sideways for the whole apartment.</div>
+<div class="pills"><a class="pill" id="to-meadow" href="./">Visit the meadow</a><button class="pill" id="open" type="button">Change the weather</button></div>
+<div id="panel" role="dialog" aria-label="Scene controls">
+  <button id="close" type="button" aria-label="Close">Close</button>
+  <div class="seg" aria-label="Scene"><a id="seg-meadow" href="./">Meadow</a><a class="on" href="#" aria-current="page">City</a></div>
+  <h2>The city apartment</h2>
+  <p>He codes by the west window and edits your photos on the second screen. From 1 to 8 in the morning he's asleep, facing the sunrise.</p>
+
+  <label>Your photos <span>stay on this device</span></label>
+  <label class="file" style="margin:0">Choose photos<input id="files" type="file" accept="image/*" multiple></label>
+
+  <label>Room</label>
+  <div class="chips" id="views"><button type="button" data-v="">By the clock</button><button type="button" data-v="desk">Desk</button><button type="button" data-v="bed">Bed</button></div>
+
+  <label>Animals <span>they also come by on their own</span></label>
+  <div class="chips" id="pets"><button type="button" data-dog="visit">Dog, come here</button><button type="button" data-dog="fetch">Fetch</button><button type="button" data-dog="tail">Chase your tail</button><button type="button" data-cat="1">Wake the cat</button></div>
+
+  <label for="wind-range">Wind <span id="wind-val"></span></label>
+  <input id="wind-range" type="range" min="0" max="80" step="1" value="10">
+
+  <label>Weather</label>
+  <div class="chips" id="kinds">
+    <button type="button" data-code="0">Clear</button><button type="button" data-code="2">Partly cloudy</button>
+    <button type="button" data-code="3">Overcast</button><button type="button" data-code="45">Fog</button>
+    <button type="button" data-code="63">Rain</button><button type="button" data-code="95">Storm</button>
+    <button type="button" data-code="73">Snow</button>
+  </div>
+
+  <label for="time-range">Time of day <span id="time-val"></span></label>
+  <input id="time-range" type="range" min="0" max="23.75" step="0.25" value="12">
+
+  <label for="day-range">Date <span id="day-val"></span></label>
+  <input id="day-range" type="range" min="0" max="364" step="1" value="0">
+
+  <label for="place">Place</label>
+  <div class="row"><input id="place" type="text" placeholder="Search a town" autocomplete="off"><button id="find" type="button">Go</button></div>
+  <div class="row" style="margin-top:6px"><button id="find-here" type="button">Near me</button><button id="live" type="button">Live weather</button><button id="units" type="button">°F</button></div>
+  <div id="place-status"></div>
+
+  <div class="foot">Drawn entirely in code, no images. Weather from <a class="link" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>. <a class="link" href="../">How it was made</a></div>
+</div>
+
+<script>
+  // Read the shared settings (from a link or the meadow), then take them off the address:
+  // the scene treats ?wx, ?wind and ?time as fixed, and here the controls should stay free.
+  window.CITY_STANDALONE = true;
+  window.CITY_START = (function () {
+    var o = {}, keep = [], parts = location.search.replace(/^\?/, '').split('&');
+    for (var i = 0; i < parts.length; i++) {
+      if (!parts[i]) continue;
+      var kv = parts[i].split('='), k = decodeURIComponent(kv[0]), v = decodeURIComponent(kv[1] || '');
+      if (/^(wx|wind|time|days|place|lat|lon|unit)$/.test(k)) o[k] = v; else keep.push(parts[i]);
+    }
+    try { history.replaceState(null, '', location.pathname + (keep.length ? '?' + keep.join('&') : '') + location.hash); } catch (e) {}
+    return o;
+  })();
+</script>
+<script src="../static/sky.js"></script>
+<script src="../static/city.js"></script>
+<script>
+(function () {
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var DSHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var COMPASS = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+  var WMO = {0: 'Clear', 1: 'Mostly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Fog',
+    51: 'Light drizzle', 53: 'Drizzle', 55: 'Heavy drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain',
+    66: 'Freezing rain', 67: 'Freezing rain', 71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains',
+    80: 'Showers', 81: 'Showers', 82: 'Heavy showers', 85: 'Snow showers', 86: 'Snow showers',
+    95: 'Thunderstorm', 96: 'Thunderstorm', 99: 'Thunderstorm'};
+  var WX = { clear: 0, partly: 2, cloudy: 3, fog: 45, drizzle: 53, rain: 63, heavy: 65, snow: 73, blizzard: 75, storm: 95 };
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  var S = window.CITY_START;
+
+  var unit = S.unit || (/^en-US/.test(navigator.language || '') ? 'F' : 'C');
+  var placeSet = !!S.place, place = { name: S.place || 'New York', lat: +(S.lat || 40.7484), lon: +(S.lon || -73.9857) };
+  var live = null, manual = { code: S.wx && WX[S.wx] !== undefined ? WX[S.wx] : null, wind: S.wind ? +S.wind : null };
+  var dayN = +(S.days || 0), timeH = S.time ? (function (t) { var p = t.split(':'); return +p[0] + (+p[1] || 0) / 60; })(S.time) : null, viewPick = '';
+
+  function T(c) { return Math.round(unit === 'F' ? c * 9 / 5 + 32 : c); }
+  function current() {
+    var w = {}, k;
+    for (k in live) w[k] = live[k];
+    if (manual.code !== null) { w.code = manual.code; w.desc = WMO[manual.code]; }
+    if (manual.wind !== null) w.wind = manual.wind;
+    return w;
+  }
+  function localNow() {
+    if (timeH !== null) return timeH;
+    var d = new Date(Date.now() + (live ? live.utc_offset : 0) * 1000);
+    return d.getUTCHours() + d.getUTCMinutes() / 60;
+  }
+  function hm(iso) { var p = iso.split('T')[1].split(':'); return +p[0] + p[1] / 60; }
+  function fmt(h) { var hh = Math.floor(h), mm = Math.round((h - hh) * 60); if (mm === 60) { hh++; mm = 0; } return { t: (hh % 12 || 12) + ':' + pad(mm), ap: hh % 24 < 12 ? 'am' : 'pm' }; }
+  function windWords(kmh, dir) {
+    var from = dir == null ? '' : ' from the ' + COMPASS[Math.round(dir / 45) % 8];
+    if (kmh < 2) return 'Still air over the city.';
+    return (kmh < 12 ? 'A light breeze' : kmh < 29 ? 'A steady breeze' : kmh < 39 ? 'A fresh wind' : kmh < 50 ? 'A strong wind' : kmh < 62 ? 'Near-gale winds' : 'Gale-force winds') + from + '.';
+  }
+  function chipsOn(id, test) { var b = $(id).getElementsByTagName('button'); for (var i = 0; i < b.length; i++) b[i].className = test(b[i]) ? 'on' : ''; }
+
+  function render() {
+    if (!live) return;
+    var w = current();
+    City.setWeather(w);
+    $('w-temp').textContent = T(w.temp) + '°';
+    var feels = Math.abs(T(w.feels) - T(w.temp)) >= 3;
+    $('w-text').textContent = w.desc + ' in ' + place.name + (feels ? ', feels like ' + T(w.feels) + '°.' : '.');
+    var now = localNow(), rise = hm(w.sunrise), set = hm(w.sunset), riseNext = now < rise || now >= set;
+    var r = fmt(rise), s = fmt(set);
+    $('w-sun').textContent = riseNext ? 'Sunrise at ' + r.t + ' ' + r.ap : 'Sunset at ' + s.t + ' ' + s.ap;
+    $('bc-sun').textContent = riseNext ? 'Sunrise ' + r.t + ' ' + r.ap : 'Sunset ' + s.t + ' ' + s.ap;
+    var html = '';
+    for (var i = 1; i < Math.min(4, w.days.length); i++) {
+      var dd = w.days[i], p = dd.date.split('-');
+      html += '<div class="day"><i>' + DSHORT[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + '</i>' + T(dd.hi) + '° <span class="lo">' + T(dd.lo) + '°</span></div>';
+    }
+    $('w-days').innerHTML = html;
+    var kmh = City.wind();
+    $('wind-speed').innerHTML = kmh < 2 ? 'Calm' : (unit === 'F' ? Math.round(kmh * 0.621) + '<small>mph</small>' : Math.round(kmh) + '<small>km/h</small>');
+    $('wind-words').textContent = windWords(kmh, w.wind_dir);
+    $('wind-range').value = Math.round(w.wind);
+    $('wind-val').textContent = unit === 'F' ? Math.round(w.wind * 0.621) + ' mph' : Math.round(w.wind) + ' km/h';
+    chipsOn('kinds', function (b) { return manual.code !== null && +b.getAttribute('data-code') === manual.code; });
+    chipsOn('views', function (b) { return b.getAttribute('data-v') === viewPick; });
+    $('units').textContent = unit === 'F' ? 'Show °C' : 'Show °F';
+    tick(); links();
+  }
+  function tick() {
+    var d = new Date(City.now()), h = d.getHours(), t = (h % 12 || 12) + ':' + pad(d.getMinutes()), ap = h < 12 ? 'am' : 'pm';
+    if (live) { d = new Date(City.now() + live.utc_offset * 1000); h = d.getUTCHours(); t = (h % 12 || 12) + ':' + pad(d.getUTCMinutes()); ap = h < 12 ? 'am' : 'pm'; }
+    $('time').textContent = t; $('ampm').textContent = ap;
+    $('date').textContent = DAYS[live ? d.getUTCDay() : d.getDay()] + ', ' + MONTHS[live ? d.getUTCMonth() : d.getMonth()] + ' ' + (live ? d.getUTCDate() : d.getDate());
+    $('dclock').innerHTML = t + '<small>' + ap + '</small>';
+    $('bc-time').innerHTML = t + '<small>' + ap + '</small>';
+    document.body.className = document.body.className.replace(/ph-\w+/, 'ph-' + City.phase());
+    $('time-range').value = localNow();
+    var tf = fmt(localNow()); $('time-val').textContent = timeH === null ? 'now, ' + tf.t + ' ' + tf.ap : tf.t + ' ' + tf.ap;
+    $('day-range').value = dayN;
+    $('day-val').textContent = dayN ? MONTHS[live ? d.getUTCMonth() : d.getMonth()].slice(0, 3) + ' ' + (live ? d.getUTCDate() : d.getDate()) : 'today';
+  }
+  function links() {   // the switch to the meadow keeps the weather, wind, time and place
+    var q = [], name;
+    for (name in WX) if (WX[name] === manual.code) { q.push('wx=' + name); break; }
+    if (manual.wind !== null) q.push('wind=' + manual.wind);
+    if (timeH !== null) q.push('time=' + Math.floor(timeH) + ':' + pad(Math.round((timeH % 1) * 60)));
+    if (dayN) q.push('days=' + dayN);
+    if (placeSet) q.push('place=' + encodeURIComponent(place.name), 'lat=' + place.lat, 'lon=' + place.lon);
+    q.push('unit=' + unit);
+    var href = './?' + q.join('&');
+    $('to-meadow').href = href; $('seg-meadow').href = href;
+  }
+
+  function fetchWeather() {
+    $('place-status').textContent = 'Fetching the weather for ' + place.name;
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat + '&longitude=' + place.lon +
+      '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,relative_humidity_2m,is_day,cloud_cover' +
+      '&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4';
+    var x = new XMLHttpRequest();
+    x.open('GET', url, true);
+    x.onload = function () {
+      try {
+        var r = JSON.parse(x.responseText), c = r.current, days = [];
+        for (var i = 0; i < r.daily.time.length; i++) days.push({ date: r.daily.time[i], hi: r.daily.temperature_2m_max[i], lo: r.daily.temperature_2m_min[i] });
+        live = { place: place.name, lat: place.lat, lon: place.lon, temp: c.temperature_2m, feels: c.apparent_temperature,
+          desc: WMO[c.weather_code] || 'Fair', wind: Math.round(c.wind_speed_10m), wind_dir: c.wind_direction_10m,
+          humidity: c.relative_humidity_2m, code: c.weather_code, is_day: c.is_day, clouds: c.cloud_cover,
+          utc_offset: r.utc_offset_seconds || 0, sunrise: r.daily.sunrise[0], sunset: r.daily.sunset[0], days: days };
+        $('place-status').textContent = 'Live weather for ' + place.name + '.';
+        render();
+      } catch (e) { offline(); }
+    };
+    x.onerror = offline;
+    x.send();
+  }
+  function offline() {   // still show the scene with a pleasant made-up day
+    var d = new Date(), iso = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()), days = [];
+    for (var i = 0; i < 4; i++) { var e = new Date(d.getTime() + i * 86400000); days.push({ date: e.getFullYear() + '-' + pad(e.getMonth() + 1) + '-' + pad(e.getDate()), hi: 18 + i, lo: 10 + i }); }
+    live = { place: place.name, lat: place.lat, lon: place.lon, temp: 16, feels: 16, desc: 'Partly cloudy', wind: 12, wind_dir: 250,
+      humidity: 55, code: 2, is_day: 1, utc_offset: -d.getTimezoneOffset() * 60, sunrise: iso + 'T06:40', sunset: iso + 'T17:50', days: days };
+    $('place-status').textContent = 'Could not reach the weather service, so this is a made-up day.';
+    render();
+  }
+
+  // controls
+  $('open').onclick = function () { document.body.className += ' panel'; };
+  $('close').onclick = function () { document.body.className = document.body.className.replace(' panel', ''); };
+  $('wind-range').oninput = function () { manual.wind = +this.value; render(); };
+  $('kinds').onclick = function (e) { var c = e.target.getAttribute('data-code'); if (c === null) return; manual.code = +c; render(); };
+  $('views').onclick = function (e) { var v = e.target.getAttribute('data-v'); if (v === null) return; viewPick = v; City.showView(v); render(); };
+  $('pets').onclick = function (e) {
+    var dk = e.target.getAttribute('data-dog'), ct = e.target.getAttribute('data-cat');
+    if (!dk && !ct) return;
+    if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }   // they live by the desk
+    var busy = City.busy();
+    if (dk) { if (busy.dog) { $('place-status').textContent = 'The dog is busy. Try again in a moment.'; return; } City.callDog(dk); }
+    if (ct) { if (busy.cat) { $('place-status').textContent = 'The cat is already up.'; return; } City.wakeCat(); }
+    $('place-status').textContent = dk ? (dk === 'fetch' ? 'Here comes the ball.' : 'Here comes the dog.') : 'The cat is waking up.';
+  };
+  $('time-range').oninput = function () { timeH = +this.value; City.setTime(timeH); render(); };
+  $('day-range').oninput = function () { dayN = +this.value; City.setDays(dayN); render(); };
+  $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; dayN = 0; City.setDays(0); City.setTime(null); fetchWeather(); };
+  $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; render(); };
+  function search() {
+    var name = $('place').value.replace(/^\s+|\s+$/g, ''); if (!name) return;
+    $('place-status').textContent = 'Looking for ' + name;
+    var x = new XMLHttpRequest();
+    x.open('GET', 'https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(name), true);
+    x.onload = function () {
+      try {
+        var r = JSON.parse(x.responseText).results[0];
+        place = { name: r.name, lat: r.latitude, lon: r.longitude }; placeSet = true;
+        manual = { code: null, wind: null }; timeH = null; City.setTime(null); fetchWeather();
+      } catch (e) { $('place-status').textContent = 'No town called ' + name + ' found. Try another spelling.'; }
+    };
+    x.onerror = function () { $('place-status').textContent = 'The town search is unavailable right now.'; };
+    x.send();
+  }
+  $('find').onclick = search;
+  $('place').onkeydown = function (e) { if (e.keyCode === 13) search(); };
+  $('find-here').onclick = function () {
+    if (!navigator.geolocation) { $('place-status').textContent = 'This browser cannot share its location.'; return; }
+    $('place-status').textContent = 'Asking for your location';
+    navigator.geolocation.getCurrentPosition(function (p) {
+      place = { name: 'your area', lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2) }; placeSet = true;
+      manual = { code: null, wind: null }; timeH = null; City.setTime(null); fetchWeather();
+    }, function () { $('place-status').textContent = 'Location was not shared. Search for a town instead.'; });
+  };
+  $('files').onchange = function () {
+    var urls = [], i;
+    for (i = 0; i < this.files.length; i++) urls.push(URL.createObjectURL(this.files[i]));
+    if (!urls.length) return;
+    if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }
+    City.setPhotos(urls, 60);
+    $('place-status').textContent = urls.length === 1 ? 'He is editing your photo.' : 'He is editing your photos, a new one every minute.';
+  };
+  $('photo-hit').onclick = function () {
+    $('viewer-img').style.backgroundImage = 'url(' + (City.photo() || City.snapshot()) + ')';
+    $('viewer').className = 'on';
+  };
+  $('viewer').onclick = function () { $('viewer').className = ''; };
+  setInterval(function () {   // a message lights up his phone now and then
+    if (City.view() !== 'bed' || Math.random() > 0.25) return;
+    $('phone').style.opacity = 1; setTimeout(function () { $('phone').style.opacity = 0; }, 4000);
+  }, 20000);
+
+  if (/[?&]clean=/.test(location.search)) document.querySelector('.pills').style.display = 'none';
+  if (/[?&]panel=/.test(location.search)) document.body.className += ' panel';
+  if (timeH !== null) City.setTime(timeH);
+  if (dayN) City.setDays(dayN);
+  links();
+  fetchWeather();
+  setInterval(tick, 1000);
+  setInterval(function () { if (manual.code === null && manual.wind === null) fetchWeather(); }, 10 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
