@@ -569,6 +569,8 @@
     var awake = view === 'desk';
     if (awake) {
       bd.appendChild(catEl);   // on the desk: in front of the room, behind his arms
+      var dc = document.getElementById('dclock');   // the clock's glowing digits go under the cat when it walks past
+      if (dc) { dc.style.position = 'absolute'; bd.insertBefore(dc, catEl); }
       guy.body = sprite(bd, 270, 400, 200, 200, function (g) {
         g.fillStyle = room.hood; g.beginPath();
         g.moveTo(286, 600); g.quadraticCurveTo(278, 470, 300, 446); g.quadraticCurveTo(372, 418, 444, 446); g.quadraticCurveTo(466, 470, 458, 600); g.closePath(); g.fill();
