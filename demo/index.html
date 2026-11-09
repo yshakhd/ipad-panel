@@ -159,19 +159,42 @@
   var live = null, manual = { code: null, wind: null }, dayN = +(q('days') || 0), timeH = q('time') ? (function (t) { var p = t.split(':'); return +p[0] + p[1] / 60; })(q('time')) : null;
 
   function T(c) { return Math.round(unit === 'F' ? c * 9 / 5 + 32 : c); }
+  function offset() {   // the place's UTC offset (seconds) on the day shown, so summer dates get summer time
+    if (!live) return 0;
+    if (!dayN || !live.tz || !window.Intl) return live.utc_offset;
+    try {
+      var ms = Date.now() + dayN * 86400000, p = {}, parts = new Intl.DateTimeFormat('en-US', { timeZone: live.tz, hourCycle: 'h23',
+        year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(new Date(ms));
+      for (var i = 0; i < parts.length; i++) p[parts[i].type] = +parts[i].value;
+      return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute) - ms) / 60000) * 60;
+    } catch (e) { return live.utc_offset; }
+  }
   function current() {   // live weather with any manual changes on top
     var w = {}, k;
     for (k in live) w[k] = live[k];
     if (manual.code !== null) { w.code = manual.code; w.desc = WMO[manual.code]; }
     if (manual.wind !== null) w.wind = manual.wind;
+    w.utc_offset = offset();
     return w;
   }
   function localNow() {   // hours since midnight at the chosen place
     if (timeH !== null) return timeH;
-    var d = new Date(Date.now() + (live ? live.utc_offset : 0) * 1000);
+    var d = new Date(Date.now() + offset() * 1000);
     return d.getUTCHours() + d.getUTCMinutes() / 60;
   }
   function hm(iso) { var p = iso.split('T')[1].split(':'); return +p[0] + p[1] / 60; }
+  function sunTimes(w) {   // sunrise and sunset (local hours) on the day shown: live for today, worked out from the sun for other days
+    if (!dayN) return [hm(w.sunrise), hm(w.sunset)];
+    var off = (w.utc_offset || 0) * 1000, d = new Date(Date.now() + off + dayN * 86400000), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - off;
+    var rise = null, set = null, prev = Sky.sun(m0, place.lat, place.lon).el, i;
+    for (i = 1; i <= 288; i++) {
+      var el = Sky.sun(m0 + i * 300000, place.lat, place.lon).el, f = (i - 1 + (-0.833 - prev) / (el - prev)) / 12;
+      if (prev < -0.833 && el >= -0.833 && rise === null) rise = f;
+      if (prev >= -0.833 && el < -0.833) set = f;
+      prev = el;
+    }
+    return [rise === null ? hm(w.sunrise) : rise, set === null ? hm(w.sunset) : set];
+  }
   function fmt(h) { var hh = Math.floor(h), mm = Math.round((h - hh) * 60); if (mm === 60) { hh++; mm = 0; } return { t: (hh % 12 || 12) + ':' + pad(mm), ap: hh % 24 < 12 ? 'am' : 'pm' }; }
   function setPhase() { document.body.className = document.body.className.replace(/ph-\w+/, 'ph-' + Meadow.phase()); }
   function render() {
@@ -185,7 +208,7 @@
     $('w-text').appendChild(document.createTextNode(w.desc + ' in ' + place.name + '.'));
     $('w-text').appendChild(document.createElement('br'));
     $('w-text').appendChild(document.createTextNode((feels ? 'Feels like ' + T(w.feels) + '°, humidity ' : 'Humidity ') + w.humidity + '%.'));
-    var now = localNow(), rise = hm(w.sunrise), set = hm(w.sunset);
+    var st = sunTimes(w), now = localNow(), rise = st[0], set = st[1];
     $('w-sun').textContent = now < rise ? 'Sunrise at ' + fmt(rise).t + ' ' + fmt(rise).ap : now < set ? 'Sunset at ' + fmt(set).t + ' ' + fmt(set).ap : 'Sunrise at ' + fmt(rise).t + ' ' + fmt(rise).ap;
     var kmh = w.wind, from = w.wind_dir == null ? '' : ' from the ' + COMPASS[Math.round(w.wind_dir / 45) % 8];
     $('wind-speed').innerHTML = kmh < 2 ? 'Calm' : (unit === 'F' ? Math.round(kmh * 0.621) + '<small>mph</small>' : Math.round(kmh) + '<small>km/h</small>');
@@ -212,7 +235,7 @@
   function tick() {
     var h = localNow(), f = fmt(h);
     $('time').textContent = f.t; $('ampm').textContent = f.ap;
-    var d = new Date(Date.now() + dayN * 86400000 + (live ? live.utc_offset : 0) * 1000);
+    var d = new Date(Date.now() + dayN * 86400000 + offset() * 1000);
     $('date').textContent = DAYS[d.getUTCDay()] + ', ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate();
     $('time-range').value = h;
     $('day-range').value = dayN;
@@ -240,7 +263,7 @@
         live = { place: place.name, lat: place.lat, lon: place.lon, temp: c.temperature_2m, feels: c.apparent_temperature,
           desc: WMO[c.weather_code] || 'Fair', wind: Math.round(c.wind_speed_10m), wind_dir: c.wind_direction_10m,
           humidity: c.relative_humidity_2m, code: c.weather_code, is_day: c.is_day, clouds: c.cloud_cover,
-          utc_offset: r.utc_offset_seconds || 0, sunrise: r.daily.sunrise[0], sunset: r.daily.sunset[0] };
+          utc_offset: r.utc_offset_seconds || 0, tz: r.timezone, sunrise: r.daily.sunrise[0], sunset: r.daily.sunset[0] };
         $('place-status').textContent = 'Live weather for ' + place.name + '.';
         render();
       } catch (e) { offline(); }

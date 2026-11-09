@@ -1025,6 +1025,10 @@
         var rise = minutesOf(w.sunrise), set = minutesOf(w.sunset);
         ph = Math.abs(now - rise) < 45 || Math.abs(now - set) < 45 ? 'golden' : now > rise && now < set ? 'day' : 'night';
       }
+      if (dayShift) {   // another day of the year: today's sunrise and sunset don't apply, so go by the sun itself
+        var el = Sky.sun(Date.now() + timeShift, lat, lon).el;
+        ph = el > 8 ? 'day' : el > -5 ? 'golden' : 'night';
+      }
     }
     if (!forced.wind) windKmh = w.wind;
     windDir = w.wind_dir == null ? 270 : w.wind_dir;

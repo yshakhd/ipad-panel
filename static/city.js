@@ -1589,6 +1589,10 @@
         var nowM = localHour() * 60, rise = minutesOf(w.sunrise), set = minutesOf(w.sunset);
         ph = Math.abs(nowM - rise) < 45 || Math.abs(nowM - set) < 45 ? 'golden' : nowM > rise && nowM < set ? 'day' : 'night';
       }
+      if (dayShift) {   // another day of the year: today's sunrise and sunset don't apply, so go by the sun itself
+        var el = Sky.sun(now(), lat, lon).el;
+        ph = el > 8 ? 'day' : el > -5 ? 'golden' : 'night';
+      }
     }
     if (!forced.wind) windKmh = w.wind;
     windDir = w.wind_dir == null ? 270 : w.wind_dir;
@@ -1598,7 +1602,7 @@
     if (key !== built || Date.now() - builtAt > 5 * 60 * 1000) {
       kind = k; phase = ph;
       setView(v, !!built && changed); built = key; rebuild();
-    }
+    } else { placeSky(V.bed); placeSky(V.desk); }   // the same sky, but the sun and moon move with the clock
   }
 
   /* ---------------- main loop ---------------- */
