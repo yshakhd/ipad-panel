@@ -17,12 +17,11 @@ configuration table explains every key. After each change, restart the server
       ```
       Watch the first day: if the battery runs low during the off time, shorten
       `off_minutes`.
-- [x] **"The iPad went quiet" alerts on your phone:** done 2026-11-09 through ntfy;
-      add the Home Assistant app later too if you like. needs the Home Assistant
-      app (its notify service), or an [ntfy](https://ntfy.sh) topic, which needs
-      no smart home at all.
+- [x] **"The iPad went quiet" alerts on your phone:** on since 2026-11-09,
+      through ntfy. Once the Home Assistant app is on your phone, you can add it
+      as a second channel:
       ```json
-      "watchdog": { "minutes": 15, "notify": "notify.mobile_app_your_phone", "ntfy": "" }
+      "watchdog": { "minutes": 15, "ntfy": "https://ntfy.sh/ipad-panel", "notify": "notify.mobile_app_your_phone" }
       ```
 - [ ] **Dim when nobody's home:** your phone as a `person` in Home Assistant.
       ```json
