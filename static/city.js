@@ -48,11 +48,11 @@
     night: { far: '#2c2b55', mid: '#1b1d3b', near: '#0e1024', roof: '#2a2c4c', glass: '#2a3358' } };
   var ROOM = {
     day: { wall: '#ddd8d0', wallLo: '#c4bdb3', frame: '#262a32', desk: '#8c6849', deskHi: '#a5815f', deskEdge: '#5b4231', floor: '#a08369', dark: '#3a332d',
-      hair: '#121113', hairHi: '#3a3a40', skin: '#dba67f', shirt: '#5d6c4a', shirtHi: '#7b8b62', shirtLo: '#434e37', tee: '#e9e6df', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
+      hair: '#121113', hairHi: '#3a3a40', skin: '#dba67f', shirt: '#5d6c4a', shirtHi: '#7b8b62', shirtLo: '#434e37', tee: '#e9e6df', knit: '#7c3044', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
     golden: { wall: '#d5a58a', wallLo: '#a8775f', frame: '#2a1f24', desk: '#83553a', deskHi: '#c08354', deskEdge: '#4f3122', floor: '#8c6047', dark: '#2e211d',
-      hair: '#121012', hairHi: '#3c383c', skin: '#d4966c', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
+      hair: '#121012', hairHi: '#3c383c', skin: '#d4966c', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', knit: '#7a3640', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
     night: { wall: '#1c2236', wallLo: '#141a2b', frame: '#0a0c14', desk: '#2a2630', deskHi: '#3a3442', deskEdge: '#17151c', floor: '#181a26', dark: '#0c0d14',
-      hair: '#0b0a0e', hairHi: '#2a2a38', skin: '#7a6670', shirt: '#262e28', shirtHi: '#36433b', shirtLo: '#181e1a', tee: '#5a6176', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
+      hair: '#0b0a0e', hairHi: '#2a2a38', skin: '#7a6670', shirt: '#262e28', shirtHi: '#36433b', shirtLo: '#181e1a', tee: '#5a6176', knit: '#2d1c27', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
   var OVERCAST = { clear: 0, partly: 0.08, cloudy: 0.55, fog: 0.62, drizzle: 0.55, rain: 0.65, heavy: 0.78, snow: 0.5, blizzard: 0.72, storm: 0.85 };
   var GREY = { day: '#a7b0bb', golden: '#9e8f98', night: '#262c40' };
   var KIND = { 0: 'clear', 1: 'clear', 2: 'partly', 3: 'cloudy', 45: 'fog', 48: 'fog',
@@ -639,6 +639,15 @@
     var dx = hx - ex, dy = hy - ey, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len;
     var rx = ex + ux * len * 0.3, ry = ey + uy * len * 0.3;   // where the roll sits
     g.lineCap = 'round';
+    if (person === 'her') {   // a knit sleeve all the way down, with a ribbed cuff
+      var K = cloth();
+      g.strokeStyle = K.c; g.lineWidth = 21; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.lineTo(hx - ux * 7, hy - uy * 7); g.stroke();
+      g.strokeStyle = K.lo; g.lineWidth = 15; g.beginPath(); g.moveTo(hx - ux * 10, hy - uy * 10); g.lineTo(hx - ux * 6, hy - uy * 6); g.stroke();
+      g.save(); g.translate(hx + ux * 1, hy + uy * 1 - 1); g.rotate(Math.atan2(dy, dx));
+      g.fillStyle = room.skin; g.beginPath(); g.arc(0, 0, 6.3, 0, 6.2832); g.fill();
+      g.fillStyle = rgba(mix(room.skin, '#5a2e22', 0.3), 0.4); g.beginPath(); g.arc(1.5, 2.6, 3.5, 0, 3.1416); g.fill(); g.restore();
+      return;
+    }
     g.strokeStyle = room.shirt; g.lineWidth = 23; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.lineTo(rx, ry); g.stroke();
     g.strokeStyle = rgba(room.shirtLo, 0.6); g.lineWidth = 2; g.beginPath();   // a crease inside the elbow
     g.moveTo(ex - ux * 6 + uy * 5, ey - uy * 6 - ux * 5); g.lineTo(ex + ux * 3 + uy * 7, ey + uy * 3 - ux * 7); g.stroke();
@@ -660,7 +669,59 @@
     g.beginPath(); g.moveTo(288, 600); g.bezierCurveTo(283, 520, 281, 472, 296, 453); g.quadraticCurveTo(316, 437, 350, 431);
     g.quadraticCurveTo(372, 428, 394, 431); g.quadraticCurveTo(428, 437, 448, 453); g.bezierCurveTo(463, 472, 461, 520, 456, 600); g.closePath();
   }
+  function headphones(g, wide) {   // padded band over the crown, cups over the ears
+    var w = wide || 0;
+    g.strokeStyle = '#2a2d35'; g.lineWidth = 5; g.beginPath(); g.arc(372, 397, 35 + w, Math.PI * 1.06, Math.PI * 1.94); g.stroke();
+    g.strokeStyle = '#3c404a'; g.lineWidth = 2; g.beginPath(); g.arc(372, 397, 33 + w, Math.PI * 1.3, Math.PI * 1.7); g.stroke();
+    g.fillStyle = '#2a2d35'; rrect(g, 332 - w, 387, 13, 28, 6); g.fill(); rrect(g, 399 + w, 387, 13, 28, 6); g.fill();
+    g.fillStyle = '#3c404a'; g.fillRect(334 - w, 390, 2, 22); g.fillRect(408 + w, 390, 2, 22);
+    g.fillStyle = '#ff7a59'; g.fillRect(335 - w, 399, 2, 6); g.fillRect(407 + w, 399, 2, 6);
+  }
+  function curls(g, R, x0, y0, x1, y1, r) {   // a row of curls from one point to another
+    for (var i = 0, n = Math.max(2, Math.round(Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)) / (r * 1.3)));  i <= n; i++) {
+      g.beginPath(); g.arc(x0 + (x1 - x0) * i / n + (R() - 0.5) * 2, y0 + (y1 - y0) * i / n + (R() - 0.5) * 2, r * (0.8 + R() * 0.4), 0, 6.2832); g.fill();
+    }
+  }
+  function wavy(g, R, x0, y0, x1, y1, night) {   // light catching on curly locks: wavy strands running down
+    g.lineCap = 'round'; g.lineWidth = 1.3;
+    for (var i = 0; i < 11; i++) {
+      var x = x0 + 4 + (x1 - x0 - 8) * (i + R() * 0.6) / 11, a = 2 + R() * 1.5, k = 0;
+      g.strokeStyle = rgba(room.hairHi, (night ? 0.25 : 0.4) + R() * 0.2); g.beginPath(); g.moveTo(x, y0 + R() * 8);
+      for (var y = y0 + 6; y < y1 - 2; y += 4) { k++; g.lineTo(x + Math.sin(k * 1.7 + i) * a + (x - (x0 + x1) / 2) * (y - y0) / (y1 - y0) * 0.12, y); }
+      g.stroke();
+    }
+  }
+  function herBack(g, rim, night) {   // her, from behind: a wine knit sweater, and long black curls down her back
+    var K = cloth(), hair = room.hair, R = seeded(21), i;
+    backPath(g);
+    var sg = g.createLinearGradient(0, 430, 0, 600); sg.addColorStop(0, K.hi); sg.addColorStop(0.25, K.c); sg.addColorStop(1, K.lo);
+    g.fillStyle = sg; g.fill();
+    g.save(); backPath(g); g.clip();
+    g.strokeStyle = rgba(K.lo, 0.35); g.lineWidth = 1.2; g.beginPath();   // ribbed knit
+    for (i = 0; i < 30; i++) { var kx = 290 + i * 6; g.moveTo(kx, 436); g.quadraticCurveTo(kx + (kx - 372) * 0.04, 520, kx + (kx - 372) * 0.06, 600); }
+    g.stroke();
+    g.fillStyle = rgba(K.hi, 0.3); ellipse(g, 318, 448, 26, 7); g.fill(); ellipse(g, 426, 448, 26, 7); g.fill();
+    g.restore();
+    g.strokeStyle = K.lo; g.lineWidth = 5; g.beginPath(); g.moveTo(346, 436); g.quadraticCurveTo(372, 428, 398, 436); g.stroke();   // the neckline
+    // her hair, falling over her shoulders and down her back
+    g.fillStyle = hair; g.beginPath(); g.moveTo(344, 412); g.bezierCurveTo(326, 436, 316, 466, 320, 500); g.lineTo(424, 500);
+    g.bezierCurveTo(428, 466, 418, 436, 400, 412); g.closePath(); g.fill();
+    curls(g, R, 334, 428, 316, 498, 6.5); curls(g, R, 410, 428, 428, 498, 6.5); curls(g, R, 322, 502, 422, 502, 7);
+    wavy(g, R, 324, 418, 420, 498, night);
+    if (rim) { g.strokeStyle = rgba(rim, night ? 0.45 : 0.6); g.lineWidth = 2.5; g.beginPath(); g.moveTo(426, 438); g.quadraticCurveTo(448, 446, 456, 470); g.quadraticCurveTo(461, 520, 457, 560); g.stroke(); }
+  }
+  function herHead(g, rim, night) {   // the back of her head: all black curls, headphones over them
+    var hair = room.hair, R = seeded(23), i;
+    g.fillStyle = hair; ellipse(g, 372, 391, 31, 35); g.fill();
+    g.beginPath(); g.moveTo(342, 396); g.bezierCurveTo(334, 418, 334, 436, 338, 444); g.lineTo(406, 444); g.bezierCurveTo(410, 436, 410, 418, 402, 396); g.closePath(); g.fill();
+    curls(g, R, 344, 368, 338, 440, 6); curls(g, R, 400, 368, 406, 440, 6); curls(g, R, 352, 360, 392, 360, 5);
+    g.fillStyle = rgba(room.hairHi, night ? 0.2 : 0.35); ellipse(g, 366, 371, 13, 5); g.fill();   // a soft sheen
+    wavy(g, R, 342, 376, 402, 444, night);
+    headphones(g, 3);
+    if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 391, 34, -1.4, 0.3); g.stroke(); }
+  }
   function backView(g, rim, night) {   // the neck and an olive overshirt: collar, back yoke, a box pleat and soft folds
+    if (person === 'her') return herBack(g, rim, night);
     var sk = room.skin, skLo = mix(sk, '#4a2418', 0.35), i;
     g.fillStyle = sk; g.beginPath(); g.moveTo(357, 404); g.lineTo(387, 404); g.quadraticCurveTo(388, 424, 395, 438); g.lineTo(349, 438); g.quadraticCurveTo(356, 424, 357, 404); g.fill();
     g.strokeStyle = rgba(skLo, 0.3); g.lineWidth = 2; g.beginPath(); g.moveTo(357, 406); g.quadraticCurveTo(356, 424, 351, 436); g.moveTo(387, 406); g.quadraticCurveTo(388, 424, 393, 436); g.stroke();
@@ -683,6 +744,7 @@
     if (rim) { g.strokeStyle = rgba(rim, night ? 0.45 : 0.6); g.lineWidth = 2.5; g.beginPath(); g.moveTo(426, 438); g.quadraticCurveTo(448, 446, 456, 470); g.quadraticCurveTo(461, 520, 457, 560); g.stroke(); }
   }
   function headBack(g, rim, night) {   // back of his head: a taper fade on the sides and back, medium-short textured top
+    if (person === 'her') return herHead(g, rim, night);
     var sk = room.skin, skLo = mix(sk, '#4a2418', 0.3), hair = room.hair, i;
     function skull() {   // round at the crown, narrowing behind the ears into the neck
       g.beginPath(); g.moveTo(344, 396); g.bezierCurveTo(342, 352, 402, 352, 400, 396);
@@ -713,15 +775,17 @@
       g.quadraticCurveTo(cx + Math.cos(an + 0.5) * ln * 0.6, cy + Math.sin(an + 0.5) * ln * 0.6, cx + Math.cos(an + 0.3) * ln, cy + Math.sin(an + 0.3) * ln); g.stroke();
     }
     g.fillStyle = rgba(room.hairHi, night ? 0.2 : 0.35); ellipse(g, 366, 371, 13, 5); g.fill();   // a soft sheen
-    // headphones: padded band over the crown, cups over the ears
-    g.strokeStyle = '#2a2d35'; g.lineWidth = 5; g.beginPath(); g.arc(372, 397, 35, Math.PI * 1.06, Math.PI * 1.94); g.stroke();
-    g.strokeStyle = '#3c404a'; g.lineWidth = 2; g.beginPath(); g.arc(372, 397, 33, Math.PI * 1.3, Math.PI * 1.7); g.stroke();
-    g.fillStyle = '#2a2d35'; rrect(g, 332, 387, 13, 28, 6); g.fill(); rrect(g, 399, 387, 13, 28, 6); g.fill();
-    g.fillStyle = '#3c404a'; g.fillRect(334, 390, 2, 22); g.fillRect(408, 390, 2, 22);
-    g.fillStyle = '#ff7a59'; g.fillRect(335, 399, 2, 6); g.fillRect(407, 399, 2, 6);
+    headphones(g);
     if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 391, 31, -1.4, 0.3); g.stroke(); }
   }
   function sleeper(g, x, y) {   // asleep on his side, face towards us: drawn upright, then laid on the pillow
+    if (person === 'her') {   // or her, alone: same pose
+      g.save(); g.translate(x, y); g.rotate(-0.62); g.scale(0.9, 0.95);
+      g.fillStyle = room.tee; rrect(g, -18, 30, 36, 18, 9); g.fill();
+      g.fillStyle = mix(room.skin, '#4a2418', 0.12); g.fillRect(-6, 14, 12, 20); g.restore();
+      her(g, x + 2, y - 2, -0.62, 0.9);
+      return;
+    }
     var night = phase === 'night', sk = room.skin, skLo = mix(sk, '#4a2418', 0.35), hair = room.hair, i;
     g.save(); g.translate(x, y); g.rotate(-0.62); g.scale(0.9, 0.95);   // a slightly long oval face
     g.fillStyle = room.tee; rrect(g, -20, 30, 40, 18, 9); g.fill();   // T-shirt shoulders, going under the covers
@@ -756,16 +820,20 @@
     if (!night) { g.fillStyle = 'rgba(220,110,100,0.16)'; ellipse(g, 11, 3, 4, 2.5); g.fill(); }
     g.restore();
   }
-  var withHer = !window.CITY_STANDALONE;   // always on the panel; the demo site has a switch
+  // Who lives here. The panel: him at the desk, and both of them asleep. The demo site: him or her, alone.
+  var person = 'him', withHer = !window.CITY_STANDALONE;
+  function setPerson(p) { person = p === 'her' ? 'her' : 'him'; if (person === 'her') withHer = false; if (built) rebuild(); }
+  function cloth() { return person === 'her' ? { c: room.knit, hi: mix(room.knit, '#ffffff', 0.16), lo: mix(room.knit, '#000000', 0.28) } : { c: room.shirt, hi: room.shirtHi, lo: room.shirtLo }; }
   function setHer(on) {   // show her in bed with him, or not; the covers are redrawn in place
     withHer = !!on;
     if (!duvet) return;
     var g = duvet.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, duvet.width, duvet.height);
     g.translate(-340, -440); duvetShape(g, true);
   }
-  function her(g, x, y) {   // asleep beside him: long black curly hair with a middle part, arched brows, a soft smile
+  function her(g, x, y, rot, sc) {   // asleep: long black curly hair with a middle part, arched brows, a soft smile
     var night = phase === 'night', sk = mix(room.skin, '#ffffff', 0.04), skLo = mix(sk, '#4a2418', 0.3), hair = room.hair, i, a;
-    g.save(); g.translate(x, y); g.rotate(-0.28); g.scale(0.84, 0.86);
+    sc = sc || 0.84;
+    g.save(); g.translate(x, y); g.rotate(rot === undefined ? -0.28 : rot); g.scale(sc, sc * 1.02);
     // the mass of curls behind her head, spilling down over the pillow and the covers
     g.fillStyle = hair; g.beginPath(); g.moveTo(0, -31); g.bezierCurveTo(-30, -32, -34, 6, -30, 36); g.lineTo(30, 38); g.bezierCurveTo(36, 6, 30, -32, 0, -31); g.fill();
     var R = seeded(11);
@@ -809,7 +877,7 @@
     g.quadraticCurveTo(1000, 560, 996, 628); g.lineTo(344, 628); g.closePath(); g.fill();
     g.strokeStyle = rgba(room.duvetHi, 0.55); g.lineWidth = 2; g.beginPath();
     g.moveTo(420, 560); g.quadraticCurveTo(520, 548, 600, 560); g.moveTo(640, 590); g.quadraticCurveTo(760, 570, 880, 586); g.stroke();
-    if (him && withHer) {   // she sleeps beside him (on the panel; a switch on the demo), her pillow tucked against his shoulder; the sheet comes up to her chin
+    if (him && withHer && person === 'him') {   // she sleeps beside him (on the panel; a switch on the demo), her pillow tucked against his shoulder; the sheet comes up to her chin
       g.fillStyle = mix(room.sheet, '#ffffff', 0.4); ellipse(g, 418, 508, 50, 15); g.fill();
       g.fillStyle = rgba(room.dark, 0.15); ellipse(g, 420, 518, 46, 6); g.fill();
       her(g, 405, 484);
@@ -825,9 +893,9 @@
     g.save(); g.translate(388, 513); g.rotate(0.12); g.fillStyle = room.tee; rrect(g, -16, -8, 26, 16, 7); g.fill();   // a T-shirt sleeve
     g.strokeStyle = rgba(room.dark, 0.2); g.lineWidth = 1.2; g.beginPath(); g.moveTo(9, -7); g.lineTo(9, 7); g.stroke(); g.restore();
     cat(g, 866, 484);   // the cat, curled up by his feet
-    g.fillStyle = room.shirt; g.beginPath();   // his overshirt, thrown over the end of the bed
+    g.fillStyle = cloth().c; g.beginPath();   // the top they work in, thrown over the end of the bed
     g.moveTo(958, 532); g.quadraticCurveTo(984, 520, 1000, 540); g.lineTo(1002, 610); g.quadraticCurveTo(990, 620, 980, 606); g.quadraticCurveTo(966, 570, 958, 532); g.fill();
-    g.strokeStyle = rgba(room.shirtHi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
+    g.strokeStyle = rgba(cloth().hi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
   }
 
   /* ---------------- the animals ----------------
@@ -2031,6 +2099,7 @@
     photo: function () { return current; },
     bedPicture: bedPicture,
     setHer: setHer,
+    setPerson: setPerson,
     snapshot: function () { return ed.fin ? ed.fin.toDataURL('image/jpeg', 0.9) : ''; },
     // the hours he sleeps (local time); outside them he's at the desk
     setHours: function (s, w) { if (s === sleepH && w === wakeH) return; sleepH = s; wakeH = w; if (lastW) setWeather(lastW); },

@@ -142,22 +142,22 @@
   <button id="close" type="button" aria-label="Close">Close</button>
   <div class="seg" aria-label="Scene"><a id="seg-meadow" href="./">Meadow</a><a class="on" href="#" aria-current="page">City</a></div>
   <h2>The city apartment</h2>
-  <p>He codes by the west window and edits your photos on the second screen. From 1 to 8 in the morning he's asleep, facing the sunrise.</p>
+  <p id="about">He codes by the west window and edits your photos on the second screen. From 1 to 8 in the morning he's asleep, facing the sunrise.</p>
 
   <label>Your photos <span>stay on this device</span></label>
   <label class="file" style="margin:0">Choose photos<input id="files" type="file" accept="image/*" multiple></label>
 
-  <label>Bedroom picture <span>framed on the wall by his bed</span></label>
+  <label>Bedroom picture <span>framed on the wall by the bed</span></label>
   <div class="row"><label class="file" style="margin:0">Choose a picture<input id="bedpic" type="file" accept="image/*"></label><button id="bedpic-clear" type="button" hidden>Remove</button></div>
 
-  <label>In bed <span>who's asleep from 1 to 8</span></label>
-  <div class="chips" id="sleepers"><button type="button" data-her="0">Just him</button><button type="button" data-her="1">Him and her</button></div>
+  <label>Who lives here</label>
+  <div class="chips" id="person"><button type="button" data-p="him">Him</button><button type="button" data-p="her">Her</button></div>
 
   <label>Room</label>
   <div class="chips" id="views"><button type="button" data-v="">By the clock</button><button type="button" data-v="desk">Desk</button><button type="button" data-v="bed">Bed</button></div>
 
   <label>Animals <span>they also come by on their own</span></label>
-  <div class="chips" id="pets"><button type="button" data-dog="visit">Dog, come here</button><button type="button" data-dog="fetch">Fetch</button><button type="button" data-dog="tail">Chase your tail</button><button type="button" data-cat="1">Wake the cat</button><button type="button" data-bell="1">Ring the doorbell</button><button type="button" data-note="1">Leave him a note</button></div>
+  <div class="chips" id="pets"><button type="button" data-dog="visit">Dog, come here</button><button type="button" data-dog="fetch">Fetch</button><button type="button" data-dog="tail">Chase your tail</button><button type="button" data-cat="1">Wake the cat</button><button type="button" data-bell="1">Ring the doorbell</button><button type="button" data-note="1" id="note-btn">Leave him a note</button></div>
   <div id="pet-status"></div>
 
   <label for="wind-range">Wind <span id="wind-val"></span></label>
@@ -401,7 +401,7 @@
     if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }   // they live by the desk
     var said;
     if (bell) { City.door('doorbell'); flash.bell = Date.now() + 4000; said = 'Ding dong. The dog runs to the door.'; }
-    else if (nt) { City.note(['Laundry is done', 'Dinner at 7', 'Call Mom back', 'Package at the door'][Math.floor(Math.random() * 4)], true); flash.note = Date.now() + 2500; said = 'A note on his monitor.'; }
+    else if (nt) { City.note(['Laundry is done', 'Dinner at 7', 'Call Mom back', 'Package at the door'][Math.floor(Math.random() * 4)], true); flash.note = Date.now() + 2500; said = 'A note on ' + P('his') + ' monitor.'; }
     else if (dk) { City.callDog(dk); dogJob = dk; dogAt = Date.now(); said = dk === 'fetch' ? 'Here comes the ball.' : dk === 'tail' ? 'Round and round he goes.' : 'Here comes the dog.'; }
     else { City.wakeCat(); said = 'The cat is waking up.'; }
     $('pet-status').textContent = said;
@@ -443,7 +443,7 @@
     if (!urls.length) return;
     if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }
     City.setPhotos(urls, 60);
-    $('place-status').textContent = urls.length === 1 ? 'He is editing your photo.' : 'He is editing your photos, a new one every minute.';
+    $('place-status').textContent = P('He') + (urls.length === 1 ? ' is editing your photo.' : ' is editing your photos, a new one every minute.');
   };
   // A picture for the frame by his bed: shrunk to the frame's size and kept in this browser, so it's
   // still there next visit. Nothing is uploaded.
@@ -470,18 +470,23 @@
   $('bedpic-clear').onclick = function () { City.bedPicture(null); bedSaved(null); $('place-status').textContent = 'The skyline print is back on the wall.'; };
   try { var savedBed = localStorage.getItem('cityBedPicture'); if (savedBed) { City.bedPicture(savedBed); $('bedpic-clear').hidden = false; } } catch (e) {}
 
-  // Whether she's asleep beside him: off unless the visitor turns it on, and remembered in this browser.
-  var her = false;
-  try { her = localStorage.getItem('cityHer') === '1'; } catch (e) {}
-  function showHer() { City.setHer(her); chipsOn('sleepers', function (b) { return b.getAttribute('data-her') === (her ? '1' : '0'); }); }
-  $('sleepers').onclick = function (e) {
-    var v = e.target.getAttribute('data-her'); if (v === null) return;
-    her = v === '1'; showHer();
-    try { localStorage.setItem('cityHer', her ? '1' : '0'); } catch (e2) {}
-    if (City.view() !== 'bed') { viewPick = 'bed'; City.showView('bed'); render(); }   // go and look
-    $('place-status').textContent = her ? 'She’s asleep beside him.' : 'Just him tonight.';
+  // Who lives here: him or her, at the desk and in bed. Remembered in this browser.
+  var who = 'him';
+  try { if (localStorage.getItem('cityPerson') === 'her') who = 'her'; } catch (e) {}
+  function P(k) { var her = who === 'her'; return { he: her ? 'she' : 'he', He: her ? 'She' : 'He', his: her ? 'her' : 'his', him: her ? 'her' : 'him' }[k]; }
+  function showPerson() {
+    City.setPerson(who);
+    chipsOn('person', function (b) { return b.getAttribute('data-p') === who; });
+    $('about').textContent = P('He') + ' codes by the west window and edits your photos on the second screen. From 1 to 8 in the morning ' + P('he') + '’s asleep, facing the sunrise.';
+    $('note-btn').textContent = 'Leave ' + P('him') + ' a note';
+  }
+  $('person').onclick = function (e) {
+    var v = e.target.getAttribute('data-p'); if (v === null) return;
+    who = v; showPerson();
+    try { localStorage.setItem('cityPerson', who); } catch (e2) {}
+    $('place-status').textContent = who === 'her' ? 'She lives here now.' : 'He lives here now.';
   };
-  showHer();
+  showPerson();
 
   $('photo-hit').onclick = function () {
     $('viewer-img').style.backgroundImage = 'url(' + (City.photo() || City.snapshot()) + ')';
