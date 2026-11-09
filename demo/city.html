@@ -147,6 +147,9 @@
   <label>Your photos <span>stay on this device</span></label>
   <label class="file" style="margin:0">Choose photos<input id="files" type="file" accept="image/*" multiple></label>
 
+  <label>Bedroom picture <span>framed on the wall by his bed</span></label>
+  <div class="row"><label class="file" style="margin:0">Choose a picture<input id="bedpic" type="file" accept="image/*"></label><button id="bedpic-clear" type="button" hidden>Remove</button></div>
+
   <label>Room</label>
   <div class="chips" id="views"><button type="button" data-v="">By the clock</button><button type="button" data-v="desk">Desk</button><button type="button" data-v="bed">Bed</button></div>
 
@@ -439,6 +442,31 @@
     City.setPhotos(urls, 60);
     $('place-status').textContent = urls.length === 1 ? 'He is editing your photo.' : 'He is editing your photos, a new one every minute.';
   };
+  // A picture for the frame by his bed: shrunk to the frame's size and kept in this browser, so it's
+  // still there next visit. Nothing is uploaded.
+  function bedSaved(url) {
+    $('bedpic-clear').hidden = !url;
+    try { if (url) localStorage.setItem('cityBedPicture', url); else localStorage.removeItem('cityBedPicture'); } catch (e) {}
+  }
+  $('bedpic').onchange = function () {
+    var f = this.files[0]; if (!f) return;
+    var img = new Image(), src = URL.createObjectURL(f);
+    img.onload = function () {
+      var W2 = 330, H2 = 438, k = Math.max(W2 / img.width, H2 / img.height), cw = W2 / k, ch = H2 / k, c = document.createElement('canvas');
+      c.width = W2; c.height = H2;
+      c.getContext('2d').drawImage(img, (img.width - cw) / 2, (img.height - ch) * 0.4, cw, ch, 0, 0, W2, H2);
+      var url = c.toDataURL('image/jpeg', 0.85);
+      URL.revokeObjectURL(src);
+      City.bedPicture(url); bedSaved(url);
+      viewPick = 'bed'; City.showView('bed'); render();   // go and look at it
+      $('place-status').textContent = 'Your picture is on the bedroom wall.';
+    };
+    img.src = src;
+    this.value = '';
+  };
+  $('bedpic-clear').onclick = function () { City.bedPicture(null); bedSaved(null); $('place-status').textContent = 'The skyline print is back on the wall.'; };
+  try { var savedBed = localStorage.getItem('cityBedPicture'); if (savedBed) { City.bedPicture(savedBed); $('bedpic-clear').hidden = false; } } catch (e) {}
+
   $('photo-hit').onclick = function () {
     $('viewer-img').style.backgroundImage = 'url(' + (City.photo() || City.snapshot()) + ')';
     $('viewer').className = 'on';

@@ -521,12 +521,15 @@
     g.fillStyle = leafCol(); for (i = 0; i < 6; i++) { g.save(); g.translate(x + 63, y - 14); g.rotate(-1.1 + i * 0.45); ellipse(g, 0, -9, 3, 9); g.fill(); g.restore(); }
   }
   // A picture of your own for the bedroom frame, kept on the panel only (static/private/ is not in git).
+  // On the demo site, visitors can choose their own (City.bedPicture), and it stays in their browser.
   var bedPic = null;
-  if (!window.CITY_STANDALONE) {
-    var bedImg = new Image();
-    bedImg.onload = function () { bedPic = bedImg; if (built) drawBedRoom(); };   // drawn now if the room is built, else at the first build
-    bedImg.src = 'private/bedroom.jpg';
+  function bedPicture(src) {
+    if (!src) { bedPic = null; if (built) drawBedRoom(); return; }
+    var im = new Image();
+    im.onload = function () { bedPic = im; if (built) drawBedRoom(); };   // drawn now if the room is built, else at the first build
+    im.src = src;
   }
+  if (!window.CITY_STANDALONE) bedPicture('private/bedroom.jpg');
   function drawBedRoom() {
     var v = V.bed, g = v.room.getContext('2d'), night = phase === 'night', i;
     g.clearRect(0, 0, W, H);
@@ -539,7 +542,8 @@
     // a framed picture on the wall: your own (static/private/bedroom.jpg, iPad only), or a skyline print
     g.fillStyle = room.frame; g.fillRect(64, 236, 124, 160);
     if (bedPic) {
-      g.drawImage(bedPic, 71, 243, 110, 146);
+      var iw = bedPic.width, ih = bedPic.height, k = Math.max(110 / iw, 146 / ih), cw = 110 / k, ch = 146 / k;   // fill the frame, cropping the overflow
+      g.drawImage(bedPic, (iw - cw) / 2, (ih - ch) * 0.4, cw, ch, 71, 243, 110, 146);
       if (night) { g.fillStyle = 'rgba(8,12,30,0.5)'; g.fillRect(71, 243, 110, 146); }   // the room is dark
       else if (phase !== 'day') { g.fillStyle = 'rgba(255,150,90,0.1)'; g.fillRect(71, 243, 110, 146); }
       var sh = g.createLinearGradient(71, 243, 181, 389); sh.addColorStop(0, 'rgba(255,255,255,' + (night ? 0.04 : 0.12) + ')'); sh.addColorStop(0.45, 'rgba(255,255,255,0)');
@@ -1974,6 +1978,7 @@
     wind: function () { return windNow(); },
     dim: function (on) { dimmed = on; },
     photo: function () { return current; },
+    bedPicture: bedPicture,
     snapshot: function () { return ed.fin ? ed.fin.toDataURL('image/jpeg', 0.9) : ''; },
     // the hours he sleeps (local time); outside them he's at the desk
     setHours: function (s, w) { if (s === sleepH && w === wakeH) return; sleepH = s; wakeH = w; if (lastW) setWeather(lastW); },
