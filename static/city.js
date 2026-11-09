@@ -644,8 +644,7 @@
   function backView(g, rim, night) {   // the neck and an olive overshirt: collar, back yoke, a box pleat and soft folds
     var sk = room.skin, skLo = mix(sk, '#4a2418', 0.35), i;
     g.fillStyle = sk; g.beginPath(); g.moveTo(357, 404); g.lineTo(387, 404); g.quadraticCurveTo(388, 424, 395, 438); g.lineTo(349, 438); g.quadraticCurveTo(356, 424, 357, 404); g.fill();
-    var ng = g.createLinearGradient(0, 404, 0, 432); ng.addColorStop(0, rgba(skLo, 0.75)); ng.addColorStop(1, rgba(skLo, 0)); g.fillStyle = ng; g.fill();
-    g.strokeStyle = rgba(skLo, 0.5); g.lineWidth = 2; g.beginPath(); g.moveTo(357, 406); g.quadraticCurveTo(356, 424, 351, 436); g.moveTo(387, 406); g.quadraticCurveTo(388, 424, 393, 436); g.stroke();
+    g.strokeStyle = rgba(skLo, 0.3); g.lineWidth = 2; g.beginPath(); g.moveTo(357, 406); g.quadraticCurveTo(356, 424, 351, 436); g.moveTo(387, 406); g.quadraticCurveTo(388, 424, 393, 436); g.stroke();
     backPath(g);
     var sg = g.createLinearGradient(0, 430, 0, 600); sg.addColorStop(0, room.shirtHi); sg.addColorStop(0.25, room.shirt); sg.addColorStop(1, room.shirtLo);
     g.fillStyle = sg; g.fill();
@@ -664,22 +663,18 @@
     g.strokeStyle = rgba(night ? room.shirtHi : '#ffffff', 0.18); g.lineWidth = 1; g.beginPath(); g.moveTo(352, 429); g.quadraticCurveTo(372, 424, 392, 429); g.stroke();
     if (rim) { g.strokeStyle = rgba(rim, night ? 0.45 : 0.6); g.lineWidth = 2.5; g.beginPath(); g.moveTo(426, 438); g.quadraticCurveTo(448, 446, 456, 470); g.quadraticCurveTo(461, 520, 457, 560); g.stroke(); }
   }
-  function headBack(g, rim, night) {   // back of his head: a taper fade on the sides and back, medium-short textured top, beard at the jaw
+  function headBack(g, rim, night) {   // back of his head: a taper fade on the sides and back, medium-short textured top
     var sk = room.skin, skLo = mix(sk, '#4a2418', 0.3), hair = room.hair, i;
-    function skull() { g.beginPath(); g.ellipse ? g.ellipse(372, 392, 28, 32, 0, 0, 6.2832) : g.arc(372, 392, 30, 0, 6.2832);
-      g.moveTo(351, 408); g.quadraticCurveTo(356, 426, 358, 434); g.lineTo(386, 434); g.quadraticCurveTo(388, 426, 393, 408); g.closePath(); }
+    function skull() {   // round at the crown, narrowing behind the ears into the neck
+      g.beginPath(); g.moveTo(344, 396); g.bezierCurveTo(342, 352, 402, 352, 400, 396);
+      g.bezierCurveTo(399, 410, 391, 418, 387, 434); g.lineTo(357, 434); g.bezierCurveTo(353, 418, 345, 410, 344, 396); g.closePath(); }
     g.fillStyle = sk; ellipse(g, 344, 401, 6, 10); g.fill(); ellipse(g, 400, 401, 6, 10); g.fill();   // ears
     g.fillStyle = sk; skull(); g.fill();
-    // the beard, seen along the jaw either side of the neck
-    g.fillStyle = rgba(hair, 0.55); g.beginPath();
-    g.moveTo(346, 412); g.quadraticCurveTo(348, 422, 355, 427); g.quadraticCurveTo(351, 419, 351, 411); g.closePath();
-    g.moveTo(398, 412); g.quadraticCurveTo(396, 422, 389, 427); g.quadraticCurveTo(393, 419, 393, 411); g.closePath(); g.fill();
     // taper: short hair fading to skin down the back and above the ears
     g.save(); skull(); g.clip();
-    var fg = g.createLinearGradient(0, 384, 0, 432);
+    var fg = g.createLinearGradient(0, 384, 0, 424);
     fg.addColorStop(0, rgba(hair, 0.95)); fg.addColorStop(0.35, rgba(hair, 0.72)); fg.addColorStop(0.7, rgba(hair, 0.38)); fg.addColorStop(0.9, rgba(hair, 0.16)); fg.addColorStop(1, rgba(hair, 0));
     g.fillStyle = fg; g.fillRect(330, 370, 90, 62);
-    g.fillStyle = rgba(skLo, 0.25); g.fillRect(330, 418, 90, 16);   // shadow where the neck meets the collar
     g.restore();
     // the top: fuller than the skull, with a slightly uneven textured edge
     g.beginPath();
