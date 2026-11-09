@@ -48,11 +48,11 @@
     night: { far: '#2c2b55', mid: '#1b1d3b', near: '#0e1024', roof: '#2a2c4c', glass: '#2a3358' } };
   var ROOM = {
     day: { wall: '#ddd8d0', wallLo: '#c4bdb3', frame: '#262a32', desk: '#8c6849', deskHi: '#a5815f', deskEdge: '#5b4231', floor: '#a08369', dark: '#3a332d',
-      hair: '#1d1716', hairHi: '#54453c', skin: '#deaa84', shirt: '#5d6c4a', shirtHi: '#7b8b62', shirtLo: '#434e37', tee: '#e9e6df', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
+      hair: '#121113', hairHi: '#3a3a40', skin: '#dba67f', shirt: '#5d6c4a', shirtHi: '#7b8b62', shirtLo: '#434e37', tee: '#e9e6df', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
     golden: { wall: '#d5a58a', wallLo: '#a8775f', frame: '#2a1f24', desk: '#83553a', deskHi: '#c08354', deskEdge: '#4f3122', floor: '#8c6047', dark: '#2e211d',
-      hair: '#1a1414', hairHi: '#5e4234', skin: '#d6996f', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
+      hair: '#131012', hairHi: '#4a3a3a', skin: '#d4966c', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
     night: { wall: '#1c2236', wallLo: '#141a2b', frame: '#0a0c14', desk: '#2a2630', deskHi: '#3a3442', deskEdge: '#17151c', floor: '#181a26', dark: '#0c0d14',
-      hair: '#0d0b0f', hairHi: '#2c2c3c', skin: '#7a6670', shirt: '#262e28', shirtHi: '#36433b', shirtLo: '#181e1a', tee: '#5a6176', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
+      hair: '#0b0a0e', hairHi: '#2a2a38', skin: '#7a6670', shirt: '#262e28', shirtHi: '#36433b', shirtLo: '#181e1a', tee: '#5a6176', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
   var OVERCAST = { clear: 0, partly: 0.08, cloudy: 0.55, fog: 0.62, drizzle: 0.55, rain: 0.65, heavy: 0.78, snow: 0.5, blizzard: 0.72, storm: 0.85 };
   var GREY = { day: '#a7b0bb', golden: '#9e8f98', night: '#262c40' };
   var KIND = { 0: 'clear', 1: 'clear', 2: 'partly', 3: 'cloudy', 45: 'fog', 48: 'fog',
@@ -673,7 +673,7 @@
     // taper: short hair fading to skin down the back and above the ears
     g.save(); skull(); g.clip();
     var fg = g.createLinearGradient(0, 384, 0, 424);
-    fg.addColorStop(0, rgba(hair, 0.95)); fg.addColorStop(0.35, rgba(hair, 0.72)); fg.addColorStop(0.7, rgba(hair, 0.38)); fg.addColorStop(0.9, rgba(hair, 0.16)); fg.addColorStop(1, rgba(hair, 0));
+    fg.addColorStop(0, rgba(hair, 0.97)); fg.addColorStop(0.35, rgba(hair, 0.88)); fg.addColorStop(0.65, rgba(hair, 0.6)); fg.addColorStop(0.88, rgba(hair, 0.25)); fg.addColorStop(1, rgba(hair, 0));
     g.fillStyle = fg; g.fillRect(330, 370, 90, 62);
     g.restore();
     // the top: fuller than the skull, with a slightly uneven textured edge
@@ -704,7 +704,7 @@
   }
   function sleeper(g, x, y) {   // asleep on his side, face towards us: drawn upright, then laid on the pillow
     var night = phase === 'night', sk = room.skin, skLo = mix(sk, '#4a2418', 0.35), hair = room.hair, i;
-    g.save(); g.translate(x, y); g.rotate(-0.62); g.scale(0.92, 0.92);
+    g.save(); g.translate(x, y); g.rotate(-0.62); g.scale(0.9, 0.95);   // a slightly long oval face
     g.fillStyle = room.tee; rrect(g, -20, 30, 40, 18, 9); g.fill();   // T-shirt shoulders, going under the covers
     g.fillStyle = mix(sk, '#4a2418', 0.15); g.fillRect(-8, 14, 16, 20);   // neck
     g.strokeStyle = rgba(room.dark, 0.25); g.lineWidth = 1.5; g.beginPath(); g.moveTo(-10, 31); g.quadraticCurveTo(0, 37, 10, 31); g.stroke();   // the collar
@@ -712,22 +712,28 @@
     g.fillStyle = sk; ellipse(g, 21, -1, 3.5, 6.5); g.fill(); g.fillStyle = skLo; ellipse(g, 21.5, -1, 1.6, 4); g.fill();   // an ear
     g.fillStyle = sk; face(); g.fill();
     var lg = g.createLinearGradient(-20, 0, 20, 0); lg.addColorStop(0, rgba(skLo, 0.5)); lg.addColorStop(0.45, rgba(skLo, 0)); g.fillStyle = lg; face(); g.fill();   // into the pillow
-    // hair: medium-short on top, swept up off the forehead
-    g.fillStyle = hair; g.beginPath(); g.moveTo(-21, -5); g.bezierCurveTo(-25, -37, 25, -38, 21, -7);
-    g.quadraticCurveTo(17, -14, 9, -16); g.quadraticCurveTo(0, -18.5, -9, -16); g.quadraticCurveTo(-18, -14, -21, -5); g.closePath(); g.fill();
+    // hair: black, short at the sides, full on top and swept up and back off the forehead
+    g.fillStyle = hair; g.beginPath(); g.moveTo(-21, -5);
+    for (i = 0; i <= 24; i++) {   // the outline: a textured, uneven edge, fuller at the front where it's swept up
+      var th = Math.PI * (1 + i / 24), lift = 1 + 0.12 * Math.max(0, Math.sin(th * 1 + 2.4)), jag = i % 2 ? 0.985 : 1.01;
+      g.lineTo(Math.cos(th) * 21.5 * jag, -11 + Math.sin(th) * 25 * lift * jag);
+    }
+    g.lineTo(21, -7);
+    g.quadraticCurveTo(17, -15, 9, -17.5); g.quadraticCurveTo(0, -19.5, -9, -17.5); g.quadraticCurveTo(-18, -15.5, -21, -5); g.closePath(); g.fill();
     var R = seeded(3); g.lineCap = 'round'; g.lineWidth = 1;
-    for (i = 0; i < 14; i++) { var sx = -15 + R() * 30, sy = -26 + R() * 8; g.strokeStyle = rgba(room.hairHi, 0.4 + R() * 0.3); g.beginPath(); g.moveTo(sx, sy + 5); g.quadraticCurveTo(sx + 1, sy, sx + 3, sy - 3); g.stroke(); }
-    g.fillStyle = rgba(hair, 0.5); g.beginPath(); g.moveTo(17, -13); g.lineTo(21.5, -9); g.lineTo(21, -2); g.lineTo(18, -3); g.closePath(); g.fill();   // tapered above the ear
-    // beard: full and connected from the sideburns to the chin, kept short
-    g.fillStyle = rgba(hair, 0.68); g.beginPath();
-    g.moveTo(-20.5, -4); g.lineTo(-19.5, 3); g.quadraticCurveTo(-15, 7, -10, 8.5); g.quadraticCurveTo(-6, 8.8, -4.5, 10.2); g.quadraticCurveTo(0, 8.6, 4.5, 10.2);
-    g.quadraticCurveTo(6, 8.8, 10, 8.5); g.quadraticCurveTo(15, 7, 19.5, 3); g.lineTo(20.5, -4);
-    g.bezierCurveTo(20.8, 13, 10.5, 27, 0, 27.3); g.bezierCurveTo(-10.5, 27, -20.8, 13, -20.5, -4); g.closePath(); g.fill();
-    g.strokeStyle = mix(sk, '#a8564e', night ? 0.2 : 0.45); g.lineWidth = 1.6; g.beginPath(); g.moveTo(-4, 14.5); g.quadraticCurveTo(0, 15.5, 4, 14.5); g.stroke();   // lips
-    // brows, closed eyes, nose
-    g.strokeStyle = hair; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-14.5, -9); g.quadraticCurveTo(-9, -12, -4, -9.8); g.moveTo(4, -9.8); g.quadraticCurveTo(9, -12, 14.5, -9); g.stroke();
-    g.strokeStyle = rgba(room.dark, 0.85); g.lineWidth = 1.3; g.beginPath(); g.moveTo(-13, -3.5); g.quadraticCurveTo(-9, -0.5, -5, -3.5); g.moveTo(5, -3.5); g.quadraticCurveTo(9, -0.5, 13, -3.5); g.stroke();
-    g.strokeStyle = rgba(skLo, 0.9); g.lineWidth = 1.2; g.beginPath(); g.moveTo(0.5, -2); g.quadraticCurveTo(-0.5, 4, -2.5, 6.5); g.quadraticCurveTo(0, 8.2, 3, 7); g.stroke();
+    g.fillStyle = rgba(room.hairHi, 0.35); ellipse(g, -2, -27, 11, 3.5); g.fill();   // a soft sheen
+    for (i = 0; i < 16; i++) { var sx = -14 + R() * 26, sy = -19 - R() * 12; g.strokeStyle = rgba(room.hairHi, 0.35 + R() * 0.35); g.beginPath(); g.moveTo(sx, sy + 4); g.quadraticCurveTo(sx + 1.5, sy - 2, sx + 5, sy - 5); g.stroke(); }
+    g.fillStyle = rgba(hair, 0.75); g.beginPath(); g.moveTo(17, -14); g.lineTo(21.5, -9); g.lineTo(21, -2); g.lineTo(18, -3); g.closePath(); g.fill();   // short above the ear
+    // beard: dense, short and black, joined to the sideburns and the moustache, with a clean cheek line
+    g.fillStyle = rgba(hair, 0.9); g.beginPath();
+    g.moveTo(-20.5, -5); g.lineTo(-19.8, 1.5); g.quadraticCurveTo(-15, 5.5, -10, 7.5); g.quadraticCurveTo(-6, 8, -4.5, 9.6); g.quadraticCurveTo(0, 8, 4.5, 9.6);
+    g.quadraticCurveTo(6, 8, 10, 7.5); g.quadraticCurveTo(15, 5.5, 19.8, 1.5); g.lineTo(20.5, -5);
+    g.bezierCurveTo(20.8, 13, 10.5, 27, 0, 27.6); g.bezierCurveTo(-10.5, 27, -20.8, 13, -20.5, -5); g.closePath(); g.fill();
+    g.strokeStyle = mix(sk, '#b05a52', night ? 0.25 : 0.5); g.lineWidth = 2; g.beginPath(); g.moveTo(-5.5, 13.6); g.quadraticCurveTo(0, 17, 5.5, 13.6); g.stroke();   // a soft smile
+    // thick, fairly straight brows; closed eyes; nose
+    g.strokeStyle = hair; g.lineWidth = 2.9; g.beginPath(); g.moveTo(-15, -8.5); g.quadraticCurveTo(-10, -11.5, -4, -10); g.moveTo(4, -10); g.quadraticCurveTo(10, -11.5, 15, -8.5); g.stroke();
+    g.strokeStyle = rgba(room.dark, 0.9); g.lineWidth = 1.4; g.beginPath(); g.moveTo(-13, -3.5); g.quadraticCurveTo(-9, -0.5, -5, -3.5); g.moveTo(5, -3.5); g.quadraticCurveTo(9, -0.5, 13, -3.5); g.stroke();
+    g.strokeStyle = rgba(skLo, 0.9); g.lineWidth = 1.2; g.beginPath(); g.moveTo(0.5, -2); g.quadraticCurveTo(-0.5, 3.5, -2.5, 6); g.quadraticCurveTo(0, 7.6, 3, 6.4); g.stroke();
     if (!night) { g.fillStyle = 'rgba(220,110,100,0.16)'; ellipse(g, 11, 3, 4, 2.5); g.fill(); }
     g.restore();
   }
