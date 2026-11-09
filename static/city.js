@@ -756,6 +756,45 @@
     if (!night) { g.fillStyle = 'rgba(220,110,100,0.16)'; ellipse(g, 11, 3, 4, 2.5); g.fill(); }
     g.restore();
   }
+  function her(g, x, y) {   // asleep beside him: long black curly hair with a middle part, arched brows, a soft smile
+    var night = phase === 'night', sk = mix(room.skin, '#ffffff', 0.04), skLo = mix(sk, '#4a2418', 0.3), hair = room.hair, i, a;
+    g.save(); g.translate(x, y); g.rotate(-0.28); g.scale(0.84, 0.86);
+    // the mass of curls behind her head, spilling down over the pillow and the covers
+    g.fillStyle = hair; g.beginPath(); g.moveTo(0, -31); g.bezierCurveTo(-30, -32, -34, 6, -30, 36); g.lineTo(30, 38); g.bezierCurveTo(36, 6, 30, -32, 0, -31); g.fill();
+    var R = seeded(11);
+    for (i = 0; i < 20; i++) {   // curls along the sides, fuller lower down
+      var side = i % 2 ? 1 : -1, t = Math.floor(i / 2) / 9, cx = side * (26 + 5 * t + R() * 2), cy = -12 + t * 48;
+      g.beginPath(); g.arc(cx, cy, 4 + t * 2.5 + R() * 1.5, 0, 6.2832); g.fill();
+    }
+    g.lineCap = 'round'; g.lineWidth = 1;
+    for (i = 0; i < 14; i++) {   // a few ringlets catching the light
+      var rx = (R() < 0.5 ? -1 : 1) * (21 + R() * 9), ry = -6 + R() * 40;
+      g.strokeStyle = rgba(room.hairHi, 0.22 + R() * 0.2); g.beginPath(); g.arc(rx, ry, 2.2 + R() * 1.2, 0.4, 3.6); g.stroke();
+    }
+    // face: oval, coming to a softly pointed chin
+    function face() { g.beginPath(); g.moveTo(-17, -6); g.bezierCurveTo(-18, -30, 18, -30, 17, -6); g.bezierCurveTo(17, 10, 8, 22, 0, 24); g.bezierCurveTo(-8, 22, -17, 10, -17, -6); g.closePath(); }
+    g.fillStyle = sk; face(); g.fill();
+    var lg = g.createLinearGradient(-17, 0, 17, 0); lg.addColorStop(0, rgba(skLo, 0.35)); lg.addColorStop(0.4, rgba(skLo, 0)); g.fillStyle = lg; face(); g.fill();
+    // hair parted in the middle, falling either side of her face
+    g.fillStyle = hair; g.beginPath(); g.moveTo(0, -29); g.quadraticCurveTo(-15, -28, -20, -12); g.quadraticCurveTo(-22, 2, -19, 14);
+    g.quadraticCurveTo(-17, -4, -11, -16); g.quadraticCurveTo(-5, -23, 0, -25); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(0, -29); g.quadraticCurveTo(15, -28, 20, -12); g.quadraticCurveTo(22, 2, 19, 14);
+    g.quadraticCurveTo(17, -4, 11, -16); g.quadraticCurveTo(5, -23, 0, -25); g.closePath(); g.fill();
+    g.strokeStyle = rgba(room.hairHi, 0.45); g.lineWidth = 1; g.beginPath(); g.moveTo(-3, -27); g.quadraticCurveTo(-13, -24, -17, -10); g.moveTo(3, -27); g.quadraticCurveTo(13, -24, 17, -10); g.stroke();
+    // arched brows, closed eyes with lashes, a small nose
+    g.strokeStyle = hair; g.lineWidth = 1.9; g.beginPath(); g.moveTo(-13, -8); g.quadraticCurveTo(-8.5, -13, -3.5, -10); g.moveTo(3.5, -10); g.quadraticCurveTo(8.5, -13, 13, -8); g.stroke();
+    g.strokeStyle = rgba(room.dark, 0.95); g.lineWidth = 1.4; g.beginPath(); g.moveTo(-12, -3); g.quadraticCurveTo(-8, 0.5, -4, -2.5); g.moveTo(4, -2.5); g.quadraticCurveTo(8, 0.5, 12, -3); g.stroke();
+    g.lineWidth = 1; g.beginPath();
+    for (a = 0; a < 3; a++) { g.moveTo(-11 + a * 1.6, -2 + a * 0.6); g.lineTo(-12.5 + a * 1.6, 0 + a * 0.6); g.moveTo(11 - a * 1.6, -2 + a * 0.6); g.lineTo(12.5 - a * 1.6, 0 + a * 0.6); }
+    g.stroke();
+    g.strokeStyle = rgba(skLo, 0.8); g.lineWidth = 1.1; g.beginPath(); g.moveTo(0.5, 0); g.quadraticCurveTo(-0.5, 5, -2, 6.5); g.quadraticCurveTo(0, 7.6, 2.4, 6.6); g.stroke();
+    // a soft smile, rose lips
+    var lip = mix(sk, '#b0485a', night ? 0.3 : 0.55);
+    g.fillStyle = lip; g.beginPath(); g.moveTo(-6, 11.5); g.quadraticCurveTo(0, 10, 6, 11.5); g.quadraticCurveTo(0, 16.5, -6, 11.5); g.fill();
+    g.strokeStyle = rgba(mix(lip, '#3a1418', 0.4), 0.8); g.lineWidth = 0.9; g.beginPath(); g.moveTo(-6, 11.5); g.quadraticCurveTo(0, 13.4, 6, 11.5); g.stroke();
+    if (!night) { g.fillStyle = 'rgba(225,105,105,0.2)'; ellipse(g, -10, 5, 4.5, 2.6); g.fill(); ellipse(g, 10, 5, 4.5, 2.6); g.fill(); }
+    g.restore();
+  }
   function duvetShape(g, him) {
     g.fillStyle = room.duvet; g.beginPath();
     if (him) { g.moveTo(344, 640); g.lineTo(350, 520); g.quadraticCurveTo(370, 496, 420, 500); g.quadraticCurveTo(520, 494, 600, 486); g.quadraticCurveTo(680, 482, 730, 500); g.quadraticCurveTo(800, 512, 860, 500); g.quadraticCurveTo(930, 494, 960, 520); }
@@ -763,6 +802,11 @@
     g.quadraticCurveTo(1000, 560, 996, 628); g.lineTo(344, 628); g.closePath(); g.fill();
     g.strokeStyle = rgba(room.duvetHi, 0.55); g.lineWidth = 2; g.beginPath();
     g.moveTo(420, 560); g.quadraticCurveTo(520, 548, 600, 560); g.moveTo(640, 590); g.quadraticCurveTo(760, 570, 880, 586); g.stroke();
+    if (him) {   // she sleeps beside him, her pillow tucked against his shoulder; the sheet comes up to her chin
+      g.fillStyle = mix(room.sheet, '#ffffff', 0.4); ellipse(g, 418, 508, 50, 15); g.fill();
+      g.fillStyle = rgba(room.dark, 0.15); ellipse(g, 420, 518, 46, 6); g.fill();
+      her(g, 405, 484);
+    }
     g.fillStyle = room.sheet; g.beginPath();   // the sheet folded over the top of the duvet
     if (him) { g.moveTo(350, 520); g.quadraticCurveTo(370, 496, 420, 500); g.lineTo(424, 512); g.quadraticCurveTo(378, 510, 356, 534); }
     else { g.moveTo(350, 540); g.quadraticCurveTo(380, 536, 420, 535); g.lineTo(420, 548); g.quadraticCurveTo(380, 549, 352, 554); }
