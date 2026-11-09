@@ -93,6 +93,9 @@
     v.sky = place(view_, mk(v.w, v.h), 0, 0);
     v.moon = place(view_, mk(120, 120), 0, 0);
     v.sun = place(view_, mk(240, 240), 0, 0);
+    [v.sun, v.moon].forEach(function (c) {   // they glide to each new place rather than jump
+      c.style.webkitTransition = '-webkit-transform 0.5s ease-out'; c.style.transition = 'transform 0.5s ease-out';
+    });
     v.clouds = place(view_, document.createElement('div'), 0, 0);
     v.city = place(view_, mk(v.w, v.h), 0, 0);
     v.lights = place(view_, mk(v.w, v.h), 0, 0);
@@ -124,11 +127,11 @@
     var c = v.sun, g = c.getContext('2d'), r = 120, gr;
     g.clearRect(0, 0, 240, 240);
     if (phase === 'night') { c.style.display = 'none'; return; }
-    var gc = phase === 'golden' ? '255,190,120' : '255,250,225';
+    var gc = phase === 'golden' ? '255,190,120' : '255,240,190';   // a warm glow, so the sun reads against a pale sky
     gr = g.createRadialGradient(r, r, 0, r, r, r);
-    gr.addColorStop(0, 'rgba(' + gc + ',' + (0.8 - oc * 0.6) + ')'); gr.addColorStop(0.2, 'rgba(' + gc + ',' + (0.32 - oc * 0.2) + ')'); gr.addColorStop(1, 'rgba(' + gc + ',0)');
+    gr.addColorStop(0, 'rgba(' + gc + ',' + (0.95 - oc * 0.7) + ')'); gr.addColorStop(0.16, 'rgba(' + gc + ',' + (0.5 - oc * 0.3) + ')'); gr.addColorStop(0.45, 'rgba(' + gc + ',' + (0.14 - oc * 0.08) + ')'); gr.addColorStop(1, 'rgba(' + gc + ',0)');
     g.fillStyle = gr; g.fillRect(0, 0, 240, 240);
-    if (oc < 0.5) { g.fillStyle = phase === 'golden' ? '#ffe0a6' : '#fffbea'; g.beginPath(); g.arc(r, r, 15, 0, 6.2832); g.fill(); }
+    if (oc < 0.5) { g.fillStyle = phase === 'golden' ? '#ffe0a6' : '#fff4cf'; g.beginPath(); g.arc(r, r, 15, 0, 6.2832); g.fill(); g.fillStyle = 'rgba(255,255,250,0.9)'; g.beginPath(); g.arc(r, r, 10, 0, 6.2832); g.fill(); }
   }
   function placeSky(v) {
     var ms = now(), s = skyXY(v, Sky.sun(ms, lat, lon)), m = Sky.moon(ms, lat, lon), mxy = skyXY(v, m);
