@@ -196,7 +196,7 @@
       var bx = body[i][0], bw = body[i][2], by0 = body[i][1] + 3 * s, by1 = i + 1 < body.length ? body[i + 1][1] : Math.min(b, v.h);
       for (var yy = by0; yy < by1 - chh; yy += gy) for (var xx = bx + 2; xx < bx + bw - cw2 - 1; xx += gx) {
         g.fillRect(xx, yy, cw2, chh);
-        if (o.cells.length < 40000) o.cells.push(xx, yy, cw2, chh, o.row);
+        if ((o.cells.n[o.row] = (o.cells.n[o.row] || 0) + 1) < 3000) o.cells.push(xx, yy, cw2, chh, o.row);   // a budget per row, so the far rows can't use it all up
       }
     }
     // rim light on the sunward edge when the towers are backlit
@@ -236,6 +236,7 @@
       for (i = 0; i < 14; i++) g.fillRect(sunX - 18 + R() * 36 - i, hy + 5 + i * 0.9, 6 + R() * 18, 1);
     }
     var cells = [], tops = [], steam = [], rects = [], rows = [[hy + 14, 0.55, 0.12], [hy + 30, 0.8, 0.14], [hy + 58, 1.1, 0.16], [hy + 98, 1.45, 0.14]];
+    cells.n = [];
     for (var r = 0; r < rows.length; r++) {
       var col = r < 2 ? mix(city.far, city.mid, r * 0.6) : mix(city.mid, city.near, (r - 2) * 0.6), s = rows[r][1];
       x = -10 - R() * 20;
@@ -299,18 +300,37 @@
     g.clearRect(0, 0, v.w, v.h);
     var cols = ['#ffd99a', '#ffe7c0', '#ffc976', '#cfe6ff'];
     var P = v.prof;
-    for (i = 0; i < c.length; i += 5) {
-      if (R() > f * (c[i + 4] === 4 ? 0.8 : 1)) continue;
+    function lit(near) {
+      for (i = 0; i < c.length; i += 5) {
+        if ((c[i + 4] === 4) !== near) continue;
+        if (R() > f * (near ? 1.15 : 1)) continue;
       var row = c[i + 4], bot = c[i + 1] + c[i + 3], xl = Math.max(0, Math.floor(c[i])), xr = Math.min(v.w, Math.ceil(c[i] + c[i + 2]));
-      if (row < 4 && (P[row][xl] < bot || P[row][xr] < bot)) continue;   // behind a nearer building
-      g.fillStyle = cols[Math.floor(R() * 4)]; g.globalAlpha = c[i + 4] < 2 ? 0.75 : 0.95;
-      g.fillRect(c[i], c[i + 1], c[i + 2], c[i + 3]);
+        if (row < 4 && (P[row][xl] < bot || P[row][xr] < bot)) continue;   // behind a nearer building
+        g.fillStyle = cols[Math.floor(R() * 4)]; g.globalAlpha = c[i + 4] < 2 ? 0.75 : 0.95;
+        g.fillRect(c[i], c[i + 1], c[i + 2], c[i + 3]);
+        if (near) {   // close enough to see into: a dimmer lower half, sometimes a blind half down
+          g.globalAlpha = 0.25; g.fillStyle = '#7a5a3a'; g.fillRect(c[i], c[i + 1] + c[i + 3] * 0.62, c[i + 2], c[i + 3] * 0.38);
+          if (R() < 0.3) { g.globalAlpha = 0.55; g.fillStyle = '#c8a878'; g.fillRect(c[i], c[i + 1], c[i + 2], c[i + 3] * (0.25 + R() * 0.35)); }
+        }
+      }
+      g.globalAlpha = 1;
     }
-    g.globalAlpha = 1;
+    lit(false);
     g.globalCompositeOperation = 'destination-out';   // fewer lights down in the canyon
-    var fade = g.createLinearGradient(0, v.hy + 60, 0, v.h); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,0.6)');
+    var fade = g.createLinearGradient(0, v.hy + 60, 0, v.h); fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,0.35)');
     g.fillStyle = fade; g.fillRect(0, v.hy + 60, v.w, v.h - v.hy - 60);
     g.globalCompositeOperation = 'source-over';
+    lit(true);   // the towers right outside are drawn after the fade, so they keep their lights
+    if (v === V.desk) {   // soften the lights behind the clock and the weather so the text stays easy to read
+      g.globalCompositeOperation = 'destination-out';
+      var spots = [[150, 80, 230], [790, 100, 210]];
+      for (i = 0; i < spots.length; i++) {
+        var sg = g.createRadialGradient(spots[i][0], spots[i][1], 0, spots[i][0], spots[i][1], spots[i][2]);
+        sg.addColorStop(0, 'rgba(0,0,0,0.6)'); sg.addColorStop(0.55, 'rgba(0,0,0,0.4)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = sg; g.fillRect(spots[i][0] - spots[i][2], spots[i][1] - spots[i][2], spots[i][2] * 2, spots[i][2] * 2);
+      }
+      g.globalCompositeOperation = 'source-over';
+    }
     v.lights.style.opacity = phase === 'night' ? 1 : phase === 'golden' ? 0.28 : oc > 0.5 ? 0.25 : 0;
     v.lights.style.display = v.lights.style.opacity === '0' ? 'none' : 'block';
   }
@@ -542,12 +562,10 @@
   function buildPeople() {
     var bd = V.desk.box, bb = V.bed.box, rim = room.rim, night = phase === 'night';
     steamEls.forEach(function (e) { if (e.parentNode) e.parentNode.removeChild(e); }); steamEls = [];
-    [guy.armL, guy.armR, guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat, guy.legs, guy.armPet, guy.armRPet].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
+    [guy.body, guy.head, guy.chair, duvet, guy.empty, guy.bedEmpty, guy.deskCat, guy.legs, ARM.L.c, ARM.R.c].forEach(function (e) { if (e && e.parentNode) e.parentNode.removeChild(e); });
     var awake = view === 'desk';
     if (awake) {
       bd.appendChild(catEl);   // on the desk: in front of the room, behind his arms
-      guy.armL = sprite(bd, 236, 440, 110, 110, function (g) { arm(g, 300, 452, 262, 528, 304, 520); });
-      guy.armR = sprite(bd, 420, 440, 110, 110, function (g) { arm(g, 444, 452, 482, 530, 506, 518); });
       guy.body = sprite(bd, 270, 400, 200, 200, function (g) {
         g.fillStyle = room.hood; g.beginPath();
         g.moveTo(286, 600); g.quadraticCurveTo(278, 470, 300, 446); g.quadraticCurveTo(372, 418, 444, 446); g.quadraticCurveTo(466, 470, 458, 600); g.closePath(); g.fill();
@@ -589,11 +607,9 @@
       });
       guy.bedEmpty = sprite(bb, 340, 470, 680, 180, function (g) { duvetShape(g, false); });
       guy.deskCat = null;
-      bd.appendChild(dogEl); bd.appendChild(ballEl);   // the dog runs in front of the chair
-      guy.armPet = sprite(bd, 200, 440, 120, 180, function (g) { arm(g, 300, 452, 272, 516, 246, 552); });   // reaching down to the dog
-      guy.armPet.style.display = 'none'; guy.petting = false;
-      guy.armRPet = sprite(bd, 420, 440, 160, 110, function (g) { arm(g, 444, 452, 494, 512, 548, 490); });   // stroking the cat
-      guy.armRPet.style.display = 'none'; guy.pettingCat = false;
+      bd.appendChild(dogEl);   // the dog runs in front of the chair
+      armSetup(bd);   // his arms go over the dog: he reaches down to it
+      bd.appendChild(ballEl);   // and the ball over his hand, when he holds it
       for (var k = 0; k < 2; k++) {   // steam off his coffee
         var st = mk(22, 40), sg = st.getContext('2d');
         for (var j = 0; j < 6; j++) { var gx = 11 + Math.sin(j * 1.1) * 4, gy = 36 - j * 6, rg = sg.createRadialGradient(gx, gy, 0, gx, gy, 5 + j); rg.addColorStop(0, 'rgba(255,255,255,' + (night ? 0.14 : 0.3) + ')'); rg.addColorStop(1, 'rgba(255,255,255,0)'); sg.fillStyle = rg; sg.fillRect(0, 0, 22, 40); }
@@ -636,73 +652,180 @@
     g.strokeStyle = rgba(room.hoodHi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
   }
 
-  /* ---------------- the dog ----------------
-   * A golden retriever who comes and goes: wanders through, chases a ball (and brings it
-   * back), chases his own tail, or comes to sit by the chair to be petted. All its poses are
-   * drawn once into one strip; a frame is picked by sliding the strip, the dog is moved and
-   * flipped with a transform. Preview with ?dog=visit (or chase, walk, tail). */
-  var FW = 170, FH = 120, DOGF = 15, DOGP = param('dog');
-  var dogEl = document.createElement('div'), dogSheet = null, ballEl = mk(16, 16);
-  dogEl.style.cssText = 'position:absolute;left:0;top:0;width:' + FW + 'px;height:' + FH + 'px;overflow:hidden;display:none;-webkit-transform-origin:50% 100%;transform-origin:50% 100%';
+  /* ---------------- the animals ----------------
+   * The dog and the cat are drawn from simple skeletons: a spine from shoulder to hip, legs
+   * solved from where each paw should be (so a planted paw stays put while the body moves
+   * over it), a head, ears and a tail. Every pose is drawn once into a grid of frames; at run
+   * time a frame is picked by sliding the grid inside a small window, and the animal is moved,
+   * scaled and flipped with a transform. Walk cycles advance with the ground covered, so paws
+   * don't skate; turns go through a frame facing us instead of flipping in place.
+   * Preview with ?dog=visit (or fetch, walk, tail) and ?cat=1. */
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function ease(t) { t = t < 0 ? 0 : t > 1 ? 1 : t; return t * t * (3 - 2 * t); }
+  function ik(ax, ay, bx, by, l1, l2, bend) {   // the knee, given the hip, the foot and the two bone lengths
+    var dx = bx - ax, dy = by - ay, d = Math.sqrt(dx * dx + dy * dy) || 0.001;
+    if (d >= l1 + l2) return [ax + dx / d * l1, ay + dy / d * l1];
+    var a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+    return [ax + dx * a / d + dy / d * h * bend, ay + dy * a / d - dx / d * h * bend];
+  }
+  function foot(p, duty, stride, lift) {   // a paw over one stride: planted and sliding back, then lifted forward
+    p = ((p % 1) + 1) % 1;
+    if (p < duty) return [stride * (0.5 - p / duty), 0, 0];
+    var s = (p - duty) / (1 - duty), e = s * s * (3 - 2 * s), l = Math.sin(Math.PI * s);
+    return [stride * (-0.5 + e), -lift * l, l];
+  }
+  function limb(g, pts, ws, col) {   // a leg as a chain of round-capped strokes, thick to thin
+    g.strokeStyle = col; g.lineCap = 'round'; g.lineJoin = 'round';
+    for (var i = 0; i < pts.length - 1; i++) { g.lineWidth = ws[i]; g.beginPath(); g.moveTo(pts[i][0], pts[i][1]); g.lineTo(pts[i + 1][0], pts[i + 1][1]); g.stroke(); }
+  }
+  function blend(a, b, t) {   // in-between two poses (numbers and arrays of numbers)
+    var o = {}, k;
+    for (k in a) {
+      if (typeof a[k] === 'number' && typeof b[k] === 'number') o[k] = lerp(a[k], b[k], t);
+      else if (a[k] && a[k].length && b[k] && b[k].length) o[k] = a[k].map(function (v, i) { return v && v.length ? v.map(function (u, j) { return lerp(u, b[k][i][j], t); }) : lerp(v, b[k][i], t); });
+      else o[k] = t < 0.5 ? a[k] : b[k];
+    }
+    return o;
+  }
+  function copy(p, o) { var r = {}, k; for (k in p) r[k] = p[k]; for (k in o) r[k] = o[k]; return r; }
+  function bakeGrid(frames, cols, w, h, s, shadow) {   // draw every pose into one canvas, cell by cell
+    var c = mk(cols * w * s, Math.ceil(frames.length / cols) * h * s), g = c.getContext('2d');
+    for (var i = 0; i < frames.length; i++) {
+      g.save(); g.translate((i % cols) * w * s, Math.floor(i / cols) * h * s); g.beginPath(); g.rect(0, 0, w * s, h * s); g.clip(); g.scale(s, s);
+      shadow(g, frames[i]); frames[i].draw(g, frames[i]);
+      g.restore();
+    }
+    return c;
+  }
+
+  /* ---------------- the dog: a golden retriever ---------------- */
+  var DS = 1.6, FW = 170, FH = 120, DCOLS = 7, DGY = 108, DOGP = param('dog');
+  var dogEl = document.createElement('div'), dogSheet = null, ballEl = mk(22, 22), DOG = {};
+  dogEl.style.cssText = 'position:absolute;left:0;top:0;width:' + Math.round(FW * DS) + 'px;height:' + Math.round(FH * DS) + 'px;overflow:hidden;display:none;' +
+    '-webkit-transform-origin:' + 85 * DS + 'px ' + DGY * DS + 'px;transform-origin:' + 85 * DS + 'px ' + DGY * DS + 'px';
   ballEl.style.cssText = 'position:absolute;left:0;top:0;display:none';
-  (function () { var g = ballEl.getContext('2d'); g.fillStyle = '#d4e157'; g.beginPath(); g.arc(8, 8, 7, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1.2; g.beginPath(); g.arc(4, 8, 6, -1, 1); g.stroke(); })();
-  // [front near, front far, hind near, hind far, pitch, bob]
-  var WALK = [[0.35, -0.3, -0.3, 0.35, 0, 0], [0.1, 0.05, 0.05, 0.1, 0, -1.2], [-0.3, 0.35, 0.35, -0.3, 0, 0], [0.05, 0.1, 0.1, 0.05, 0, -1.2]];
-  var RUN = [[0.8, 0.65, -0.6, -0.45, 0, -5], [0.1, 0, 0.35, 0.5, -0.06, 0], [-0.6, -0.45, 0.85, 0.7, 0.06, 1.5], [0.45, 0.3, -0.2, -0.35, -0.04, -2]];
+  (function () { var g = ballEl.getContext('2d'); g.fillStyle = '#d4e157'; g.beginPath(); g.arc(11, 11, 9, 0, 6.2832); g.fill(); g.fillStyle = 'rgba(0,0,0,0.12)'; g.beginPath(); g.arc(12.5, 12.5, 7.5, 0, 6.2832); g.fill(); g.fillStyle = '#d4e157'; g.beginPath(); g.arc(10.5, 10.5, 7.5, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 1.4; g.beginPath(); g.arc(5, 11, 8, -1, 1); g.stroke(); })();
   function dogCols() {
     var n = phase === 'night', gd = phase === 'golden';
-    return { coat: n ? '#6e5842' : gd ? '#db9550' : '#dba45c', shade: n ? '#4c3c2d' : gd ? '#a86a3a' : '#b27b3f',
-      light: n ? '#8b7359' : gd ? '#f5c98a' : '#f3d39a', dark: '#22170f', tongue: n ? '#8a4a55' : '#e8788a' };
+    return { coat: n ? '#6e5842' : gd ? '#db9550' : '#d9a35a', shade: n ? '#4c3c2d' : gd ? '#a86a3a' : '#b07a3e', light: n ? '#8b7359' : gd ? '#f5c98a' : '#f2d49e',
+      ear: n ? '#574332' : gd ? '#b9763f' : '#bf8646', dark: '#21160e', tongue: n ? '#8a4a55' : '#e8788a', mouth: n ? '#2a1414' : '#5c2b2b' };
   }
-  function dogLeg(g, x, y, a, hind, col, w) {
-    var l1 = hind ? 21 : 22, l2 = hind ? 26 : 23, a1 = hind ? a + 0.35 : a;
-    var kx = x + Math.sin(a1) * l1, ky = y + Math.cos(a1) * l1, a2 = hind ? a - 0.35 : a < 0 ? a * 1.8 : a * 0.6;
-    var px = kx + Math.sin(a2) * l2, py = ky + Math.cos(a2) * l2;
-    g.strokeStyle = col; g.lineCap = 'round';
-    g.lineWidth = w + (hind ? 6 : 2); g.beginPath(); g.moveTo(x, y); g.lineTo(kx, ky); g.stroke();
-    g.lineWidth = w; g.beginPath(); g.moveTo(kx, ky); g.lineTo(px, py); g.stroke();
-    g.fillStyle = col; ellipse(g, px + 3, py + 1, 6, 3.5); g.fill();
+  function dogStand() {   // standing square, facing right; paws are [x, y, lift] for near front, far front, near hind, far hind
+    return { sx: 108, sy: 59, hx: 60, hy: 57, paws: [[112, DGY, 0], [104, DGY, 0], [62, DGY, 0], [54, DGY, 0]],
+      hx2: 134, hy2: 27, ha: 0, mouth: 0.35, tongue: 1, shut: 0, ear: 0, tail: 0.3, wag: 0, ball: 0, sit: 0 };
   }
-  function dogHead(g, x, y, C, o) {
-    g.fillStyle = C.shade; g.save(); g.translate(x - 7, y + 1); g.rotate(o.run ? -0.6 : 0.2); ellipse(g, 0, 7, 7, 13); g.fill(); g.restore();   // far ear
-    g.fillStyle = C.coat; g.beginPath(); g.arc(x, y, 15, 0, 6.2832); g.fill();
-    ellipse(g, x + 14, y + 6, 13, 8.5); g.fill();   // muzzle
-    g.fillStyle = rgba(C.light, 0.7); ellipse(g, x + 2, y - 8, 9, 4.5); g.fill();
-    if (o.tongue || o.run) { g.fillStyle = C.tongue; ellipse(g, x + 16, y + 16, 3.5, 5.5); g.fill(); }
-    g.fillStyle = C.dark; ellipse(g, x + 26, y + 3, 3.6, 3); g.fill();   // nose
-    g.beginPath(); g.arc(x + 5, y - 3, 2.1, 0, 6.2832); g.fill();   // eye
-    g.strokeStyle = C.dark; g.lineWidth = 1.1; g.beginPath(); g.moveTo(x + 24, y + 10); g.quadraticCurveTo(x + 17, y + 13, x + 9, y + 10); g.stroke();
-    if (o.ball) { g.fillStyle = '#d4e157'; g.beginPath(); g.arc(x + 21, y + 12, 6.5, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1; g.beginPath(); g.arc(x + 18, y + 12, 5, -1, 1); g.stroke(); }
-    g.fillStyle = mix(C.shade, C.coat, 0.3); g.save(); g.translate(x - 3, y - 2); g.rotate(o.run ? -0.7 : 0.15); ellipse(g, 0, 8, 7.5, 14); g.fill(); g.restore();   // near ear, floppy
-  }
-  function drawDog(g, p, o) {
-    var C = dogCols(), i, tl = o.run ? -8 : 0;
-    g.save(); g.translate(0, p[5]); g.translate(82, 60); g.rotate(p[4]); g.translate(-82, -60);
-    dogLeg(g, 112, 62, p[1], false, C.shade, 7); dogLeg(g, 58, 60, p[3], true, C.shade, 7);
-    g.strokeStyle = C.coat; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(40, 52); g.quadraticCurveTo(22, 38 + tl, 6, 46 + tl * 2); g.stroke();   // tail
-    g.strokeStyle = rgba(C.light, 0.55); g.lineWidth = 3; g.beginPath(); g.moveTo(38, 56); g.quadraticCurveTo(22, 46 + tl, 8, 51 + tl * 2); g.stroke();   // feathered underside
-    g.fillStyle = C.coat; ellipse(g, 80, 58, 40, 20); g.fill(); ellipse(g, 106, 60, 18, 21); g.fill(); ellipse(g, 52, 56, 18, 18); g.fill();
-    g.fillStyle = rgba(C.light, 0.4); ellipse(g, 78, 45, 30, 6); g.fill();
-    g.fillStyle = C.light; ellipse(g, 106, 70, 11, 12); g.fill();   // chest
-    g.fillStyle = rgba(C.light, 0.5); g.beginPath(); g.moveTo(60, 72); g.quadraticCurveTo(80, 84, 100, 74); g.quadraticCurveTo(80, 78, 60, 72); g.fill();   // belly fur
-    dogLeg(g, 104, 64, p[0], false, C.coat, 8); dogLeg(g, 50, 62, p[2], true, C.coat, 8);
-    var hy = o.run ? 7 : 0;
-    g.fillStyle = C.coat; g.save(); g.translate(117, 45 + hy * 0.5); g.rotate(o.run ? 0.95 : 0.55); ellipse(g, 0, 0, 13, 19); g.fill(); g.restore();   // neck
-    dogHead(g, 130, 29 + hy, C, o);
+  function dogEar(g, w, l) { g.beginPath(); g.moveTo(-w * 0.45, 0); g.bezierCurveTo(-w * 0.9, l * 0.5, -w * 0.3, l, w * 0.15, l * 0.95); g.bezierCurveTo(w * 0.7, l * 0.8, w * 0.8, l * 0.3, w * 0.5, 0); g.closePath(); g.fill(); }
+  function dogHead(g, p, C) {   // side view, facing right, around the skull's centre
+    var m = p.mouth;
+    g.save(); g.translate(p.hx2, p.hy2); g.rotate(p.ha);
+    g.fillStyle = C.shade; g.save(); g.translate(-5, -9); g.rotate(0.3 + p.ear * 0.8); dogEar(g, 9, 17); g.restore();   // far ear
+    if (m > 0.05) {   // the open mouth behind the jaw
+      g.fillStyle = C.mouth; g.beginPath(); g.moveTo(8, 6); g.lineTo(25, 5); g.lineTo(23, 8 + m * 9); g.lineTo(8, 10 + m * 4); g.closePath(); g.fill();
+    }
+    g.fillStyle = C.coat; g.beginPath(); g.arc(0, 0, 13.5, 0, 6.2832); g.fill();
+    g.beginPath(); g.moveTo(4, -9); g.quadraticCurveTo(10, -8, 14, -4.5); g.lineTo(26, -2.5); g.quadraticCurveTo(30.5, -1.5, 30, 3); g.quadraticCurveTo(29.5, 6.5, 25, 6.5); g.lineTo(6, 9); g.closePath(); g.fill();   // muzzle
+    g.save(); g.translate(7, 7); g.rotate(m * 0.42);   // the lower jaw drops as it pants
+    if (p.tongue && m > 0.2) { g.fillStyle = C.tongue; g.beginPath(); g.moveTo(5, 0); g.quadraticCurveTo(15, 1, 16, 5 + m * 6); g.quadraticCurveTo(14, 10 + m * 6, 10, 7 + m * 4); g.quadraticCurveTo(8, 3, 5, 3); g.fill(); }
+    g.fillStyle = mix(C.coat, C.shade, 0.25); g.beginPath(); g.moveTo(-2, 0); g.lineTo(17, -0.5); g.quadraticCurveTo(19, 1.5, 17, 3.5); g.lineTo(-1, 5); g.closePath(); g.fill();
+    g.restore();
+    g.fillStyle = rgba(C.light, 0.55); ellipse(g, 1, -8, 8, 4); g.fill(); ellipse(g, 19, -2.5, 7, 1.6); g.fill();
+    g.fillStyle = C.dark; ellipse(g, 28.5, 0, 3.4, 2.9); g.fill();   // nose
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.arc(28, -1.2, 0.9, 0, 6.2832); g.fill();
+    if (p.shut > 0.5) { g.strokeStyle = C.dark; g.lineWidth = 1.3; g.lineCap = 'round'; g.beginPath(); g.arc(6, -4.5, 2.6, 0.2, 2.9); g.stroke(); }
+    else { g.fillStyle = C.dark; ellipse(g, 6.5, -4, 2.3, 2.5); g.fill(); g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(7.2, -4.8, 0.7, 0, 6.2832); g.fill(); }
+    g.strokeStyle = rgba(C.shade, 0.7); g.lineWidth = 1.2; g.lineCap = 'round'; g.beginPath(); g.moveTo(3, -8.5); g.quadraticCurveTo(7, -10, 10, -8); g.stroke();   // brow
+    if (p.ball) { g.fillStyle = '#d4e157'; g.beginPath(); g.arc(22, 9, 6.2, 0, 6.2832); g.fill(); g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 1; g.beginPath(); g.arc(19, 9, 5, -1, 1); g.stroke(); }
+    g.fillStyle = C.ear; g.save(); g.translate(-3, -9); g.rotate(0.12 + p.ear); dogEar(g, 11, 20); g.restore();   // near ear, soft and floppy
+    g.fillStyle = rgba(C.light, 0.25); g.save(); g.translate(-3, -9); g.rotate(0.12 + p.ear); ellipse(g, 0, 7, 3, 6); g.fill(); g.restore();
     g.restore();
   }
-  function drawSit(g, wag) {
+  function dogTail(g, x, y, up, wag, C) {   // a long feathered tail; a wag swings it towards us and away, so it shortens
+    var n = 9, seg = 5.4 * (1 - 0.32 * Math.abs(wag)), a = Math.PI + up + wag * 0.25, pts = [[x, y]], i;
+    for (i = 0; i < n; i++) { a += 0.07; x += Math.cos(a) * seg; y += Math.sin(a) * seg; if (y > DGY - 2) y = DGY - 2; pts.push([x, y]); }
+    g.lineCap = 'round';
+    for (i = 0; i < n; i++) { g.strokeStyle = rgba(C.light, 0.75); g.lineWidth = 7 - i * 0.45; g.beginPath(); g.moveTo(pts[i][0], pts[i][1] + 3); g.lineTo(pts[i + 1][0], pts[i + 1][1] + 3.5); g.stroke(); }   // the feathering underneath
+    for (i = 0; i < n; i++) { g.strokeStyle = C.coat; g.lineWidth = 8 - i * 0.6; g.beginPath(); g.moveTo(pts[i][0], pts[i][1]); g.lineTo(pts[i + 1][0], pts[i + 1][1]); g.stroke(); }
+  }
+  function dogLegF(p, k, s) {   // front leg: shoulder, elbow (behind), wrist, paw
+    var w = p.paws[k], l = w[2], r = [p.sx + 1, p.sy + 3];
+    var wr = [w[0] - lerp(1.5, -6, l), w[1] - 3 - lerp(6, 2, l)], el = ik(r[0], r[1], wr[0], wr[1], 19.5 * s, 19.5 * s, -1);
+    return [r, el, wr, [w[0] + 2.5, w[1] - 2.8]];
+  }
+  function dogLegH(p, k) {   // hind leg: hip, stifle (forward), hock (behind the paw), paw
+    var w = p.paws[k], l = w[2], r = [p.hx + 2, p.hy + 3], sit = p.sit;
+    var hk = [w[0] - lerp(lerp(6, 17, sit), -4, l), w[1] - lerp(lerp(17, 4, sit), 11, l)], st = ik(r[0], r[1], hk[0], hk[1], 20, 20.5, 1);
+    return [r, st, hk, [w[0] + 2.5, w[1] - 2.8]];
+  }
+  function paw(g, q, col) { g.fillStyle = col; ellipse(g, q[0] + 0.5, q[1] - 0.3, 6, 3.3); g.fill(); }
+  // Body shapes are drawn from points fixed to the shoulder (S) or the hip (H), turned with the
+  // spine, so the body keeps its depth when it tips up to sit or down to stretch.
+  function spine(p, rest) { var a = Math.atan2(p.sy - p.hy, p.sx - p.hx) - rest; return [Math.cos(a), Math.sin(a)]; }
+  function bp(p, cs, atS, ox, oy) { var x = atS ? p.sx : p.hx, y = atS ? p.sy : p.hy; return [x + ox * cs[0] - oy * cs[1], y + ox * cs[1] + oy * cs[0]]; }
+  function shape(g, p, cs, pts) {   // pts: a start point, then bezier triples; each point is [atS, ox, oy]
+    var q = bp(p, cs, pts[0][0], pts[0][1], pts[0][2]), i, a, b, c;
+    g.beginPath(); g.moveTo(q[0], q[1]);
+    for (i = 1; i + 2 < pts.length + 1; i += 3) { a = bp(p, cs, pts[i][0], pts[i][1], pts[i][2]); b = bp(p, cs, pts[i + 1][0], pts[i + 1][1], pts[i + 1][2]); c = bp(p, cs, pts[i + 2][0], pts[i + 2][1], pts[i + 2][2]); g.bezierCurveTo(a[0], a[1], b[0], b[1], c[0], c[1]); }
+    g.closePath();
+  }
+  var DOGBODY = [[1, 12, -9], [1, 21, 3], [1, 15, 19], [1, 2, 21], [1, -14, 23], [0, 24, 15], [0, 11, 10], [0, 3, 16], [0, -14, 15], [0, -16, 2],
+    [0, -18, -12], [0, -10, -19], [0, 2, -19], [0, 22, -20], [1, -22, -22], [1, -6, -21], [1, 2, -21], [1, 8, -17], [1, 12, -9]];
+  var DOGFRINGE = [[1, 2, 21], [1, -14, 27], [0, 16, 14], [0, 16, 14], [1, -10, 20], [1, 2, 17], [1, 2, 17]];
+  var DOGSHEEN = [[0, 2, -17], [0, 22, -18], [1, -22, -20], [1, -6, -19], [1, -22, -16], [0, 22, -14], [0, 2, -15]];
+  function drawDogSide(g, p) {
+    var C = dogCols(), sx = p.sx, sy = p.sy, hx = p.hx, hy = p.hy, L;
+    L = dogLegF(p, 1, 1); limb(g, L, [10, 7.5, 6.5], C.shade); paw(g, L[3], C.shade);   // far legs first, in shadow
+    L = dogLegH(p, 3); limb(g, L, [12, 8, 6.5], C.shade); paw(g, L[3], C.shade);
+    dogTail(g, hx - 13, hy - 12, p.tail, p.wag, C);
+    // neck, from the withers and the chest up to the back of the head
+    var ca = Math.cos(p.ha), sa = Math.sin(p.ha), ax = p.hx2 + (-5 * ca + 11 * sa), ay = p.hy2 + (-5 * sa - 11 * ca), bx = p.hx2 + (5 * ca - 9 * sa), by = p.hy2 + (5 * sa + 9 * ca);
+    var cs = spine(p, 0.042), n1 = bp(p, cs, 1, -12, -18), n2 = bp(p, cs, 1, 18, -4), n3 = bp(p, cs, 1, 13, 8);
+    g.fillStyle = C.coat; g.beginPath(); g.moveTo(n1[0], n1[1]); g.quadraticCurveTo(ax - 10, ay + 2, ax, ay); g.lineTo(bx, by); g.quadraticCurveTo(n2[0], n2[1], n3[0], n3[1]); g.closePath(); g.fill();
+    // body: chest, belly with its fringe, the back of the thigh, rump and the line of the back
+    shape(g, p, cs, DOGBODY); g.fill();
+    g.fillStyle = rgba(C.light, 0.6); shape(g, p, cs, DOGFRINGE); g.fill();
+    var ch = bp(p, cs, 1, 9, 6); g.fillStyle = rgba(C.light, 0.8); g.save(); g.translate(ch[0], ch[1]); g.rotate(Math.atan2(cs[1], cs[0])); ellipse(g, 0, 0, 7, 12); g.fill(); g.restore();   // the pale chest
+    g.fillStyle = rgba(C.light, 0.35); shape(g, p, cs, DOGSHEEN); g.fill();
+    // near legs: the thigh is a big soft muscle along its bone, which becomes the haunch when sitting
+    L = dogLegH(p, 2);
+    var tx = (L[0][0] + L[1][0]) / 2, ty = (L[0][1] + L[1][1]) / 2, ta = Math.atan2(L[1][1] - L[0][1], L[1][0] - L[0][0]);
+    g.fillStyle = C.coat; g.save(); g.translate(tx, ty); g.rotate(ta); ellipse(g, 0, 0, 17, 11.5); g.fill(); g.restore();
+    limb(g, L.slice(1), [8.5, 7], C.coat); paw(g, L[3], C.coat);
+    g.strokeStyle = rgba(C.light, 0.3); g.lineWidth = 3; g.beginPath(); g.moveTo(L[1][0] - 3, L[1][1] + 2); g.lineTo(L[2][0] - 2, L[2][1] - 3); g.stroke();   // feathering behind the leg
+    g.strokeStyle = rgba(C.shade, 0.3); g.lineWidth = 1.2; g.beginPath(); g.arc(tx, ty, 10, ta + 2.3, ta + 3.4); g.stroke();
+    L = dogLegF(p, 0, 1); limb(g, L, [11, 8, 7], C.coat); paw(g, L[3], C.coat);
+    g.strokeStyle = rgba(C.light, 0.3); g.lineWidth = 3; g.beginPath(); g.moveTo(L[1][0] - 3, L[1][1] + 1); g.lineTo(L[2][0] - 2.5, L[2][1] - 4); g.stroke();
+    dogHead(g, p, C);
+  }
+  function drawDogFront(g, p) {   // facing us, half way through a turn
     var C = dogCols();
-    g.strokeStyle = C.coat; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(46, 100); g.quadraticCurveTo(28, 103, 10, wag ? 90 : 106); g.stroke();   // tail, sweeping the floor
-    g.strokeStyle = C.shade; g.lineWidth = 8; g.beginPath(); g.moveTo(108, 66); g.lineTo(110, 102); g.stroke(); g.fillStyle = C.shade; ellipse(g, 113, 104, 6, 3.5); g.fill();
-    g.fillStyle = C.coat; ellipse(g, 62, 88, 25, 17); g.fill();   // haunch
-    g.save(); g.translate(84, 68); g.rotate(-1.0); ellipse(g, 0, 0, 34, 19); g.fill(); g.restore();
-    ellipse(g, 100, 60, 16, 22); g.fill(); ellipse(g, 84, 104, 11, 4); g.fill();
-    g.fillStyle = C.light; ellipse(g, 102, 66, 10, 15); g.fill();
-    g.strokeStyle = rgba(C.shade, 0.6); g.lineWidth = 1.5; g.beginPath(); g.arc(62, 86, 14, 3.6, 5.6); g.stroke();
-    g.strokeStyle = C.coat; g.lineWidth = 9; g.beginPath(); g.moveTo(97, 68); g.lineTo(97, 102); g.stroke(); g.fillStyle = C.coat; ellipse(g, 100, 104, 6.5, 3.5); g.fill();
-    g.fillStyle = C.coat; g.save(); g.translate(104, 38); g.rotate(0.25); ellipse(g, 0, 0, 12, 18); g.fill(); g.restore();
-    dogHead(g, 112, 20, C, { tongue: true });
+    g.fillStyle = C.shade; ellipse(g, 85, 64, 23, 19); g.fill();
+    limb(g, [[72, 78], [71, 105]], [9], C.shade); limb(g, [[98, 78], [99, 105]], [9], C.shade);
+    g.strokeStyle = C.coat; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(100, 56); g.quadraticCurveTo(116 + p.wag * 6, 46, 118 + p.wag * 10, 32); g.stroke();
+    g.fillStyle = C.coat; ellipse(g, 85, 64, 19, 21); g.fill();
+    g.fillStyle = C.light; ellipse(g, 85, 70, 12, 16); g.fill();
+    limb(g, [[77, 74], [77, 103]], [10], C.coat); limb(g, [[93, 74], [93, 103]], [10], C.coat);
+    g.fillStyle = C.coat; ellipse(g, 77, 105, 6.5, 3.6); g.fill(); ellipse(g, 93, 105, 6.5, 3.6); g.fill();
+    g.strokeStyle = rgba(C.shade, 0.6); g.lineWidth = 1; g.beginPath(); g.moveTo(75, 103); g.lineTo(75, 107); g.moveTo(79, 103); g.lineTo(79, 107); g.moveTo(91, 103); g.lineTo(91, 107); g.moveTo(95, 103); g.lineTo(95, 107); g.stroke();
+    g.fillStyle = C.coat; ellipse(g, 85, 36, 15, 13.5); g.fill();
+    g.fillStyle = C.ear; g.save(); g.translate(72, 30); g.rotate(0.35); dogEar(g, 10, 19); g.restore(); g.save(); g.translate(98, 30); g.scale(-1, 1); g.rotate(0.35); dogEar(g, 10, 19); g.restore();
+    g.fillStyle = mix(C.coat, C.light, 0.35); ellipse(g, 85, 46, 9, 7.5); g.fill();
+    if (p.tongue) { g.fillStyle = C.tongue; ellipse(g, 85, 54, 3.4, 4.5); g.fill(); }
+    g.fillStyle = C.dark; ellipse(g, 85, 43, 4.2, 3.2); g.fill();
+    g.strokeStyle = C.dark; g.lineWidth = 1; g.beginPath(); g.moveTo(85, 46); g.lineTo(85, 49); g.quadraticCurveTo(82, 51, 80, 49); g.moveTo(85, 49); g.quadraticCurveTo(88, 51, 90, 49); g.stroke();
+    g.fillStyle = C.dark; g.beginPath(); g.arc(79, 34, 2.3, 0, 6.2832); g.arc(91, 34, 2.3, 0, 6.2832); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.7)'; g.beginPath(); g.arc(79.7, 33.3, 0.7, 0, 6.2832); g.arc(91.7, 33.3, 0.7, 0, 6.2832); g.fill();
+    g.fillStyle = rgba(C.light, 0.5); ellipse(g, 85, 28, 7, 3); g.fill();
+  }
+  function drawDogBack(g, p) {   // from behind, during a spin
+    var C = dogCols();
+    g.fillStyle = C.shade; ellipse(g, 85, 56, 17, 15); g.fill();
+    g.fillStyle = C.ear; ellipse(g, 71, 44, 5, 10); g.fill(); ellipse(g, 99, 44, 5, 10); g.fill();
+    g.fillStyle = C.coat; ellipse(g, 85, 40, 13, 11); g.fill();
+    limb(g, [[76, 70], [75, 104]], [11, 9], C.coat); limb(g, [[94, 70], [95, 104]], [11, 9], C.coat);
+    g.fillStyle = C.coat; ellipse(g, 85, 68, 21, 19); g.fill(); ellipse(g, 75, 104, 6, 3.4); g.fill(); ellipse(g, 95, 104, 6, 3.4); g.fill();
+    g.fillStyle = rgba(C.light, 0.7); ellipse(g, 78, 84, 5, 12); g.fill(); ellipse(g, 92, 84, 5, 12); g.fill();
+    g.strokeStyle = C.coat; g.lineWidth = 8; g.lineCap = 'round'; g.beginPath(); g.moveTo(85, 56); g.quadraticCurveTo(85 + p.wag * 10, 36, 85 + p.wag * 16, 24); g.stroke();
+    g.strokeStyle = rgba(C.light, 0.7); g.lineWidth = 3; g.beginPath(); g.moveTo(88, 56); g.quadraticCurveTo(89 + p.wag * 10, 38, 89 + p.wag * 16, 27); g.stroke();
   }
   function sleepingDog(g) {   // curled up on its bed by ours
     var C = dogCols();
@@ -713,205 +836,403 @@
     g.strokeStyle = C.coat; g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(874, 690); g.quadraticCurveTo(862, 708, 800, 702); g.stroke();
     g.fillStyle = rgba(C.light, 0.5); ellipse(g, 830, 672, 36, 6); g.fill();
     g.fillStyle = C.coat; g.beginPath(); g.arc(784, 690, 14, 0, 6.2832); g.fill(); ellipse(g, 772, 698, 11, 7); g.fill();
-    g.fillStyle = C.shade; ellipse(g, 792, 690, 7, 12); g.fill();
+    g.fillStyle = C.ear; ellipse(g, 792, 690, 7, 12); g.fill();
     g.fillStyle = C.dark; ellipse(g, 762, 697, 3, 2.5); g.fill();
     g.strokeStyle = C.dark; g.lineWidth = 1.2; g.beginPath(); g.arc(780, 688, 3, 0.3, 2.8); g.stroke();
     g.restore();
   }
   function buildDog() {
-    var sheet = mk(FW * DOGF, FH), g = sheet.getContext('2d'), i;
-    for (i = 0; i < DOGF; i++) {
-      g.save(); g.translate(i * FW, 0); g.beginPath(); g.rect(0, 0, FW, FH); g.clip();
-      g.fillStyle = 'rgba(20,12,8,0.22)'; ellipse(g, i >= 8 && i < 10 ? 72 : 84, 108, i >= 8 && i < 10 ? 44 : 54, 5); g.fill();
-      if (i < 4) drawDog(g, WALK[i], {});
-      else if (i < 8) drawDog(g, RUN[i - 4], { run: true });
-      else if (i < 10) drawSit(g, i - 8);
-      else if (i < 14) drawDog(g, WALK[i - 10], { ball: true });
-      else drawDog(g, [0.05, -0.05, -0.05, 0.05, 0, 0], { tongue: true });
-      g.restore();
+    var F = [], i, p, B = dogStand();
+    function add(name, list) { DOG[name] = []; for (var j = 0; j < list.length; j++) { DOG[name].push(F.length); F.push(list[j]); } }
+    function side(q) { q.draw = drawDogSide; return q; }
+    function gait(n, offs, duty, stride, lifts, bob, o) {   // one full stride, n frames
+      var out = [];
+      for (var j = 0; j < n; j++) {
+        var ph = j / n, q = copy(B, o), pw = [], k;
+        for (k = 0; k < 4; k++) { var f = foot(ph + offs[k], duty, stride, lifts[k]); pw.push([B.paws[k][0] + f[0], DGY + f[1], f[2]]); }
+        q.paws = pw;
+        var b = Math.cos(ph * 4 * Math.PI) * bob;
+        q.sy += b; q.hy += Math.cos(ph * 4 * Math.PI + 0.9) * bob; q.hy2 += Math.cos(ph * 4 * Math.PI - 0.7) * bob * 1.2;
+        q.ear = (o.ear || 0) + Math.sin(ph * 4 * Math.PI - 1.2) * (o.flop || 0.08);
+        q.wag = Math.sin(ph * 2 * Math.PI) * (o.wagA || 0.8);
+        if (o.gallop) {   // the back flexes: gathered when the hind legs reach under, stretched out at full reach
+          var hf = (pw[2][0] - B.paws[2][0] + pw[3][0] - B.paws[3][0]) / 2, ff = (pw[0][0] - B.paws[0][0] + pw[1][0] - B.paws[1][0]) / 2;
+          q.hx += hf * 0.3; q.sx += ff * 0.2;
+          q.sy += -3 * Math.sin(2 * Math.PI * (ph - 0.3)); q.hy += -3.5 * Math.sin(2 * Math.PI * (ph - 0.05)); q.hy2 = q.sy - 26 + 2 * Math.sin(2 * Math.PI * (ph - 0.4)); q.hx2 = q.sx + 30;
+        }
+        out.push(side(q));
+      }
+      return out;
     }
+    add('walk', gait(8, [0.25, 0.75, 0, 0.5], 0.62, 28, [8, 8, 7, 7], 0.9, { mouth: 0.3 }));
+    add('trot', gait(8, [0.5, 0, 0, 0.5], 0.44, 40, [12, 12, 10, 10], 1.6, { mouth: 0.5, flop: 0.18, wagA: 0.9 }));
+    add('balltrot', gait(8, [0.5, 0, 0, 0.5], 0.44, 40, [12, 12, 10, 10], 1.6, { mouth: 0.28, tongue: 0, ball: 1, flop: 0.18, wagA: 1 }));
+    add('gallop', gait(8, [0.5, 0.6, 0, 0.1], 0.34, 72, [15, 15, 13, 13], 0, { gallop: 1, mouth: 0.55, ear: 0.45, flop: 0.22, tail: 0.05, wagA: 0.2, ha: 0.12 }));
+    var idle = [];
+    for (i = 0; i < 4; i++) { p = copy(B, {}); p.mouth = 0.45 + 0.1 * Math.sin(i * Math.PI / 2); p.sy += 0.6 * Math.sin(i * Math.PI / 2); p.wag = Math.sin(i * Math.PI / 2) * 0.6; idle.push(side(p)); }
+    add('stand', idle);
+    var sniff = [];
+    for (i = 0; i < 4; i++) { p = copy(B, { hx2: 140 + (i % 2), hy2: 76 + (i === 2 ? -1 : 0), ha: 0.95, mouth: 0, ear: -0.2, tail: 0.2, wag: Math.sin(i * Math.PI / 2) * 0.5, sy: 64 }); sniff.push(side(p)); }
+    add('sniff', sniff);
+    var S = copy(B, { sx: 104, sy: 57, hx: 69, hy: 92, paws: [[110, DGY, 0], [103, DGY, 0], [84, DGY, 0], [77, DGY, 0]], hx2: 126, hy2: 22, tail: -0.9, sit: 1, mouth: 0.45 });
+    var down = [];
+    for (i = 0; i < 4; i++) { p = side(blend(B, S, ease(i / 3))); p.sit = ease(i / 3); down.push(p); }
+    add('sitdown', down);
+    var sit = [];
+    for (i = 0; i < 4; i++) { p = copy(S, { wag: Math.sin(i * Math.PI / 2), mouth: 0.42 + 0.12 * Math.sin(i * Math.PI / 2) }); p.sy += 0.5 * Math.sin(i * Math.PI / 2); sit.push(side(p)); }
+    add('sit', sit);
+    var pet = [];
+    for (i = 0; i < 4; i++) { p = copy(S, { hx2: 124 + Math.sin(i * Math.PI / 2), hy2: 18 - Math.abs(Math.sin(i * Math.PI / 2)), ha: -0.3, shut: 1, mouth: 0.55, ear: 0.35, wag: Math.sin(i * Math.PI / 2) * 1.1 }); pet.push(side(p)); }
+    add('pet', pet);
+    var sb = [];
+    for (i = 0; i < 2; i++) sb.push(side(copy(S, { hx2: 127, hy2: 20 - i, ha: -0.18, mouth: 0.28, tongue: 0, ball: 1, ear: 0.1, wag: i ? 0.9 : -0.9 })));
+    add('sitball', sb);
+    p = copy(B, { draw: drawDogFront, wag: 0.6 }); add('front', [p]);
+    p = copy(B, { draw: drawDogBack, wag: 0.5 }); add('back', [p]);
+    var sheet = bakeGrid(F, DCOLS, FW, FH, DS, function (g, q) {
+      var sitting = q.sit || 0, front = q.draw !== drawDogSide;
+      g.fillStyle = 'rgba(20,12,8,0.24)'; ellipse(g, front ? 85 : lerp(84, 90, sitting), DGY + 0.5, front ? 26 : lerp(52, 40, sitting), 4.5); g.fill();
+    });
     dogEl.innerHTML = ''; dogEl.appendChild(sheet); dogSheet = sheet; dog.f = -1;
   }
-  var dog = { on: false, x: 0, y: 712, dir: 1, f: -1, steps: [], si: 0, ph: 0, next: 0, pet: false }, ball = { on: false };
+
+  /* The dog's day. It comes in now and then for one of: a visit (sits by the chair and gets
+   * petted), fetch (chases a ball out of the room, brings it back, he throws it again), a
+   * wander (stops to sniff the rug) or chasing its own tail. The floor between the chair and
+   * the desk is taken by his legs, so it crosses in front of the chair, nearer to us. */
+  var dog = { on: false, x: 0, y: 744, dir: 1, f: -1, sx: 1, steps: [], si: 0, ph: 0, v: 0, next: 0, pet: false, ball: null },
+    ball = { on: false }, SITAT = [168, 700];
+  function dogScale(y) { return 0.6 + (y + 20 - 560) * 0.0057; }   // nearer the camera = lower on the floor = bigger
+  var GAIT = { walk: [80, 28, 'walk'], trot: [165, 40, 'trot'], balltrot: [150, 40, 'balltrot'], gallop: [390, 112, 'gallop'] };
   function startEpisode(k, t) {
-    // The floor between the chair and the desk is taken by his legs, so the dog crosses the
-    // room in front of the chair (lower on screen, nearer the camera) and sits beside it.
-    var L = -160, Rt = W + 160, from = Math.random() < 0.5 ? L : Rt, to = from === L ? Rt : L, mid = rnd(560, 760), lane = rnd(748, 760), st;
-    dog.x = from; dog.y = lane;
-    var SIT = [{ m: 'stand', d: 0.7, dir: 1 }, { m: 'sit', d: 15, pet: true, dir: 1 }, { m: 'stand', d: 0.8 }, { m: 'walk', x: L, y: 726 }];
-    if (k === 'visit') st = (from === L ? [{ m: 'jump', x: L, y: 726 }, { m: 'walk', x: 200, y: 716 }] : [{ m: 'walk', x: 210, y: lane }, { m: 'walk', x: 200, y: 716 }]).concat(SIT);
-    else if (k === 'chase') {
-      dog.x = L - 40; ball = { on: true, x: -20, t0: t, a: 0, y: lane + 8 }; ballEl.style.display = 'block';
-      st = [{ m: 'run', x: Rt + 40, y: lane }, { m: 'wait', d: 3.5 }, { m: 'jump', x: Rt, y: lane - 4 }, { m: 'ballwalk', x: mid, y: lane - 4 }, { m: 'stand', d: 1.5, dir: -1 }, { m: 'ballwalk', x: L, y: lane }];
+    var L = -150, Rt = W + 150, left = Math.random() < 0.5, lane = rnd(740, 750), st;
+    dog.ball = null;
+    if (k === 'visit') {
+      dog.x = left ? L : Rt; dog.y = left ? 702 : lane;
+      st = left ? [{ go: SITAT, g: 'walk' }] : [{ go: [150, lane], g: 'walk' }, { go: SITAT, g: 'walk' }];
+      st = st.concat([{ face: 1 }, { clip: 'stand', d: 0.5 }, { clip: 'sitdown', fps: 8 }, { clip: 'sit', fps: 7, d: 1 }, { clip: 'pet', fps: 9, d: 13, pet: 1 },
+        { clip: 'sit', fps: 7, d: 1.2 }, { clip: 'sitdown', fps: 8, rev: 1 }, { clip: 'stand', fps: 4, d: 0.6 }, { go: [L, 704], g: 'walk' }]);
+    } else if (k === 'fetch') {
+      dog.x = L - 60; dog.y = lane;
+      ball = { on: true, x: -30, y: lane - 60, vx: 680, vy: 0, a: 0, floor: lane + 4 }; ballEl.style.display = 'block';
+      st = [{ wait: 0.6 }, { go: [Rt + 60, lane], g: 'gallop' }, { wait: 2.6 }, { at: [Rt, lane] },
+        { go: [150, lane], g: 'balltrot' }, { go: SITAT, g: 'balltrot' }, { face: 1 }, { clip: 'sitdown', fps: 9 }, { clip: 'sitball', fps: 4, d: 3.15, give: 1 },
+        { clip: 'sit', fps: 7, d: 0.3, watch: 1 }, { clip: 'sitdown', fps: 14, rev: 1 }, { face: -1 }, { go: [L - 60, lane], g: 'gallop' }];
+    } else if (k === 'tail') {
+      dog.x = Rt; dog.y = 744;
+      st = [{ go: [650, 744], g: 'trot' }, { clip: 'stand', d: 0.6 }, { spin: 3.6, cx: 640, cy: 744 }, { clip: 'stand', fps: 4, d: 1.4 }, { go: [Rt, 746], g: 'walk' }];
+    } else {
+      var from = left ? L : Rt, to = left ? Rt : L, mid = rnd(560, 760);
+      dog.x = from; dog.y = lane;
+      st = [{ go: [mid, lane], g: 'walk' }, { clip: 'sniff', fps: 5, d: rnd(2, 3.5) }, { clip: 'stand', fps: 4, d: rnd(1, 2) },
+        { go: [Math.random() < 0.3 ? from : to, lane + rnd(-4, 4)], g: 'walk' }];
     }
-    else if (k === 'tail') { dog.x = Rt; st = [{ m: 'run', x: 660, y: 744 }, { m: 'spin', d: 3.4, cx: 626, cy: 744 }, { m: 'stand', d: 1 }, { m: 'walk', x: Rt, y: 748 }]; }
-    else st = [{ m: 'walk', x: mid, y: lane }, { m: 'stand', d: rnd(1.5, 3) }, { m: 'walk', x: to, y: lane + rnd(-6, 6) }];
-    dog.steps = st; dog.si = 0; dog.on = true; dogEl.style.display = 'block';
+    dog.steps = st; dog.si = 0; dog.on = true; dog.v = 0; dog.dir = dog.x < W / 2 ? 1 : -1; dogEl.style.display = 'block';
   }
   function endEpisode(t) {
-    dog.on = false; dog.pet = false; dogEl.style.display = 'none'; ballEl.style.display = 'none'; ball.on = false;
-    dog.next = t + (DOGP ? 5 : rnd(50, 160));
+    dog.on = false; dog.pet = false; dog.ball = null; dogEl.style.display = 'none';
+    if (!ball.on) ballEl.style.display = 'none';
+    dog.next = t + (DOGP ? 4 : rnd(50, 160));
+  }
+  function updateBall(dt) {   // a tennis ball bouncing across the floor
+    if (!ball.on || ball.held) return;
+    ball.vy += 1500 * dt; ball.x += ball.vx * dt; ball.y += ball.vy * dt; ball.a += ball.vx * dt / 10;
+    if (ball.y >= ball.floor) { ball.y = ball.floor; if (ball.vy > 90) { ball.vy = -ball.vy * 0.55; ball.vx *= 0.9; } else { ball.vy = 0; ball.vx *= 1 - 0.35 * dt; } }   // bounces, then rolls
+    var s = dogScale(ball.floor) / 1.75;
+    tr(ballEl, 'translate3d(' + (ball.x - 11).toFixed(1) + 'px,' + (ball.y - 22).toFixed(1) + 'px,0) rotate(' + ball.a.toFixed(2) + 'rad) scale(' + s.toFixed(2) + ')');
+    if (ball.x > W + 40 || ball.x < -40) { ball.on = false; ballEl.style.display = 'none'; }
   }
   function updateDog(t, dt) {
-    if (ball.on) {   // the ball bounces across the floor, the dog right behind it
-      var bt = t - ball.t0; ball.x += 300 * dt; ball.a += dt * 14;
-      var by = ball.y - Math.abs(Math.sin(bt * 5.5)) * 60 * Math.exp(-bt * 0.6);
-      tr(ballEl, 'translate3d(' + ball.x.toFixed(1) + 'px,' + (by - 16).toFixed(1) + 'px,0) rotate(' + ball.a.toFixed(2) + 'rad)');
-      if (ball.x > W + 30) { ball.on = false; ballEl.style.display = 'none'; }
-    }
+    updateBall(dt);
     if (!dog.on) {
       if (!dog.next) dog.next = t + (DOGP ? 2 : rnd(25, 90));
       if (t > dog.next && view === 'desk') {
-        var r = Math.random(), k = DOGP || (r < 0.45 ? 'visit' : r < 0.72 ? 'chase' : r < 0.9 ? 'walk' : 'tail');
+        var r = Math.random(), k = DOGP === 'chase' ? 'fetch' : DOGP || (r < 0.42 ? 'visit' : r < 0.7 ? 'fetch' : r < 0.9 ? 'walk' : 'tail');
         startEpisode(k, t);
       }
       return;
     }
-    var s = dog.steps[dog.si], f = 14;
+    var s = dog.steps[dog.si], f = DOG.stand[0], sxs = 1;
     if (!s || view !== 'desk') { endEpisode(t); return; }
     if (s.st == null) s.st = t;
-    if (s.m === 'walk' || s.m === 'run' || s.m === 'ballwalk') {
-      var sp = s.m === 'run' ? 340 : 78, dx = s.x - dog.x, dy = s.y - dog.y, d = Math.sqrt(dx * dx + dy * dy);
-      if (d < sp * dt + 1) { dog.x = s.x; dog.y = s.y; dog.si++; }
-      else { dog.x += dx / d * sp * dt; dog.y += dy / d * sp * dt; if (Math.abs(dx) > 1) dog.dir = dx > 0 ? 1 : -1; }
-      dog.ph += dt * (s.m === 'run' ? 11 : 6);
-      f = (s.m === 'run' ? 4 : s.m === 'ballwalk' ? 10 : 0) + Math.floor(dog.ph) % 4;
-    } else if (s.m === 'spin') {   // chasing his own tail
-      var a = (t - s.st) * 7; dog.x = s.cx + Math.cos(a) * 34; dog.y = s.cy + Math.sin(a) * 8; dog.dir = Math.sin(a) > 0 ? -1 : 1;
-      dog.ph += dt * 11; f = 4 + Math.floor(dog.ph) % 4;
-      if (t - s.st > s.d) dog.si++;
-    } else if (s.m === 'jump') { dog.x = s.x; dog.y = s.y; dog.si++; }
-    else {   // sit, stand, wait
-      if (s.dir) dog.dir = s.dir;
-      f = s.m === 'sit' ? 8 + Math.floor(t * 5) % 2 : 14;
-      dog.pet = s.m === 'sit' && s.pet && t - s.st > 1;
-      if (t - s.st > s.d) { dog.si++; dog.pet = false; }
+    var el = t - s.st;
+    dog.pet = false;
+    if (s.go) {
+      var tx = s.go[0], ty = s.go[1], dx = tx - dog.x, dy = ty - dog.y, d = Math.sqrt(dx * dx + dy * dy), G = GAIT[s.g];
+      if (Math.abs(dx) > 3 && (dx > 0 ? 1 : -1) !== dog.dir) { dog.steps.splice(dog.si, 0, { face: dx > 0 ? 1 : -1 }); dog.v = 0; return; }
+      var nx = dog.steps[dog.si + 1], keep = nx && nx.go && nx.g === s.g && (nx.go[0] - tx) * dog.dir > 0;   // keep going into the next leg
+      var acc = s.g === 'gallop' ? 900 : 260, vmax = G[0];
+      dog.v = Math.min(vmax, dog.v + acc * dt, keep ? 1e9 : Math.max(20, Math.sqrt(2 * acc * d)));
+      var mv = dog.v * dt;
+      if (d <= mv + 0.5) { dog.x = tx; dog.y = ty; dog.si++; if (!keep) dog.v = 0; }
+      else { dog.x += dx / d * mv; dog.y += dy / d * mv; }
+      dog.ph += mv / (G[1] * dogScale(dog.y));
+      var fr = DOG[G[2]]; f = fr[Math.floor(((dog.ph % 1) + 1) % 1 * fr.length) % fr.length];
+      if (s.hide && el < s.hide) f = -1;
+    } else if (s.face) {   // turn round through a frame facing us
+      if (s.face === dog.dir) { dog.si++; f = DOG.stand[0]; }
+      else {
+        var T = 0.42;
+        if (el < T * 0.3) { f = DOG.stand[0]; sxs = 1 - 0.3 * el / (T * 0.3); }
+        else if (el < T * 0.7) { f = DOG.front[0]; }
+        else { dog.dir = s.face; f = DOG.stand[0]; sxs = 0.7 + 0.3 * (el - T * 0.7) / (T * 0.3); }
+        if (el >= T) { dog.dir = s.face; dog.si++; sxs = 1; }
+      }
+    } else if (s.spin) {   // chasing its own tail: round in a tight circle, seen from the side, the front and behind
+      var a = el * 6.2, sn = Math.sin(a), cs = Math.cos(a);
+      dog.x = s.cx + cs * 30; dog.y = s.cy + sn * 7;
+      dog.ph += dt * 2.6;
+      if (Math.abs(cs) < 0.72) { dog.dir = sn > 0 ? -1 : 1; f = DOG.gallop[Math.floor(dog.ph * 8) % 8]; }
+      else f = cs > 0 ? DOG.front[0] : DOG.back[0];
+      if (el > s.spin && Math.abs(cs) < 0.3) { dog.si++; dog.y = s.cy; }
+    } else if (s.wait) { f = -1; if (el > s.wait) dog.si++; }
+    else if (s.at) { dog.x = s.at[0]; dog.y = s.at[1]; dog.dir = -1; dog.si++; f = -1; }
+    else {   // a clip: played once (forwards or back), or looped for d seconds
+      var c = DOG[s.clip], n = c.length, fps = s.fps || 5;
+      if (s.d) { f = c[Math.floor(el * fps) % n]; if (el > s.d) dog.si++; }
+      else { var i = Math.min(n - 1, Math.floor(el * fps)); f = c[s.rev ? n - 1 - i : i]; if (el > n / fps) dog.si++; }
+      dog.pet = !!(s.pet && el > 0.4 && el < s.d - 0.6);
+      if (s.give) { dog.ball = el < 1.8 ? 'offer' : 'given'; dog.giveEl = el; }
+      else if (s.watch) dog.ball = 'thrown';
+      if (s.give && dog.ball === 'given') f = DOG.sit[Math.floor(el * 7) % 4];
+      if (s.clip === 'sitdown' && s.rev && dog.steps[dog.si - 1] && dog.steps[dog.si - 1].watch) dog.ball = 'thrown';
     }
-    // nearer the camera = lower on the floor = bigger
-    var sc = 0.6 + (dog.y - 560) * 0.0057, bob = dog.pet ? Math.max(0, Math.sin(t * 5)) * 1.5 : 0;
-    if (f !== dog.f) { tr(dogSheet, 'translate3d(' + (-f * FW) + 'px,0,0)'); dog.f = f; }
-    tr(dogEl, 'translate3d(' + (dog.x - FW / 2).toFixed(1) + 'px,' + (dog.y - FH + bob).toFixed(1) + 'px,0) scale(' + (sc * dog.dir).toFixed(3) + ',' + sc.toFixed(3) + ')');
+    var sc = dogScale(dog.y);
+    if (f < 0) { dogEl.style.visibility = 'hidden'; return; }
+    dogEl.style.visibility = 'visible';
+    if (f !== dog.f) { tr(dogSheet, 'translate3d(' + (-(f % DCOLS) * FW * DS) + 'px,' + (-Math.floor(f / DCOLS) * FH * DS) + 'px,0)'); dog.f = f; }
+    var k2 = sc / DS;
+    tr(dogEl, 'translate3d(' + (dog.x - 85 * DS).toFixed(1) + 'px,' + (dog.y - DGY * DS).toFixed(1) + 'px,0) scale(' + (k2 * dog.dir * sxs).toFixed(3) + ',' + k2.toFixed(3) + ')');
+  }
+  function dogMouth() {   // where the ball sits in its mouth, on screen, when it offers it up
+    var sc = dogScale(SITAT[1]);
+    return [dog.x + (127 + 22 * Math.cos(-0.18) - 9 * Math.sin(-0.18) - 85) * sc * dog.dir, dog.y + (20 + 22 * Math.sin(-0.18) + 9 * Math.cos(-0.18) - DGY) * sc];
+  }
+  function dogHeadAt() {   // the top of its head, where his hand goes
+    var sc = dogScale(dog.y);
+    return [dog.x + (124 - 85) * sc * dog.dir, dog.y + (8 - DGY) * sc];
   }
 
-  /* ---------------- the cat ----------------
-   * A grey tabby asleep on the desk. Every few minutes it wakes, gets up, stretches, washes,
-   * then walks along the desk with its tail up (across the keyboard, which types for it) to
-   * be petted, sits by the mug for a while, and goes back to sleep. ?cat=1 to watch it often. */
-  var CTW = 110, CTH = 90, CATF = 12, CATP = param('cat');
+  /* ---------------- the cat: a grey tabby ---------------- */
+  var CTW = 110, CTH = 90, CCOLS = 8, CGY = 84, CATP = param('cat'), CAT = {};
   var catEl = document.createElement('div'), catSheet = null;
   catEl.style.cssText = 'position:absolute;left:0;top:0;width:' + CTW + 'px;height:' + CTH + 'px;overflow:hidden;-webkit-transform-origin:55px 84px;transform-origin:55px 84px';
   function catCols() {
-    var c = phase === 'night' ? '#3a3d4a' : phase === 'golden' ? '#8a7f80' : '#7b7f8b';
-    return { c: c, d: mix(c, '#000000', 0.28), l: mix(c, '#ffffff', 0.28), eye: phase === 'night' ? '#9fc28a' : '#c6d36a' };
+    var c = phase === 'night' ? '#3d404d' : phase === 'golden' ? '#8a7f80' : '#7d818c';
+    return { c: c, d: mix(c, '#000000', 0.3), s: mix(c, '#000000', 0.42), l: mix(c, '#ffffff', 0.32), eye: phase === 'night' ? '#a8cf8a' : '#c9d66a', pink: phase === 'night' ? '#8a6470' : '#e3a0a6', mouth: '#5a2a33' };
   }
-  function catHead(g, x, y, C, o) {   // facing right
-    g.fillStyle = C.c; g.beginPath();
-    g.moveTo(x - 8, y - 4); g.lineTo(x - 6, y - 15); g.lineTo(x - 1, y - 8); g.moveTo(x + 2, y - 8); g.lineTo(x + 7, y - 16); g.lineTo(x + 9, y - 4); g.fill();
-    g.beginPath(); g.arc(x, y, 9.5, 0, 6.2832); g.fill();
-    ellipse(g, x + 7, y + 3, 5, 4); g.fill();
-    g.fillStyle = C.d; g.fillRect(x - 3, y - 9, 1.5, 4); g.fillRect(x + 1, y - 9, 1.5, 4);
-    if (o.shut) { g.strokeStyle = C.d; g.lineWidth = 1.2; g.beginPath(); g.arc(x + 4, y - 1, 2.2, 0.3, 2.8); g.stroke(); }
-    else { g.fillStyle = C.eye; ellipse(g, x + 4, y - 1.5, 2.2, 2.4); g.fill(); g.fillStyle = '#111111'; g.fillRect(x + 4, y - 3, 1, 3); }
-    g.fillStyle = '#d98a8a'; g.fillRect(x + 11, y + 1, 2, 1.6);
-    if (o.tongue) { g.fillStyle = '#e88a9a'; ellipse(g, x + 9, y + 7, 2, 2.6); g.fill(); }
+  function catStandPose() {
+    return { sx: 73, sy: 57, hx: 41, hy: 55, arch: 0, paws: [[76, CGY, 0], [70, CGY, 0], [43, CGY, 0], [37, CGY, 0]], hx2: 87, hy2: 41, ha: 0,
+      shut: 0, mouth: 0, tongue: 0, ta: -2.05, tk: 0.075, tt: 0.45, tfront: 0, raise: null, over: 0 };
   }
-  function catLeg(g, x, y, a, col, len) { var L = len || 20; g.strokeStyle = col; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.sin(a) * L, y + Math.cos(a) * L); g.stroke(); }
-  function catTail(g, x, y, C, sway) {   // held up, the tip curled over
-    g.strokeStyle = C.c; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath();
-    g.moveTo(x, y); g.quadraticCurveTo(x - 10, y - 18, x - 6 + sway, y - 36); g.quadraticCurveTo(x - 3 + sway, y - 44, x + 3 + sway, y - 40); g.stroke();
+  function catHead(g, p, C) {   // side view, facing right
+    g.save(); g.translate(p.hx2, p.hy2); g.rotate(p.ha);
+    g.fillStyle = C.d; g.beginPath(); g.moveTo(-1, -6); g.lineTo(2, -15); g.lineTo(6, -6); g.fill();   // far ear
+    g.fillStyle = C.c; ellipse(g, 0, 0, 9.5, 8.6); g.fill();
+    ellipse(g, 6.5, 2.8, 5.2, 4.2); g.fill();   // cheek and muzzle
+    g.beginPath(); g.moveTo(-7, -4); g.lineTo(-5, -16.5); g.lineTo(2, -7); g.fill();   // near ear
+    g.fillStyle = C.pink; g.beginPath(); g.moveTo(-5, -6); g.lineTo(-4.4, -13.5); g.lineTo(0, -7); g.fill();
+    g.fillStyle = C.d; g.fillRect(-3, -8.5, 1.4, 4); g.fillRect(0, -8.8, 1.4, 3.6);   // tabby marks on the brow
+    g.fillStyle = C.l; ellipse(g, 7.5, 5.2, 4, 2.4); g.fill();   // pale chin
+    if (p.mouth > 0.05) {   // a yawn
+      g.fillStyle = C.mouth; ellipse(g, 8.5, 5.5, 3.6, 1 + p.mouth * 4); g.fill();
+      g.fillStyle = C.pink; ellipse(g, 8, 6.5 + p.mouth * 2.5, 2.4, 1.2 + p.mouth * 1.2); g.fill();
+      g.fillStyle = '#ffffff'; g.fillRect(10, 3, 0.9, 1.6); g.fillRect(10, 6 + p.mouth * 3.5, 0.9, 1.4);
+    }
+    if (p.tongue) { g.fillStyle = C.pink; ellipse(g, 11.5, 5.5, 2.2, 1.5); g.fill(); }
+    g.fillStyle = C.pink; g.beginPath(); g.moveTo(10.2, 0.6); g.lineTo(12.6, 0.8); g.lineTo(11.2, 2.4); g.fill();   // nose
+    if (p.shut) { g.strokeStyle = C.s; g.lineWidth = 1.1; g.lineCap = 'round'; g.beginPath(); g.moveTo(2.2, -1.4); g.quadraticCurveTo(4.4, 0.2, 6.6, -1.6); g.stroke(); }
+    else { g.fillStyle = C.eye; ellipse(g, 4.6, -1.6, 2.3, 2.2); g.fill(); g.fillStyle = '#121212'; ellipse(g, 5.1, -1.6, 0.7, 1.9); g.fill(); }
+    g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(9, 3.5); g.lineTo(17, 1.5); g.moveTo(9, 4.2); g.lineTo(17, 4.6); g.stroke();   // whiskers
+    g.restore();
   }
-  function catStand(g, legs, o) {
-    var C = catCols(), arch = o.arch ? -4 : 0, i;
-    catLeg(g, 70, 62, legs[1], C.d); catLeg(g, 34, 62, legs[3], C.d);
-    catTail(g, 26, 56 + arch, C, o.sway || 0);
-    g.fillStyle = C.c; ellipse(g, 50, 56 + arch, 26, o.arch ? 13 : 11); g.fill(); ellipse(g, 70, 56, 10, 12); g.fill();
-    g.fillStyle = C.l; ellipse(g, 52, 65, 16, 3.5); g.fill();
-    g.fillStyle = C.d; for (i = 0; i < 4; i++) g.fillRect(38 + i * 8, 46 + arch, 2, 7);   // tabby stripes
-    catLeg(g, 66, 62, legs[0], C.c); catLeg(g, 30, 62, legs[2], C.c);
-    catHead(g, 80, 44, C, o);
+  function catTail(g, x, y, a, k, tip, C) {   // ringed, round-capped; it lies along the desk rather than through it
+    var n = 11, seg = 3.5, pts = [[x, y]], i;
+    for (i = 0; i < n; i++) { a += i >= n - 3 ? tip : k; x += Math.cos(a) * seg; y += Math.sin(a) * seg; if (y > CGY - 2) { y = CGY - 2; if (a > 0.3 && a < 2.9) { a = 0.12; k = 0; } } pts.push([x, y]); }   // reaching the desk, it runs along it
+    g.lineCap = 'round';
+    for (i = 0; i < n; i++) { g.strokeStyle = i % 3 === 2 || i === n - 1 ? C.d : C.c; g.lineWidth = 5 - i * 0.17; g.beginPath(); g.moveTo(pts[i][0], pts[i][1]); g.lineTo(pts[i + 1][0], pts[i + 1][1]); g.stroke(); }
   }
-  function catStretch(g) {   // the long front-down stretch, with a yawn
+  function catLegF(p, k) {
+    var w = p.paws[k], l = w[2], r = [p.sx, p.sy + 2];
+    var wr = [w[0] - lerp(1, -4, l), w[1] - lerp(4, 2, l)], el = ik(r[0], r[1], wr[0], wr[1], 11.5, 11.5, -1);
+    return [r, el, wr, [w[0] + 1.6, w[1] - 1.8]];
+  }
+  function catLegH(p, k) {
+    var w = p.paws[k], l = w[2], sit = p.sit || 0, r = [p.hx + 1, p.hy + 2];
+    var hk = [w[0] - lerp(lerp(4, 12, sit), -3, l), w[1] - lerp(lerp(9, 2.5, sit), 6, l)], st = ik(r[0], r[1], hk[0], hk[1], 10.5, 11, 1);
+    return [r, st, hk, [w[0] + 1.6, w[1] - 1.8]];
+  }
+  function catPaw(g, q, col) { g.fillStyle = col; ellipse(g, q[0], q[1], 3.4, 2); g.fill(); }
+  function catBodyPath(g, p) {
+    var ar = p.arch, big = p.sit || 0;
+    shape(g, p, spine(p, 0.062), [[1, 7, -8], [1, 11, 0], [1, 9, 9], [1, 1, 10], [1, -10, 12], [0, 15, 14], [0, 6, 9], [0, 0, 12 + big * 2], [0, -11 - big * 2, 9 + big * 3],
+      [0, -11 - big * 2, 1], [0, -11, -7], [0, -5, -11], [0, 2, -11], [0, 14, -11 - ar], [1, -14, -12 - ar], [1, -3, -12], [1, 2, -12], [1, 5, -11], [1, 7, -8]]);
+  }
+  function drawCatSide(g, p) {
+    var C = catCols(), L, i;
+    L = catLegF(p, 1); limb(g, L, [5, 4, 3.6], C.d); catPaw(g, L[3], C.d);
+    L = catLegH(p, 3); limb(g, L, [6, 4.4, 3.6], C.d); catPaw(g, L[3], C.d);
+    if (!p.tfront) catTail(g, p.hx - 9, p.hy - 5, p.ta, p.tk, p.tt, C);
+    var ca = Math.cos(p.ha), sa = Math.sin(p.ha), ax = p.hx2 - 4 * ca + 7 * sa, ay = p.hy2 - 4 * sa - 7 * ca, bx = p.hx2 + 3 * ca - 6 * sa, by = p.hy2 + 3 * sa + 6 * ca;
+    var cs = spine(p, 0.062), n1 = bp(p, cs, 1, -6, -11), n2 = bp(p, cs, 1, 10, -2), n3 = bp(p, cs, 1, 8, 4);
+    g.fillStyle = C.c; g.beginPath(); g.moveTo(n1[0], n1[1]); g.quadraticCurveTo(ax - 5, ay + 2, ax, ay); g.lineTo(bx, by); g.quadraticCurveTo(n2[0], n2[1], n3[0], n3[1]); g.closePath(); g.fill();   // neck
+    catBodyPath(g, p); g.fill();
+    g.save(); catBodyPath(g, p); g.clip();   // tabby stripes, following the back
+    g.strokeStyle = C.d; g.lineWidth = 2.2; g.lineCap = 'round';
+    for (i = 0; i < 5; i++) { var f = (i + 0.7) / 5.4, q0 = bp(p, cs, 0, f * 30, -13 - p.arch * Math.sin(f * Math.PI)), q1 = bp(p, cs, 0, f * 30 + 3, -7), q2 = bp(p, cs, 0, f * 30 - 1, -2); g.beginPath(); g.moveTo(q0[0], q0[1]); g.quadraticCurveTo(q1[0], q1[1], q2[0], q2[1]); g.stroke(); }
+    var bl = bp(p, cs, 0, 18, 10); g.fillStyle = rgba(C.l, 0.7); g.save(); g.translate(bl[0], bl[1]); g.rotate(Math.atan2(cs[1], cs[0])); ellipse(g, 0, 0, 14, 2.6); g.fill(); g.restore();
+    g.restore();
+    var cc = bp(p, cs, 1, 5, 2); g.fillStyle = C.l; g.save(); g.translate(cc[0], cc[1]); g.rotate(Math.atan2(cs[1], cs[0])); ellipse(g, 0, 0, 4, 6.5); g.fill(); g.restore();   // pale chest
+    L = catLegH(p, 2);
+    var tx = (L[0][0] + L[1][0]) / 2, ty = (L[0][1] + L[1][1]) / 2, ta = Math.atan2(L[1][1] - L[0][1], L[1][0] - L[0][0]);
+    g.fillStyle = C.c; g.save(); g.translate(tx, ty); g.rotate(ta); ellipse(g, 0, 0, 10 + 3 * (p.sit || 0), 7 + 3 * (p.sit || 0)); g.fill(); g.restore();
+    limb(g, L.slice(1), [4.6, 3.8], C.c); catPaw(g, L[3], C.c);
+    g.strokeStyle = C.d; g.lineWidth = 1.5; g.beginPath(); g.moveTo(tx - 3, ty - 5); g.quadraticCurveTo(tx + 1, ty, tx - 2, ty + 4); g.stroke();
+    if (p.tfront) catTail(g, p.hx - 9, p.hy + 4, p.ta, p.tk, p.tt, C);
+    if (!p.over) { L = catLegF(p, 0); limb(g, L, [5.2, 4.2, 3.8], C.c); catPaw(g, L[3], C.c); }
+    catHead(g, p, C);
+    if (p.over) { L = catLegF(p, 0); limb(g, L, [5.2, 4.2, 3.8], C.c); catPaw(g, L[3], C.l); }   // a paw up over its face, washing
+  }
+  function drawCatCurl(g, p) {   // curled up asleep, or with its head up, just woken
+    var C = catCols(), u = p.up;
+    g.fillStyle = C.c; ellipse(g, 50, 74, 25, 11); g.fill();
+    g.save(); ellipse(g, 50, 74, 25, 11); g.clip(); g.strokeStyle = C.d; g.lineWidth = 2.2; g.lineCap = 'round';
+    for (var i = 0; i < 4; i++) { g.beginPath(); g.moveTo(36 + i * 8, 62); g.quadraticCurveTo(40 + i * 8, 68, 37 + i * 8, 74); g.stroke(); }
+    g.restore();
+    catTail(g, 27, 78, 1.3, -0.24, -0.1, C);   // the tail wrapped round the front
+    g.fillStyle = C.l; ellipse(g, 66, 82, 4, 1.8); g.fill();
+    if (u > 0.2) { g.fillStyle = C.c; g.beginPath(); g.moveTo(58, 66); g.quadraticCurveTo(lerp(66, 68, u), lerp(68, 58, u), lerp(70, 72, u), lerp(70, 58, u)); g.lineTo(lerp(74, 78, u), lerp(78, 68, u)); g.lineTo(70, 82); g.closePath(); g.fill(); }
+    catHead(g, { hx2: lerp(70, 74, u), hy2: lerp(73, 60, u), ha: lerp(0.5, 0, u), shut: p.shut, mouth: p.mouth || 0, tongue: 0 }, C);
+  }
+  function drawCatFront(g, p) {   // facing us, half way through a turn
     var C = catCols();
-    g.strokeStyle = C.d; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(70, 74); g.lineTo(98, 82); g.stroke();
-    catLeg(g, 36, 54, 0.05, C.d, 29);
-    catTail(g, 26, 48, C, 5);
-    g.fillStyle = C.c; g.save(); g.translate(50, 60); g.rotate(0.34); ellipse(g, 0, 0, 27, 10); g.fill(); g.restore();
-    ellipse(g, 72, 72, 10, 8); g.fill();
-    g.strokeStyle = C.c; g.lineWidth = 5; g.beginPath(); g.moveTo(68, 76); g.lineTo(94, 83); g.stroke();
-    catLeg(g, 32, 54, -0.05, C.c, 29);
-    catHead(g, 86, 68, C, { shut: true, tongue: true });
-  }
-  function catSit(g, lick) {
-    var C = catCols();
-    g.strokeStyle = C.c; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(34, 80); g.quadraticCurveTo(50, 87, 74, 83); g.stroke();   // tail round the paws
-    g.fillStyle = C.c; ellipse(g, 44, 70, 16, 14); g.fill();
-    g.save(); g.translate(56, 58); g.rotate(-1.1); ellipse(g, 0, 0, 18, 11); g.fill(); g.restore();
-    ellipse(g, 62, 54, 9, 12); g.fill();
-    g.fillStyle = C.l; ellipse(g, 65, 60, 5, 8); g.fill();
-    catLeg(g, 62, 62, 0, C.c, 21);
-    if (lick) { g.strokeStyle = C.c; g.lineWidth = 5; g.beginPath(); g.moveTo(66, 62); g.lineTo(73, 46 + lick); g.stroke(); }   // a paw up to wash
-    else catLeg(g, 68, 62, 0, C.c, 21);
-    catHead(g, lick ? 70 : 66, lick ? 34 + lick : 32, C, { shut: !!lick, tongue: lick === 3 });
-  }
-  function catLie(g, awake) {
-    var C = catCols();
-    if (!awake) { cat(g, 30, 70); return; }   // curled up asleep
-    g.strokeStyle = C.c; g.lineWidth = 6; g.lineCap = 'round'; g.beginPath(); g.moveTo(22, 76); g.quadraticCurveTo(30, 86, 66, 84); g.stroke();
-    g.fillStyle = C.c; ellipse(g, 46, 74, 28, 12); g.fill();
-    g.fillStyle = C.d; for (var i = 0; i < 4; i++) g.fillRect(34 + i * 8, 63, 2, 7);
-    catHead(g, 74, 60, C, {});
+    g.fillStyle = C.d; ellipse(g, 55, 66, 13, 12); g.fill();
+    g.strokeStyle = C.c; g.lineWidth = 4.5; g.lineCap = 'round'; g.beginPath(); g.moveTo(63, 62); g.quadraticCurveTo(76, 52, 72, 34); g.quadraticCurveTo(70, 28, 75, 27); g.stroke();
+    g.fillStyle = C.c; ellipse(g, 55, 66, 10.5, 13); g.fill();
+    g.fillStyle = C.l; ellipse(g, 55, 69, 6, 9); g.fill();
+    limb(g, [[50.5, 70], [50.5, 82]], [5], C.c); limb(g, [[59.5, 70], [59.5, 82]], [5], C.c);
+    g.fillStyle = C.l; ellipse(g, 50.5, 83, 3.2, 1.8); g.fill(); ellipse(g, 59.5, 83, 3.2, 1.8); g.fill();
+    g.fillStyle = C.c; ellipse(g, 55, 45, 10.5, 9.5); g.fill();
+    g.beginPath(); g.moveTo(45.5, 41); g.lineTo(46.5, 30); g.lineTo(52, 37); g.moveTo(58, 37); g.lineTo(63.5, 30); g.lineTo(64.5, 41); g.fill();
+    g.fillStyle = C.pink; g.beginPath(); g.moveTo(47.5, 39); g.lineTo(48, 33); g.lineTo(51, 37); g.moveTo(59, 37); g.lineTo(62, 33); g.lineTo(62.5, 39); g.fill();
+    g.fillStyle = C.d; g.fillRect(53.2, 36.5, 1.4, 4); g.fillRect(55.8, 36.5, 1.4, 4);
+    g.fillStyle = C.l; ellipse(g, 55, 50, 5.5, 3.6); g.fill();
+    g.fillStyle = C.eye; ellipse(g, 50.8, 44.5, 2.3, 2.1); g.fill(); ellipse(g, 59.2, 44.5, 2.3, 2.1); g.fill();
+    g.fillStyle = '#121212'; ellipse(g, 50.8, 44.5, 0.7, 1.8); g.fill(); ellipse(g, 59.2, 44.5, 0.7, 1.8); g.fill();
+    g.fillStyle = C.pink; g.beginPath(); g.moveTo(53.6, 48); g.lineTo(56.4, 48); g.lineTo(55, 49.6); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 0.6; g.beginPath(); g.moveTo(51, 50); g.lineTo(42, 48.5); g.moveTo(51, 51); g.lineTo(42, 52); g.moveTo(59, 50); g.lineTo(68, 48.5); g.moveTo(59, 51); g.lineTo(68, 52); g.stroke();
   }
   function buildCat() {
-    var sheet = mk(CTW * CATF, CTH), g = sheet.getContext('2d'), i;
-    var WK = [[0.3, -0.25, -0.25, 0.3, -2], [0.05, 0.05, 0.05, 0.05, 0], [-0.25, 0.3, 0.3, -0.25, 2], [0.05, 0.05, 0.05, 0.05, 0]];
-    for (i = 0; i < CATF; i++) {
-      g.save(); g.translate(i * CTW, 0); g.beginPath(); g.rect(0, 0, CTW, CTH); g.clip();
-      g.fillStyle = 'rgba(20,12,8,0.18)'; ellipse(g, 52, 85, 30, 3); g.fill();
-      if (i < 2) catLie(g, i === 1);
-      else if (i === 2) catStand(g, [0.05, -0.05, -0.05, 0.05], {});
-      else if (i < 7) catStand(g, WK[i - 3], { sway: WK[i - 3][4] });
-      else if (i === 7) catStretch(g);
-      else if (i === 8) catSit(g, 0);
-      else if (i < 11) catSit(g, i === 9 ? 1 : 3);
-      else catStand(g, [0.05, -0.05, -0.05, 0.05], { arch: true, shut: true });
-      g.restore();
+    var F = [], i, p, B = catStandPose();
+    function add(name, list) { CAT[name] = []; for (var j = 0; j < list.length; j++) { CAT[name].push(F.length); F.push(list[j]); } }
+    function side(q) { q.draw = drawCatSide; return q; }
+    function curl(u, shut, mouth) { return { draw: drawCatCurl, up: u, shut: shut, mouth: mouth || 0 }; }
+    add('sleep', [curl(0, 1)]);
+    add('wake', [curl(0.45, 1), curl(1, 0), curl(1, 1), curl(1, 1, 0.8)]);   // head up, eyes open, a blink, a small yawn
+    // lying with its legs folded under (a loaf) → front legs up → back legs up → standing
+    var LOAF = copy(B, { sx: 72, sy: 69, hx: 40, hy: 73, paws: [[82, CGY, 0], [77, CGY, 0], [52, CGY, 0], [47, CGY, 0]], hx2: 86, hy2: 55, sit: 0.9, ta: 2.9, tk: -0.26, tt: -0.05, tfront: 1 });
+    var FRONTUP = copy(B, { sx: 73, sy: 58, hx: 41, hy: 72, paws: [[77, CGY, 0], [71, CGY, 0], [52, CGY, 0], [47, CGY, 0]], hx2: 87, hy2: 42, sit: 0.85, ta: 2.9, tk: -0.2, tt: 0, tfront: 1 });
+    add('rise', [side(LOAF), side(FRONTUP), side(blend(FRONTUP, B, 0.55)), side(copy(B, {}))]);
+    // the stretch: front end down and forward, rump up, a big yawn
+    var ST = copy(B, { sx: 80, sy: 71, hx: 40, hy: 52, paws: [[99, CGY, 0], [94, CGY, 0], [43, CGY, 0], [37, CGY, 0]], hx2: 96, hy2: 64, ha: -0.15, ta: -2.3, tk: 0.06, tt: 0.3, arch: -3 });
+    add('stretch', [side(blend(B, ST, 0.35)), side(blend(B, ST, 0.75)), side(copy(ST, { mouth: 0.6, shut: 1 })), side(copy(ST, { mouth: 1, shut: 1, ha: -0.25 }))]);
+    var WK = [];
+    for (i = 0; i < 8; i++) {
+      var ph = i / 8, pw = [], offs = [0.25, 0.75, 0, 0.5];
+      for (var k = 0; k < 4; k++) { var f = foot(ph + offs[k], 0.6, 17, k < 2 ? 5 : 4.5); pw.push([B.paws[k][0] + f[0], CGY + f[1], f[2]]); }
+      p = copy(B, { paws: pw }); var b = Math.cos(ph * 4 * Math.PI) * 0.6;
+      p.sy += b; p.hy += Math.cos(ph * 4 * Math.PI + 1) * 0.6; p.hy2 += b * 0.8; p.ta += Math.sin(ph * 2 * Math.PI) * 0.12; p.tt = 0.45 + Math.sin(ph * 2 * Math.PI + 1) * 0.15;
+      WK.push(side(p));
     }
-    catEl.innerHTML = ''; catEl.appendChild(sheet); catSheet = sheet; kitty.f = -1;
+    add('walk', WK);
+    var SIT = copy(B, { sx: 71, sy: 51, hx: 46, hy: 74, paws: [[75, CGY, 0], [69, CGY, 0], [57, CGY, 0], [52, CGY, 0]], hx2: 84, hy2: 33, sit: 1, ta: 3.05, tk: -0.3, tt: -0.05, tfront: 1 });
+    var sd = [];
+    for (i = 1; i <= 3; i++) { p = blend(B, SIT, ease(i / 3)); p.tfront = i > 1 ? 1 : 0; if (!p.tfront) { p.ta = -2.05; p.tk = 0.075; p.tt = 0.45; } sd.push(side(p)); }
+    add('sitdown', [side(copy(B, {}))].concat(sd));
+    add('sit', [side(copy(SIT, {})), side(copy(SIT, { shut: 1 })), side(copy(SIT, { tt: 0.25 }))]);   // still, a slow blink, a twitch of the tail tip
+    // washing: a paw up, licked a few times, then wiped over the face
+    var g0 = copy(SIT, { paws: [[83, 58, 1], [69, CGY, 0], [57, CGY, 0], [52, CGY, 0]], hx2: 85, hy2: 36, ha: 0.25 });
+    add('groom', [side(copy(SIT, { paws: [[79, 70, 0.8], [69, CGY, 0], [57, CGY, 0], [52, CGY, 0]] })), side(g0), side(copy(g0, { tongue: 1, shut: 1, ha: 0.32, hy2: 37 })),
+      side(copy(g0, { tongue: 1, shut: 1, ha: 0.18, hy2: 35 })), side(copy(SIT, { paws: [[90, 38, 1], [69, CGY, 0], [57, CGY, 0], [52, CGY, 0]], hx2: 84, hy2: 36, ha: 0.45, shut: 1, over: 1 })),
+      side(copy(SIT, { paws: [[86, 30, 1], [69, CGY, 0], [57, CGY, 0], [52, CGY, 0]], hx2: 84, hy2: 36, ha: 0.55, shut: 1, over: 1 }))]);
+    // petted: the back rises into his hand, head pushed up, eyes shut, tail straight up and quivering
+    var PET = copy(B, { arch: 5, sy: 55, hy: 53, hx2: 88, hy2: 37, ha: -0.35, shut: 1, ta: -1.75, tk: 0.02, tt: 0.3 });
+    add('pet', [side(copy(PET, {})), side(copy(PET, { hy2: 35, ha: -0.45, tt: 0.45, arch: 6 })), side(copy(PET, { hy2: 36, ha: -0.4, tt: 0.15 }))]);
+    add('front', [{ draw: drawCatFront }]);
+    // kneading before it settles: treading the desk, one front paw then the other
+    var KN = copy(B, { sx: 72, sy: 61, hx: 41, hy: 64, sit: 0.4, hx2: 85, hy2: 46, shut: 1 });
+    add('knead', [side(copy(KN, { paws: [[79, 79, 0.6], [70, CGY, 0], [45, CGY, 0], [39, CGY, 0]] })), side(copy(KN, { paws: [[76, CGY, 0], [73, 79, 0.6], [45, CGY, 0], [39, CGY, 0]] }))]);
+    catSheet = bakeGrid(F, CCOLS, CTW, CTH, 1, function (g, q) {
+      g.fillStyle = 'rgba(20,12,8,0.18)'; ellipse(g, q.draw === drawCatFront ? 55 : 56, CGY + 0.5, q.draw === drawCatFront ? 15 : 28, 2.8); g.fill();
+    });
+    catEl.innerHTML = ''; catEl.appendChild(catSheet); kitty.f = -1;
   }
   var HOME = [64, 510];
-  var kitty = { x: HOME[0], y: HOME[1], dir: 1, f: -1, steps: null, si: 0, ph: 0, next: 0, pet: false, keys: false, keyAt: 0 };
+  var kitty = { x: HOME[0], y: HOME[1], dir: 1, f: -1, steps: null, si: 0, ph: 0, v: 0, next: 0, pet: false, keys: false, keyAt: 0 };
   function catEpisode() {
-    return [{ f: 1, d: 2.5 }, { f: 2, d: 0.8 }, { f: 7, d: 2.6 }, { f: 8, d: 0.8 }, { lick: 4 }, { f: 8, d: 0.6 },
-      { m: 'walk', x: 562, y: 528 }, { f: 11, d: 7, pet: true, dir: 1 }, { m: 'walk', x: 642, y: 528 }, { f: 8, d: 2 }, { lick: 3 }, { f: 8, d: 10 },
-      { m: 'walk', x: HOME[0], y: HOME[1] }, { f: 2, d: 0.5, dir: 1 }];
+    var st = [{ clip: 'wake', seq: [0, 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1], fps: 4 },   // head up, look about, blink, a little yawn
+      { clip: 'rise', fps: 5 }, { clip: 'rise', seq: [3], fps: 2 },
+      { clip: 'stretch', seq: [0, 1, 2, 3, 3, 3, 3, 3, 2, 1, 0], fps: 5 },
+      { clip: 'sitdown', fps: 7 }, { clip: 'sit', seq: [0], fps: 2 },
+      { clip: 'groom', seq: [0, 1, 2, 3, 2, 3, 2, 3, 2, 3, 1, 4, 5, 4, 5, 4, 1, 2, 3, 2, 3, 0], fps: 5 },
+      { clip: 'sit', seq: [0, 0, 1, 0], fps: 3 }, { clip: 'sitdown', fps: 7, rev: 1 },
+      { go: [548, 528] },
+      { clip: 'pet', seq: [0, 1, 2, 1, 0, 1, 2, 1], fps: 3, d: 8, pet: 1 },
+      { go: [640, 524] }, { clip: 'sitdown', fps: 7 },
+      { clip: 'groom', seq: [0, 1, 2, 3, 2, 3, 1, 4, 5, 4, 1, 0], fps: 5 },
+      { clip: 'sit', seq: [0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 2], fps: 2 },
+      { clip: 'sitdown', fps: 7, rev: 1 },
+      { go: [420, 508] }, { go: [HOME[0] - 6, HOME[1]] },   // home behind the keyboard this time
+      { face: 1 }, { clip: 'knead', seq: [0, 1, 0, 1, 0, 1, 0, 1], fps: 4 },
+      { clip: 'rise', fps: 5, rev: 1 }, { clip: 'wake', seq: [1, 1, 2, 1, 0], fps: 3 }, { clip: 'sleep', seq: [0], fps: 1 }];
+    return st;
   }
   function updateCat(t, dt) {
-    var f = 0, k = kitty;
-    if (view !== 'desk') { k.steps = null; k.x = HOME[0]; k.y = HOME[1]; k.pet = false; k.keys = false; }
+    var f = CAT.sleep[0], k = kitty, sxs = 1;
+    if (view !== 'desk') { k.steps = null; k.x = HOME[0]; k.y = HOME[1]; k.dir = 1; k.pet = false; k.keys = false; }
     else if (!k.steps) {
       if (!k.next) k.next = t + (CATP ? 2 : rnd(60, 180));
       if (t > k.next) { k.steps = catEpisode(); k.si = 0; }
     }
+    k.pet = false; k.keys = false; k.walking = false;
     if (k.steps) {
       var s = k.steps[k.si];
-      if (!s) { k.steps = null; k.next = t + (CATP ? 5 : rnd(150, 330)); k.dir = 1; }
+      if (!s) { k.steps = null; k.next = t + (CATP ? 5 : rnd(150, 330)); k.dir = 1; k.x = HOME[0]; k.y = HOME[1]; }
       else {
         if (s.st == null) s.st = t;
-        if (s.m === 'walk') {
-          var dx = s.x - k.x, dy = s.y - k.y, d = Math.sqrt(dx * dx + dy * dy), sp = 42;
-          if (d < sp * dt + 0.5) { k.x = s.x; k.y = s.y; k.si++; } else { k.x += dx / d * sp * dt; k.y += dy / d * sp * dt; if (Math.abs(dx) > 0.5) k.dir = dx > 0 ? 1 : -1; }
-          k.ph += dt * 5; f = 3 + Math.floor(k.ph) % 4;
-        } else if (s.lick) { f = 9 + Math.floor(t * 3) % 2; if (t - s.st > s.lick) k.si++; }
-        else { f = s.f; if (s.dir) k.dir = s.dir; if (t - s.st > s.d) k.si++; }
-        k.pet = !!(s.pet && t - s.st > 0.8 && t - s.st < s.d - 0.5);
-        k.keys = s.m === 'walk' && k.x > 400 && k.x < 562;   // paws on the keyboard
+        var el = t - s.st;
+        if (s.go) {
+          var dx = s.go[0] - k.x, dy = s.go[1] - k.y, d = Math.sqrt(dx * dx + dy * dy);
+          if (Math.abs(dx) > 2 && (dx > 0 ? 1 : -1) !== k.dir) { k.steps.splice(k.si, 0, { face: dx > 0 ? 1 : -1 }); k.v = 0; f = CAT.walk[0]; }
+          else {
+            var nx = k.steps[k.si + 1], keep = nx && nx.go && (nx.go[0] - s.go[0]) * k.dir > 0;
+            k.v = Math.min(44, k.v + 90 * dt, keep ? 1e9 : Math.max(10, Math.sqrt(2 * 90 * d)));
+            var mv = k.v * dt;
+            if (d <= mv + 0.3) { k.x = s.go[0]; k.y = s.go[1]; k.si++; if (!keep) k.v = 0; } else { k.x += dx / d * mv; k.y += dy / d * mv; }
+            k.walking = true; k.ph += mv / 17; f = CAT.walk[Math.floor(((k.ph % 1) + 1) % 1 * 8) % 8];
+            k.keys = k.y > 518 && k.x > 470 && k.x < 600;   // paws on the keyboard
+          }
+        } else if (s.face) {
+          if (s.face === k.dir) k.si++;
+          var T = 0.4;
+          if (el < T * 0.3) { f = CAT.walk[1]; sxs = 1 - 0.3 * el / (T * 0.3); }
+          else if (el < T * 0.7) f = CAT.front[0];
+          else { k.dir = s.face; f = CAT.walk[1]; sxs = 0.7 + 0.3 * (el - T * 0.7) / (T * 0.3); }
+          if (el >= T) { k.dir = s.face; k.si++; sxs = 1; }
+        } else {
+          var c = CAT[s.clip], seq = s.seq || c.map(function (v, i) { return i; }), n = seq.length, fps = s.fps || 5, i;
+          if (s.d) { i = seq[Math.floor(el * fps) % n]; if (el > s.d) k.si++; }
+          else { i = Math.min(n - 1, Math.floor(el * fps)); i = seq[s.rev ? n - 1 - i : i]; if (el > n / fps) k.si++; }
+          f = c[i];
+          k.pet = !!(s.pet && el > 0.6 && el < s.d - 0.6);
+        }
       }
     }
-    if (!k.steps) { f = 0; k.pet = false; k.keys = false; }
-    if (f !== k.f) { tr(catSheet, 'translate3d(' + (-f * CTW) + 'px,0,0)'); k.f = f; }
-    var breathe = f === 0 ? 1 + 0.03 * (0.5 + 0.5 * Math.sin(t * 1.6)) : 1;
-    tr(catEl, 'translate3d(' + (k.x - 55).toFixed(1) + 'px,' + (k.y - 84).toFixed(1) + 'px,0) scale(' + k.dir + ',' + breathe.toFixed(3) + ')');
+    if (f !== k.f) { tr(catSheet, 'translate3d(' + (-(f % CCOLS) * CTW) + 'px,' + (-Math.floor(f / CCOLS) * CTH) + 'px,0)'); k.f = f; }
+    var breathe = f === CAT.sleep[0] ? 1 + 0.035 * (0.5 + 0.5 * Math.sin(t * 1.5)) : 1;
+    tr(catEl, 'translate3d(' + (k.x - 55).toFixed(1) + 'px,' + (k.y - 84).toFixed(1) + 'px,0) scale(' + (k.dir * sxs).toFixed(3) + ',' + breathe.toFixed(3) + ')');
   }
+  function catBack() { return [kitty.x + (lerp(41, 73, 0.75) - 55) * kitty.dir, kitty.y - 84 + 40]; }   // the middle of its back, for his hand
   function catKey() {   // the cat's paws on the keyboard type into his code
     var x = GUT + (code.ci + code.extra) * CW;
     if (!code.lines.length || x > D.code.w - CW) return;
@@ -919,6 +1240,87 @@
     cg.fillStyle = COL.txt; cg.fillText('asdfghjkl;'.charAt(Math.floor(Math.random() * 10)), x, rowY(code.row) + 9);
     code.extra++; cursor(true);
   }
+
+  /* ---------------- his arms ----------------
+   * Each arm is drawn from shoulder to hand, the elbow solved like the animals' knees, and
+   * whatever falls behind his back or the chair is cut away. At rest the hands are on the
+   * keyboard; they reach down to pet the dog, take its ball and throw it, stroke the cat, and
+   * lift out of the way when the cat walks across the keys. */
+  var ARM = {
+    L: { sh: [300, 452], rest: [304, 520], el0: [262, 528], box: [170, 420, 190, 220], bend: -1 },
+    R: { sh: [444, 452], rest: [506, 518], el0: [482, 530], box: [400, 420, 230, 150], bend: -1 } };
+  function armSetup(bd) {
+    ['L', 'R'].forEach(function (n) {
+      var A = ARM[n], b = A.box;
+      if (A.c && A.c.parentNode) A.c.parentNode.removeChild(A.c);
+      A.c = mk(b[2], b[3]); A.g = A.c.getContext('2d'); place(bd, A.c, b[0], b[1]);
+      A.l1 = Math.sqrt(Math.pow(A.el0[0] - A.sh[0], 2) + Math.pow(A.el0[1] - A.sh[1], 2));
+      A.l2 = Math.sqrt(Math.pow(A.rest[0] - A.el0[0], 2) + Math.pow(A.rest[1] - A.el0[1], 2));
+      A.w = 0; A.hand = A.rest.slice(); A.drawnAt = null; A.target = null; A.goal = 0;
+      armDraw(A, true);
+    });
+  }
+  function armDraw(A, force) {
+    var key = A.hand[0].toFixed(1) + ',' + A.hand[1].toFixed(1);
+    if (!force && key === A.drawnAt) return;
+    A.drawnAt = key;
+    var g = A.g, b = A.box, w = A.w, el;
+    if (w < 0.001) el = A.el0;
+    else { var dd = Math.sqrt(Math.pow(A.hand[0] - A.sh[0], 2) + Math.pow(A.hand[1] - A.sh[1], 2)); el = ik(A.sh[0], A.sh[1], A.hand[0], A.hand[1], lerp(A.l1, Math.max(40, dd * 0.57), w), lerp(A.l2, Math.max(34, dd * 0.5), w), A.bend); }   // reaching, the arm is nearly straight
+    g.clearRect(0, 0, b[2], b[3]); g.save(); g.translate(-b[0], -b[1]);
+    arm(g, A.sh[0], A.sh[1], el[0], el[1], A.hand[0], A.hand[1]);
+    g.globalCompositeOperation = 'destination-out';   // what's behind his back and the chair stays hidden
+    g.beginPath(); g.moveTo(286, 600); g.quadraticCurveTo(278, 470, 300, 446); g.quadraticCurveTo(372, 418, 444, 446); g.quadraticCurveTo(466, 470, 458, 600); g.closePath(); g.fill();
+    rrect(g, 290, 470, 164, 150, 26); g.fill();
+    g.restore(); g.globalCompositeOperation = 'source-over';
+  }
+  function armTick(A, goal, target, dt, dur, follow) {   // ease the hand towards a target (or back to the keys) over dur seconds, then draw
+    A.w = Math.max(0, Math.min(1, A.w + (goal ? 1 : -1) * dt / (dur || 0.7)));
+    if (target) {
+      if (!A.tg) A.tg = target.slice();
+      else { var r = Math.min(1, dt * (follow || 8)); A.tg[0] += (target[0] - A.tg[0]) * r; A.tg[1] += (target[1] - A.tg[1]) * r; }
+    }
+    var e = ease(A.w), tg = A.tg || A.rest;
+    A.hand = [lerp(A.rest[0], tg[0], e), lerp(A.rest[1], tg[1], e) - Math.sin(e * Math.PI) * 12];   // the hand arcs up on its way
+    if (A.w === 0) A.tg = null;
+    armDraw(A, false);
+  }
+  // What his hands are doing this frame; returns where his head should turn (null: his own business).
+  function handsTick(t, dt) {
+    if (!ARM.L.c) return null;
+    var L = ARM.L, R = ARM.R, look = null, lt = null, rt = null, lg = 0, rg = 0, ld = 0.7, lf = 8;
+    var catComing = kitty.walking && kitty.y > 518 && kitty.x > 400 && kitty.x < 610;
+    if (catComing) {   // hands up off the keys while the cat walks over them
+      lg = rg = 1; lt = [292, 500]; rt = [486, 492]; look = 5;
+    }
+    if (kitty.pet) {   // stroking the cat, head to tail
+      var cb = catBack(), u = 0.5 - 0.5 * Math.cos(t * 2.4);
+      rg = 1; rt = [cb[0] + 16 - u * 34, cb[1] - 3 + Math.sin(u * Math.PI) * -2]; look = 8;
+    }
+    if (dog.pet) {   // stroking the dog's head and down its neck
+      var hd = dogHeadAt(), v = 0.5 - 0.5 * Math.cos(t * 2.8);
+      lg = 1; lt = [hd[0] + 4 - v * 18, hd[1] + 4 + v * 6]; look = -9;
+    }
+    if (dog.ball === 'offer' || dog.ball === 'given') {   // take the ball from its mouth, show it, throw it
+      var ge = dog.giveEl, m = dogMouth();
+      look = -8; lg = ge > 0.25 ? 1 : 0;
+      if (ge < 1.8) lt = [m[0] + 6, m[1] - 2];
+      else if (ge < 2.75) { lt = [268, 494]; lf = 5; }   // up, showing it off
+      else { lt = [214, 548]; lf = 30; look = -12; }   // and away
+      if (ge > 1.8 && !L.holding && !L.thrown) { L.holding = true; ballEl.style.display = 'block'; }
+      if (L.holding && ge > 2.92) {   // let go
+        L.holding = false; L.thrown = true;
+        ball = { on: true, x: L.hand[0] - 8, y: L.hand[1] + 2, vx: -600, vy: -260, a: 0, floor: 742 };
+      }
+    } else if (dog.ball === 'thrown') { look = -12; }
+    else { L.thrown = false; L.holding = false; }
+    armTick(L, lg, lt, dt, lg && dog.ball ? 0.9 : ld, lf);
+    armTick(R, rg, rt, dt, catComing ? 0.35 : 0.8, 8);
+    if (L.holding) { var s = dogScale(SITAT[1]) / 1.75; tr(ballEl, 'translate3d(' + (L.hand[0] - 17).toFixed(1) + 'px,' + (L.hand[1] - 3).toFixed(1) + 'px,0) scale(' + s.toFixed(2) + ')'); }
+    if (L.w > 0 || R.w > 0) code.next = Math.max(code.next, t + 0.4);   // no typing with a hand away from the keys
+    return look;
+  }
+
 
   /* ---------------- the code on his screen ----------------
    * He types this very file, with editor colours, at a believable pace. Only the new
@@ -1234,22 +1636,13 @@
       // he looks at whichever screen is busy, leans back to think, and his hands type
       updateDog(t, dt); updateCat(t, dt);
       if (kitty.keys && t > kitty.keyAt) { catKey(); kitty.keyAt = t + rnd(0.1, 0.25); code.next = Math.max(code.next, t + 1.5); }
-      if (guy.armRPet && kitty.pet !== guy.pettingCat) {
-        guy.pettingCat = kitty.pet; guy.armRPet.style.display = kitty.pet ? 'block' : 'none'; guy.armR.style.display = kitty.pet ? 'none' : 'block';
-      }
-      if (kitty.pet) tr(guy.armRPet, 'translate3d(' + (Math.sin(t * 2.2) * 7).toFixed(1) + 'px,' + (Math.abs(Math.sin(t * 2.2)) * -2).toFixed(1) + 'px,0)');
-      if (guy.armPet) {   // when the dog sits by him, his left hand comes down to pet it
-        var petting = dog.pet;
-        if (petting !== guy.petting) { guy.petting = petting; guy.armPet.style.display = petting ? 'block' : 'none'; guy.armL.style.display = petting ? 'none' : 'block'; }
-        if (petting) tr(guy.armPet, 'translate3d(' + (Math.sin(t * 2.5) * 3).toFixed(1) + 'px,' + (Math.max(0, Math.sin(t * 5)) * 3).toFixed(1) + 'px,0)');
-      }
-      var aim = dog.pet ? -9 : kitty.pet ? 8 : !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = dog.pet ? 3 : code.think && t < code.think ? -3 : 0;
+      var look = handsTick(t, dt);
+      var aim = look !== null ? look : !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = look !== null && look < 0 ? 3 : code.think && t < code.think ? -3 : 0;
       headA += (aim - headA) * Math.min(1, dt * 2); headY += (ay - headY) * Math.min(1, dt * 2);
       if (guy.head) tr(guy.head, 'translate3d(' + (headA * 0.5).toFixed(2) + 'px,' + headY.toFixed(2) + 'px,0) rotate(' + headA.toFixed(2) + 'deg)');
-      if (guy.armR && t > jitterAt) {
+      if (ARM.R.c && t > jitterAt) {   // his hands move a little as he types
         var typing = t - code.lastKey < 0.2;
-        tr(guy.armL, 'translate3d(' + (typing ? rnd(-1, 1) : 0).toFixed(1) + 'px,' + (typing ? rnd(-1.2, 0.6) : 0).toFixed(1) + 'px,0)');
-        tr(guy.armR, 'translate3d(' + (typing ? rnd(-1, 1) : 0).toFixed(1) + 'px,' + (typing ? rnd(-1.2, 0.6) : 0).toFixed(1) + 'px,0)');
+        ['L', 'R'].forEach(function (n) { var A = ARM[n], j = typing && A.w === 0; tr(A.c, 'translate3d(' + (j ? rnd(-1, 1) : 0).toFixed(1) + 'px,' + (j ? rnd(-1.2, 0.6) : 0).toFixed(1) + 'px,0)'); });
         jitterAt = t + 0.08;
       }
       for (i = 0; i < steamEls.length; i++) {

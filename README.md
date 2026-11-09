@@ -46,11 +46,14 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
   other, while the real sunset drops behind the Hudson and the towers light up.
   The time and weather sit over the scene as in the meadow, and the time also
   glows on a digital clock on his desk and by the bed. Every so often a golden
-  retriever wanders through, chases a ball (and brings it back), chases its
-  tail, or comes to sit by his chair to be petted; at night it sleeps on its
-  bed by his. The cat naps on the desk, and every few minutes wakes, stretches,
-  washes and walks over (across the keyboard, which types for it) to be
-  petted. `cat=1` sends it more often. The camera pans across
+  retriever wanders through and sniffs the rug, chases its tail, comes to sit
+  by his chair to be petted, or plays fetch: it brings the ball back, he takes
+  it and throws it again. At night it sleeps on its bed by his. The cat naps on
+  the desk, and every few minutes wakes, stretches, washes and walks over
+  (across the keyboard, which types for it; he lifts his hands) to be petted,
+  then goes home behind the keyboard, kneads and curls up. Both are drawn from
+  simple skeletons, so paws stay planted as they walk and they turn round
+  through a frame facing you. `cat=1` sends the cat more often. The camera pans across
   the apartment when he gets up or turns in.
 - **Photo scene.** A slideshow of your photos with a slow pan and zoom, under
   a time-of-day tint and animated weather.
@@ -139,7 +142,7 @@ for trying the tiles without real hardware.
   headless browsers barely animate. The
   photo scene takes `/?wx=…&phase=…`.
 - The city takes the same options plus `view=bed` or `view=desk`:
-  `/city.html?view=bed&time=6:40&wx=rain&wind=30`. `dog=visit` (or `chase`,
+  `/city.html?view=bed&time=6:40&wx=rain&wind=30`. `dog=visit` (or `fetch`,
   `walk`, `tail`) sends the dog in every few seconds.
 - Jump straight to a screen: `/#home` or `/#system`.
 - The iPad has no developer console, so the page reports page loads, JavaScript
