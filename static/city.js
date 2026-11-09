@@ -756,6 +756,13 @@
     if (!night) { g.fillStyle = 'rgba(220,110,100,0.16)'; ellipse(g, 11, 3, 4, 2.5); g.fill(); }
     g.restore();
   }
+  var withHer = !window.CITY_STANDALONE;   // always on the panel; the demo site has a switch
+  function setHer(on) {   // show her in bed with him, or not; the covers are redrawn in place
+    withHer = !!on;
+    if (!duvet) return;
+    var g = duvet.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, duvet.width, duvet.height);
+    g.translate(-340, -440); duvetShape(g, true);
+  }
   function her(g, x, y) {   // asleep beside him: long black curly hair with a middle part, arched brows, a soft smile
     var night = phase === 'night', sk = mix(room.skin, '#ffffff', 0.04), skLo = mix(sk, '#4a2418', 0.3), hair = room.hair, i, a;
     g.save(); g.translate(x, y); g.rotate(-0.28); g.scale(0.84, 0.86);
@@ -802,7 +809,7 @@
     g.quadraticCurveTo(1000, 560, 996, 628); g.lineTo(344, 628); g.closePath(); g.fill();
     g.strokeStyle = rgba(room.duvetHi, 0.55); g.lineWidth = 2; g.beginPath();
     g.moveTo(420, 560); g.quadraticCurveTo(520, 548, 600, 560); g.moveTo(640, 590); g.quadraticCurveTo(760, 570, 880, 586); g.stroke();
-    if (him) {   // she sleeps beside him, her pillow tucked against his shoulder; the sheet comes up to her chin
+    if (him && withHer) {   // she sleeps beside him (on the panel; a switch on the demo), her pillow tucked against his shoulder; the sheet comes up to her chin
       g.fillStyle = mix(room.sheet, '#ffffff', 0.4); ellipse(g, 418, 508, 50, 15); g.fill();
       g.fillStyle = rgba(room.dark, 0.15); ellipse(g, 420, 518, 46, 6); g.fill();
       her(g, 405, 484);
@@ -2023,6 +2030,7 @@
     dim: function (on) { dimmed = on; },
     photo: function () { return current; },
     bedPicture: bedPicture,
+    setHer: setHer,
     snapshot: function () { return ed.fin ? ed.fin.toDataURL('image/jpeg', 0.9) : ''; },
     // the hours he sleeps (local time); outside them he's at the desk
     setHours: function (s, w) { if (s === sleepH && w === wakeH) return; sleepH = s; wakeH = w; if (lastW) setWeather(lastW); },
