@@ -372,7 +372,7 @@
   $('wind-range').oninput = function () { manual.wind = +this.value; render(); };
   $('kinds').onclick = function (e) { var c = e.target.getAttribute('data-code'); if (c === null) return; manual.code = +c; render(); };
   $('views').onclick = function (e) { var v = e.target.getAttribute('data-v'); if (v === null) return; viewPick = v; City.showView(v); render(); };
-  // Animal buttons: the panel steps aside so you can watch, a caption says what's happening,
+  // Animal buttons: a caption over the scene and a line under the buttons say what's happening,
   // and the button stays lit while the animal is at it (dog buttons dim while the dog is busy).
   var dogJob = null, dogAt = 0, flash = {};
   function petButtons() {
@@ -400,7 +400,7 @@
     else { City.wakeCat(); said = 'The cat is waking up.'; }
     $('pet-status').textContent = said;
     petButtons();
-    closePanel(); caption(said);   // out of the way, so the animals can be seen
+    caption(said);
   };
   $('time-range').oninput = function () { timeH = +this.value; City.setTime(timeH); render(); };
   $('day-range').oninput = function () { dayN = +this.value; City.setDays(dayN); render(); };
