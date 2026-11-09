@@ -523,9 +523,9 @@
   // A picture of your own for the bedroom frame, kept on the panel only (static/private/ is not in git).
   var bedPic = null;
   if (!window.CITY_STANDALONE) {
-    var bp = new Image();
-    bp.onload = function () { bedPic = bp; if (V.bed && V.bed.room) drawBedRoom(); };
-    bp.src = 'private/bedroom.jpg';
+    var bedImg = new Image();
+    bedImg.onload = function () { bedPic = bedImg; if (built) drawBedRoom(); };   // drawn now if the room is built, else at the first build
+    bedImg.src = 'private/bedroom.jpg';
   }
   function drawBedRoom() {
     var v = V.bed, g = v.room.getContext('2d'), night = phase === 'night', i;
