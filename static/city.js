@@ -520,6 +520,13 @@
     g.fillStyle = phase === 'night' ? '#3a2a24' : '#d9cfc2'; g.fillRect(x + 54, y - 14, 18, 14);
     g.fillStyle = leafCol(); for (i = 0; i < 6; i++) { g.save(); g.translate(x + 63, y - 14); g.rotate(-1.1 + i * 0.45); ellipse(g, 0, -9, 3, 9); g.fill(); g.restore(); }
   }
+  // A picture of your own for the bedroom frame, kept on the panel only (static/private/ is not in git).
+  var bedPic = null;
+  if (!window.CITY_STANDALONE) {
+    var bp = new Image();
+    bp.onload = function () { bedPic = bp; if (V.bed && V.bed.room) drawBedRoom(); };
+    bp.src = 'private/bedroom.jpg';
+  }
   function drawBedRoom() {
     var v = V.bed, g = v.room.getContext('2d'), night = phase === 'night', i;
     g.clearRect(0, 0, W, H);
@@ -529,12 +536,20 @@
     g.fillStyle = room.floor; g.fillRect(0, 640, W, H - 640);
     g.fillStyle = rgba(mix(room.duvet, room.floor, 0.5), 0.6); ellipse(g, 600, 712, 380, 40); g.fill();
     g.fillStyle = mix(room.wallLo, '#000000', 0.2); g.fillRect(W - 22, 0, 22, H);   // the wall between the rooms
-    // a print on the wall
+    // a framed picture on the wall: your own (static/private/bedroom.jpg, iPad only), or a skyline print
     g.fillStyle = room.frame; g.fillRect(64, 236, 124, 160);
-    var gr = g.createLinearGradient(0, 244, 0, 388); gr.addColorStop(0, night ? '#2a3150' : '#e7b48f'); gr.addColorStop(1, night ? '#151a30' : '#5f6f95');
-    g.fillStyle = gr; g.fillRect(71, 243, 110, 146);
-    g.fillStyle = night ? '#f3e7c8' : '#fff4d8'; g.beginPath(); g.arc(150, 278, 9, 0, 6.2832); g.fill();
-    g.fillStyle = night ? '#0e1122' : '#2f3550'; for (i = 0; i < 8; i++) { var bh = 18 + ((i * 37) % 54); g.fillRect(74 + i * 13.5, 389 - bh, 11, bh); }
+    if (bedPic) {
+      g.drawImage(bedPic, 71, 243, 110, 146);
+      if (night) { g.fillStyle = 'rgba(8,12,30,0.5)'; g.fillRect(71, 243, 110, 146); }   // the room is dark
+      else if (phase !== 'day') { g.fillStyle = 'rgba(255,150,90,0.1)'; g.fillRect(71, 243, 110, 146); }
+      var sh = g.createLinearGradient(71, 243, 181, 389); sh.addColorStop(0, 'rgba(255,255,255,' + (night ? 0.04 : 0.12) + ')'); sh.addColorStop(0.45, 'rgba(255,255,255,0)');
+      g.fillStyle = sh; g.fillRect(71, 243, 110, 146);   // a little glare on the glass
+    } else {
+      var gr = g.createLinearGradient(0, 244, 0, 388); gr.addColorStop(0, night ? '#2a3150' : '#e7b48f'); gr.addColorStop(1, night ? '#151a30' : '#5f6f95');
+      g.fillStyle = gr; g.fillRect(71, 243, 110, 146);
+      g.fillStyle = night ? '#f3e7c8' : '#fff4d8'; g.beginPath(); g.arc(150, 278, 9, 0, 6.2832); g.fill();
+      g.fillStyle = night ? '#0e1122' : '#2f3550'; for (i = 0; i < 8; i++) { var bh = 18 + ((i * 37) % 54); g.fillRect(74 + i * 13.5, 389 - bh, 11, bh); }
+    }
     g.fillStyle = night ? '#4a3a32' : '#c9a27e';   // slippers by the bed
     ellipse(g, 300, 672, 22, 8); g.fill(); ellipse(g, 342, 684, 22, 8); g.fill();
     g.fillStyle = rgba(room.dark, 0.2); ellipse(g, 292, 670, 10, 4); g.fill(); ellipse(g, 334, 682, 10, 4); g.fill();
