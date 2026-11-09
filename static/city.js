@@ -50,7 +50,7 @@
     day: { wall: '#ddd8d0', wallLo: '#c4bdb3', frame: '#262a32', desk: '#8c6849', deskHi: '#a5815f', deskEdge: '#5b4231', floor: '#a08369', dark: '#3a332d',
       hair: '#121113', hairHi: '#3a3a40', skin: '#dba67f', shirt: '#5d6c4a', shirtHi: '#7b8b62', shirtLo: '#434e37', tee: '#e9e6df', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
     golden: { wall: '#d5a58a', wallLo: '#a8775f', frame: '#2a1f24', desk: '#83553a', deskHi: '#c08354', deskEdge: '#4f3122', floor: '#8c6047', dark: '#2e211d',
-      hair: '#131012', hairHi: '#4a3a3a', skin: '#d4966c', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
+      hair: '#121012', hairHi: '#3c383c', skin: '#d4966c', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
     night: { wall: '#1c2236', wallLo: '#141a2b', frame: '#0a0c14', desk: '#2a2630', deskHi: '#3a3442', deskEdge: '#17151c', floor: '#181a26', dark: '#0c0d14',
       hair: '#0b0a0e', hairHi: '#2a2a38', skin: '#7a6670', shirt: '#262e28', shirtHi: '#36433b', shirtLo: '#181e1a', tee: '#5a6176', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
   var OVERCAST = { clear: 0, partly: 0.08, cloudy: 0.55, fog: 0.62, drizzle: 0.55, rain: 0.65, heavy: 0.78, snow: 0.5, blizzard: 0.72, storm: 0.85 };
@@ -552,10 +552,10 @@
     g.fillStyle = room.sheet; g.fillRect(246, 548, W - 276, 54);
     g.fillStyle = mix(room.sheet, '#ffffff', 0.4); ellipse(g, 318, 532, 74, 22); g.fill();
     g.fillStyle = rgba(room.dark, 0.18); ellipse(g, 318, 546, 70, 8); g.fill();
-    sleeper(g, 316, 504);   // him, asleep on his side of the pillow
     // light from the window across the bed
     g.save(); g.beginPath(); g.moveTo(v.x, v.y + v.h + 18); g.lineTo(v.x + v.w, v.y + v.h + 18); g.lineTo(W - 10, 640); g.lineTo(v.x, 640); g.closePath();
     g.fillStyle = night ? 'rgba(120,140,220,0.10)' : phase === 'golden' ? 'rgba(255,170,100,0.22)' : 'rgba(255,255,255,0.12)'; g.fill(); g.restore();
+    sleeper(g, 316, 504);   // him, asleep on his side of the pillow (over the window's glow, so his hair stays black)
     if (night) light(g, 117, 460, 140, '#ffb36b', 0.14);
     sleepingDog(g);
 
