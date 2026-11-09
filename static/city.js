@@ -48,11 +48,11 @@
     night: { far: '#2c2b55', mid: '#1b1d3b', near: '#0e1024', roof: '#2a2c4c', glass: '#2a3358' } };
   var ROOM = {
     day: { wall: '#ddd8d0', wallLo: '#c4bdb3', frame: '#262a32', desk: '#8c6849', deskHi: '#a5815f', deskEdge: '#5b4231', floor: '#a08369', dark: '#3a332d',
-      hood: '#34465f', hoodHi: '#4b6080', hair: '#221d22', skin: '#e2b591', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
+      hair: '#1d1716', hairHi: '#54453c', skin: '#deaa84', shirt: '#5d6c4a', shirtHi: '#7b8b62', shirtLo: '#434e37', tee: '#e9e6df', chair: '#23252b', duvet: '#45558a', duvetHi: '#6676a8', sheet: '#eef0f2', wood: '#7a5a3f', rim: null },
     golden: { wall: '#d5a58a', wallLo: '#a8775f', frame: '#2a1f24', desk: '#83553a', deskHi: '#c08354', deskEdge: '#4f3122', floor: '#8c6047', dark: '#2e211d',
-      hood: '#2c3550', hoodHi: '#3e4864', hair: '#1c1619', skin: '#d79b78', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
+      hair: '#1a1414', hairHi: '#5e4234', skin: '#d6996f', shirt: '#5c573e', shirtHi: '#8a7b55', shirtLo: '#3c382a', tee: '#f1d9c3', chair: '#1f1a1e', duvet: '#4b4a7c', duvetHi: '#c88a78', sheet: '#f3d8c4', wood: '#6e4a33', rim: '#ffab66' },
     night: { wall: '#1c2236', wallLo: '#141a2b', frame: '#0a0c14', desk: '#2a2630', deskHi: '#3a3442', deskEdge: '#17151c', floor: '#181a26', dark: '#0c0d14',
-      hood: '#1d2638', hoodHi: '#283350', hair: '#0f0d12', skin: '#7d6a73', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
+      hair: '#0d0b0f', hairHi: '#2c2c3c', skin: '#7a6670', shirt: '#262e28', shirtHi: '#36433b', shirtLo: '#181e1a', tee: '#5a6176', chair: '#0e0f14', duvet: '#232c4e', duvetHi: '#34406a', sheet: '#5f6886', wood: '#2a2329', rim: '#6fd0ff' } };
   var OVERCAST = { clear: 0, partly: 0.08, cloudy: 0.55, fog: 0.62, drizzle: 0.55, rain: 0.65, heavy: 0.78, snow: 0.5, blizzard: 0.72, storm: 0.85 };
   var GREY = { day: '#a7b0bb', golden: '#9e8f98', night: '#262c40' };
   var KIND = { 0: 'clear', 1: 'clear', 2: 'partly', 3: 'cloudy', 45: 'fog', 48: 'fog',
@@ -552,12 +552,7 @@
     g.fillStyle = room.sheet; g.fillRect(246, 548, W - 276, 54);
     g.fillStyle = mix(room.sheet, '#ffffff', 0.4); ellipse(g, 318, 532, 74, 22); g.fill();
     g.fillStyle = rgba(room.dark, 0.18); ellipse(g, 318, 546, 70, 8); g.fill();
-    // him, asleep on his side of the pillow: hair, ear, a closed eye
-    g.fillStyle = room.skin; ellipse(g, 322, 512, 25, 22); g.fill();
-    g.fillStyle = room.hair; g.beginPath(); g.arc(314, 506, 25, Math.PI * 0.75, Math.PI * 2.05); g.quadraticCurveTo(352, 520, 340, 500); g.fill();
-    for (i = 0; i < 5; i++) { g.beginPath(); g.arc(292 + i * 9, 492 + (i % 2) * 3, 7, 0, 6.2832); g.fill(); }
-    g.strokeStyle = rgba(room.dark, 0.7); g.lineWidth = 1.4; g.beginPath(); g.arc(314, 514, 3.5, 0.3, 2.8); g.moveTo(337.5, 515); g.arc(334, 514, 3.5, 0.3, 2.8); g.stroke();   // eyes shut
-    if (phase !== 'night') { g.fillStyle = 'rgba(230,120,110,0.25)'; ellipse(g, 309, 523, 4, 2.5); g.fill(); ellipse(g, 340, 523, 4, 2.5); g.fill(); }
+    sleeper(g, 316, 504);   // him, asleep on his side of the pillow
     // light from the window across the bed
     g.save(); g.beginPath(); g.moveTo(v.x, v.y + v.h + 18); g.lineTo(v.x + v.w, v.y + v.h + 18); g.lineTo(W - 10, 640); g.lineTo(v.x, 640); g.closePath();
     g.fillStyle = night ? 'rgba(120,140,220,0.10)' : phase === 'golden' ? 'rgba(255,170,100,0.22)' : 'rgba(255,255,255,0.12)'; g.fill(); g.restore();
@@ -578,24 +573,8 @@
       bd.appendChild(catEl);   // on the desk: in front of the room, behind his arms
       var dc = document.getElementById('dclock');   // the clock's glowing digits go under the cat when it walks past
       if (dc) { dc.style.position = 'absolute'; bd.insertBefore(dc, catEl); }
-      guy.body = sprite(bd, 270, 400, 200, 200, function (g) {
-        g.fillStyle = room.hood; g.beginPath();
-        g.moveTo(286, 600); g.quadraticCurveTo(278, 470, 300, 446); g.quadraticCurveTo(372, 418, 444, 446); g.quadraticCurveTo(466, 470, 458, 600); g.closePath(); g.fill();
-        g.fillStyle = room.hoodHi; ellipse(g, 372, 438, 40, 13); g.fill();   // the hood, down
-        g.strokeStyle = rgba(room.dark, 0.35); g.lineWidth = 2; g.beginPath(); g.moveTo(372, 452); g.lineTo(372, 560); g.stroke();
-        if (rim) { g.strokeStyle = rgba(rim, night ? 0.45 : 0.6); g.lineWidth = 2.5; g.beginPath(); g.moveTo(444, 446); g.quadraticCurveTo(466, 470, 458, 560); g.stroke(); }
-      });
-      guy.head = sprite(bd, 320, 340, 104, 104, function (g) {
-        g.fillStyle = room.skin; ellipse(g, 340, 402, 6, 9); g.fill(); ellipse(g, 404, 402, 6, 9); g.fill();   // ears
-        g.fillStyle = room.hair; g.beginPath(); g.arc(372, 396, 31, 0, 6.2832); g.fill();
-        for (var i = 0; i < 7; i++) { g.beginPath(); g.arc(348 + i * 8, 372 + Math.abs(i - 3) * 2, 8, 0, 6.2832); g.fill(); }
-        g.fillStyle = room.hair; g.fillRect(358, 420, 28, 14);
-        // headphones: band over the crown, cups over the ears
-        g.strokeStyle = '#2a2d35'; g.lineWidth = 6; g.beginPath(); g.arc(372, 398, 36, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
-        g.fillStyle = '#2a2d35'; rrect(g, 330, 388, 14, 28, 6); g.fill(); rrect(g, 400, 388, 14, 28, 6); g.fill();
-        g.fillStyle = '#ff7a59'; g.fillRect(333, 400, 2, 6); g.fillRect(409, 400, 2, 6);
-        if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 396, 31, -1.4, 0.4); g.stroke(); }
-      });
+      guy.body = sprite(bd, 270, 400, 200, 200, function (g) { backView(g, rim, night); });
+      guy.head = sprite(bd, 320, 340, 104, 104, function (g) { headBack(g, rim, night); });
       guy.head.style.webkitTransformOrigin = guy.head.style.transformOrigin = '52px 90px';
       guy.legs = sprite(bd, 290, 600, 170, 90, function (g) {   // jeans and sneakers under the seat
         var jean = night ? '#1c2438' : '#34476b', shoe = night ? '#8a8f9c' : '#f1f0ea';
@@ -637,11 +616,125 @@
       duvet.style.webkitTransformOrigin = duvet.style.transformOrigin = '50% 100%';
     }
   }
-  function arm(g, sx, sy, ex, ey, hx, hy) {
-    g.lineCap = 'round'; g.strokeStyle = room.hood; g.lineWidth = 24;
-    g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.stroke();
-    g.lineWidth = 18; g.beginPath(); g.moveTo(ex, ey); g.lineTo(hx, hy); g.stroke();
-    g.fillStyle = room.skin; ellipse(g, hx + (hx > ex ? 6 : -2), hy - 2, 7, 5); g.fill();
+  function arm(g, sx, sy, ex, ey, hx, hy) {   // overshirt sleeve rolled to just below the elbow, then forearm and hand
+    var dx = hx - ex, dy = hy - ey, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len;
+    var rx = ex + ux * len * 0.3, ry = ey + uy * len * 0.3;   // where the roll sits
+    g.lineCap = 'round';
+    g.strokeStyle = room.shirt; g.lineWidth = 23; g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.lineTo(rx, ry); g.stroke();
+    g.strokeStyle = rgba(room.shirtLo, 0.6); g.lineWidth = 2; g.beginPath();   // a crease inside the elbow
+    g.moveTo(ex - ux * 6 + uy * 5, ey - uy * 6 - ux * 5); g.lineTo(ex + ux * 3 + uy * 7, ey + uy * 3 - ux * 7); g.stroke();
+    g.strokeStyle = room.skin; g.lineWidth = 11; g.beginPath(); g.moveTo(rx, ry); g.lineTo(hx - ux * 3, hy - uy * 3); g.stroke();
+    g.strokeStyle = rgba(mix(room.skin, '#5a2e22', 0.3), 0.55); g.lineWidth = 3; g.beginPath();   // shade along the underside
+    g.moveTo(rx - uy * 5, ry + ux * 5); g.lineTo(hx - ux * 5 - uy * 5, hy - uy * 5 + ux * 5); g.stroke();
+    g.strokeStyle = mix(room.shirt, room.shirtHi, 0.5); g.lineWidth = 6; g.lineCap = 'butt'; g.beginPath();   // the rolled cuff
+    g.moveTo(rx - ux * 2 - uy * 9.5, ry - uy * 2 + ux * 9.5); g.lineTo(rx - ux * 2 + uy * 9.5, ry - uy * 2 - ux * 9.5); g.stroke();
+    g.strokeStyle = rgba(room.shirtLo, 0.7); g.lineWidth = 1.2; g.beginPath();
+    g.moveTo(rx + ux * 1 - uy * 9.5, ry + uy * 1 + ux * 9.5); g.lineTo(rx + ux * 1 + uy * 9.5, ry + uy * 1 - ux * 9.5); g.stroke();
+    g.lineCap = 'round';
+    var a = Math.atan2(dy, dx);   // the hand, a little longer than wide, along the forearm
+    g.save(); g.translate(hx + ux * 1, hy + uy * 1 - 1); g.rotate(a);
+    g.fillStyle = room.skin; g.beginPath(); g.arc(0, 0, 7, 0, 6.2832); g.fill();
+    g.fillStyle = rgba(mix(room.skin, '#5a2e22', 0.3), 0.45); g.beginPath(); g.arc(1.5, 3, 4, 0, 3.1416); g.fill();
+    g.restore();
+  }
+  function backPath(g) {   // his back and shoulders; the arms are cut away behind it
+    g.beginPath(); g.moveTo(288, 600); g.bezierCurveTo(283, 520, 281, 472, 296, 453); g.quadraticCurveTo(316, 437, 350, 431);
+    g.quadraticCurveTo(372, 428, 394, 431); g.quadraticCurveTo(428, 437, 448, 453); g.bezierCurveTo(463, 472, 461, 520, 456, 600); g.closePath();
+  }
+  function backView(g, rim, night) {   // the neck and an olive overshirt: collar, back yoke, a box pleat and soft folds
+    var sk = room.skin, skLo = mix(sk, '#4a2418', 0.35), i;
+    g.fillStyle = sk; g.beginPath(); g.moveTo(357, 404); g.lineTo(387, 404); g.quadraticCurveTo(388, 424, 395, 438); g.lineTo(349, 438); g.quadraticCurveTo(356, 424, 357, 404); g.fill();
+    var ng = g.createLinearGradient(0, 404, 0, 432); ng.addColorStop(0, rgba(skLo, 0.75)); ng.addColorStop(1, rgba(skLo, 0)); g.fillStyle = ng; g.fill();
+    g.strokeStyle = rgba(skLo, 0.5); g.lineWidth = 2; g.beginPath(); g.moveTo(357, 406); g.quadraticCurveTo(356, 424, 351, 436); g.moveTo(387, 406); g.quadraticCurveTo(388, 424, 393, 436); g.stroke();
+    backPath(g);
+    var sg = g.createLinearGradient(0, 430, 0, 600); sg.addColorStop(0, room.shirtHi); sg.addColorStop(0.25, room.shirt); sg.addColorStop(1, room.shirtLo);
+    g.fillStyle = sg; g.fill();
+    g.save(); backPath(g); g.clip();
+    g.fillStyle = rgba(room.shirtHi, 0.35); ellipse(g, 318, 448, 26, 7); g.fill(); ellipse(g, 426, 448, 26, 7); g.fill();   // light on the shoulders
+    g.strokeStyle = rgba(room.shirtLo, 0.8); g.lineWidth = 1.5; g.beginPath(); g.moveTo(292, 466); g.quadraticCurveTo(372, 452, 452, 466); g.stroke();   // back yoke seam
+    if (g.setLineDash) { g.setLineDash([2, 2]); g.strokeStyle = rgba(room.shirtHi, 0.6); g.lineWidth = 1; g.beginPath(); g.moveTo(292, 469); g.quadraticCurveTo(372, 455, 452, 469); g.stroke(); g.setLineDash([]); }
+    g.strokeStyle = rgba(room.shirtLo, 0.6); g.lineWidth = 1.3; g.beginPath(); g.moveTo(366, 460); g.lineTo(365, 500); g.moveTo(378, 460); g.lineTo(379, 500); g.stroke();   // box pleat
+    g.strokeStyle = rgba(room.shirtLo, 0.35); g.lineWidth = 3;   // folds drawn in from the arms
+    g.beginPath(); g.moveTo(298, 482); g.quadraticCurveTo(322, 474, 344, 494); g.moveTo(446, 482); g.quadraticCurveTo(422, 474, 400, 494); g.stroke();
+    g.restore();
+    // collar, folded over around the neck
+    g.fillStyle = room.shirtHi; g.beginPath(); g.moveTo(343, 442); g.quadraticCurveTo(345, 430, 355, 427); g.quadraticCurveTo(372, 423, 389, 427);
+    g.quadraticCurveTo(399, 430, 401, 442); g.quadraticCurveTo(372, 435, 343, 442); g.closePath(); g.fill();
+    g.strokeStyle = rgba(room.shirtLo, 0.9); g.lineWidth = 1.5; g.beginPath(); g.moveTo(343, 442); g.quadraticCurveTo(372, 435, 401, 442); g.stroke();
+    g.strokeStyle = rgba(night ? room.shirtHi : '#ffffff', 0.18); g.lineWidth = 1; g.beginPath(); g.moveTo(352, 429); g.quadraticCurveTo(372, 424, 392, 429); g.stroke();
+    if (rim) { g.strokeStyle = rgba(rim, night ? 0.45 : 0.6); g.lineWidth = 2.5; g.beginPath(); g.moveTo(426, 438); g.quadraticCurveTo(448, 446, 456, 470); g.quadraticCurveTo(461, 520, 457, 560); g.stroke(); }
+  }
+  function headBack(g, rim, night) {   // back of his head: a taper fade on the sides and back, medium-short textured top, beard at the jaw
+    var sk = room.skin, skLo = mix(sk, '#4a2418', 0.3), hair = room.hair, i;
+    function skull() { g.beginPath(); g.ellipse ? g.ellipse(372, 392, 28, 32, 0, 0, 6.2832) : g.arc(372, 392, 30, 0, 6.2832);
+      g.moveTo(351, 408); g.quadraticCurveTo(356, 426, 358, 434); g.lineTo(386, 434); g.quadraticCurveTo(388, 426, 393, 408); g.closePath(); }
+    g.fillStyle = sk; ellipse(g, 344, 401, 6, 10); g.fill(); ellipse(g, 400, 401, 6, 10); g.fill();   // ears
+    g.fillStyle = sk; skull(); g.fill();
+    // the beard, seen along the jaw either side of the neck
+    g.fillStyle = rgba(hair, 0.55); g.beginPath();
+    g.moveTo(346, 412); g.quadraticCurveTo(348, 422, 355, 427); g.quadraticCurveTo(351, 419, 351, 411); g.closePath();
+    g.moveTo(398, 412); g.quadraticCurveTo(396, 422, 389, 427); g.quadraticCurveTo(393, 419, 393, 411); g.closePath(); g.fill();
+    // taper: short hair fading to skin down the back and above the ears
+    g.save(); skull(); g.clip();
+    var fg = g.createLinearGradient(0, 384, 0, 432);
+    fg.addColorStop(0, rgba(hair, 0.95)); fg.addColorStop(0.35, rgba(hair, 0.72)); fg.addColorStop(0.7, rgba(hair, 0.38)); fg.addColorStop(0.9, rgba(hair, 0.16)); fg.addColorStop(1, rgba(hair, 0));
+    g.fillStyle = fg; g.fillRect(330, 370, 90, 62);
+    g.fillStyle = rgba(skLo, 0.25); g.fillRect(330, 418, 90, 16);   // shadow where the neck meets the collar
+    g.restore();
+    // the top: fuller than the skull, with a slightly uneven textured edge
+    g.beginPath();
+    for (i = 0; i <= 40; i++) {
+      var th = Math.PI + Math.PI * i / 40, rr = 1 + 0.04 * Math.sin(i * 1.9) + 0.025 * Math.sin(i * 4.3);
+      var px = 372 + 30.5 * rr * Math.cos(th), py = 391 + 34 * rr * Math.sin(th) + (i === 0 || i === 40 ? -2 : 0);
+      if (i) g.lineTo(px, py); else g.moveTo(px, py);
+    }
+    g.bezierCurveTo(398, 398, 346, 398, 341.5, 389); g.closePath();
+    var tg = g.createLinearGradient(0, 360, 0, 399); tg.addColorStop(0, hair); tg.addColorStop(0.6, hair); tg.addColorStop(1, rgba(hair, 0));
+    g.fillStyle = tg; g.fill();
+    var R = seeded(7); g.lineCap = 'round'; g.lineWidth = 1;   // strands swept out from the crown
+    for (i = 0; i < 30; i++) {
+      var an = R() * Math.PI * 2, r0 = 3 + R() * 19, cx = 375 + Math.cos(an) * r0, cy = 377 + Math.sin(an) * r0 * 0.9, ln = 3 + R() * 3.5;
+      if (cy > 388) continue;
+      g.strokeStyle = rgba(room.hairHi, 0.2 + R() * 0.25); g.beginPath(); g.moveTo(cx, cy);
+      g.quadraticCurveTo(cx + Math.cos(an + 0.5) * ln * 0.6, cy + Math.sin(an + 0.5) * ln * 0.6, cx + Math.cos(an + 0.3) * ln, cy + Math.sin(an + 0.3) * ln); g.stroke();
+    }
+    g.fillStyle = rgba(room.hairHi, night ? 0.2 : 0.35); ellipse(g, 366, 371, 13, 5); g.fill();   // a soft sheen
+    // headphones: padded band over the crown, cups over the ears
+    g.strokeStyle = '#2a2d35'; g.lineWidth = 5; g.beginPath(); g.arc(372, 397, 35, Math.PI * 1.06, Math.PI * 1.94); g.stroke();
+    g.strokeStyle = '#3c404a'; g.lineWidth = 2; g.beginPath(); g.arc(372, 397, 33, Math.PI * 1.3, Math.PI * 1.7); g.stroke();
+    g.fillStyle = '#2a2d35'; rrect(g, 332, 387, 13, 28, 6); g.fill(); rrect(g, 399, 387, 13, 28, 6); g.fill();
+    g.fillStyle = '#3c404a'; g.fillRect(334, 390, 2, 22); g.fillRect(408, 390, 2, 22);
+    g.fillStyle = '#ff7a59'; g.fillRect(335, 399, 2, 6); g.fillRect(407, 399, 2, 6);
+    if (rim) { g.strokeStyle = rgba(rim, night ? 0.5 : 0.7); g.lineWidth = 2; g.beginPath(); g.arc(372, 391, 31, -1.4, 0.3); g.stroke(); }
+  }
+  function sleeper(g, x, y) {   // asleep on his side, face towards us: drawn upright, then laid on the pillow
+    var night = phase === 'night', sk = room.skin, skLo = mix(sk, '#4a2418', 0.35), hair = room.hair, i;
+    g.save(); g.translate(x, y); g.rotate(-0.62); g.scale(0.92, 0.92);
+    g.fillStyle = room.tee; rrect(g, -20, 30, 40, 18, 9); g.fill();   // T-shirt shoulders, going under the covers
+    g.fillStyle = mix(sk, '#4a2418', 0.15); g.fillRect(-8, 14, 16, 20);   // neck
+    g.strokeStyle = rgba(room.dark, 0.25); g.lineWidth = 1.5; g.beginPath(); g.moveTo(-10, 31); g.quadraticCurveTo(0, 37, 10, 31); g.stroke();   // the collar
+    function face() { g.beginPath(); g.moveTo(-20, -4); g.bezierCurveTo(-21, -31, 21, -31, 20, -4); g.bezierCurveTo(20, 12, 10, 25, 0, 26); g.bezierCurveTo(-10, 25, -20, 12, -20, -4); g.closePath(); }
+    g.fillStyle = sk; ellipse(g, 21, -1, 3.5, 6.5); g.fill(); g.fillStyle = skLo; ellipse(g, 21.5, -1, 1.6, 4); g.fill();   // an ear
+    g.fillStyle = sk; face(); g.fill();
+    var lg = g.createLinearGradient(-20, 0, 20, 0); lg.addColorStop(0, rgba(skLo, 0.5)); lg.addColorStop(0.45, rgba(skLo, 0)); g.fillStyle = lg; face(); g.fill();   // into the pillow
+    // hair: medium-short on top, swept up off the forehead
+    g.fillStyle = hair; g.beginPath(); g.moveTo(-21, -5); g.bezierCurveTo(-25, -37, 25, -38, 21, -7);
+    g.quadraticCurveTo(17, -14, 9, -16); g.quadraticCurveTo(0, -18.5, -9, -16); g.quadraticCurveTo(-18, -14, -21, -5); g.closePath(); g.fill();
+    var R = seeded(3); g.lineCap = 'round'; g.lineWidth = 1;
+    for (i = 0; i < 14; i++) { var sx = -15 + R() * 30, sy = -26 + R() * 8; g.strokeStyle = rgba(room.hairHi, 0.4 + R() * 0.3); g.beginPath(); g.moveTo(sx, sy + 5); g.quadraticCurveTo(sx + 1, sy, sx + 3, sy - 3); g.stroke(); }
+    g.fillStyle = rgba(hair, 0.5); g.beginPath(); g.moveTo(17, -13); g.lineTo(21.5, -9); g.lineTo(21, -2); g.lineTo(18, -3); g.closePath(); g.fill();   // tapered above the ear
+    // beard: full and connected from the sideburns to the chin, kept short
+    g.fillStyle = rgba(hair, 0.68); g.beginPath();
+    g.moveTo(-20.5, -4); g.lineTo(-19.5, 3); g.quadraticCurveTo(-15, 7, -10, 8.5); g.quadraticCurveTo(-6, 8.8, -4.5, 10.2); g.quadraticCurveTo(0, 8.6, 4.5, 10.2);
+    g.quadraticCurveTo(6, 8.8, 10, 8.5); g.quadraticCurveTo(15, 7, 19.5, 3); g.lineTo(20.5, -4);
+    g.bezierCurveTo(20.8, 13, 10.5, 27, 0, 27.3); g.bezierCurveTo(-10.5, 27, -20.8, 13, -20.5, -4); g.closePath(); g.fill();
+    g.strokeStyle = mix(sk, '#a8564e', night ? 0.2 : 0.45); g.lineWidth = 1.6; g.beginPath(); g.moveTo(-4, 14.5); g.quadraticCurveTo(0, 15.5, 4, 14.5); g.stroke();   // lips
+    // brows, closed eyes, nose
+    g.strokeStyle = hair; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-14.5, -9); g.quadraticCurveTo(-9, -12, -4, -9.8); g.moveTo(4, -9.8); g.quadraticCurveTo(9, -12, 14.5, -9); g.stroke();
+    g.strokeStyle = rgba(room.dark, 0.85); g.lineWidth = 1.3; g.beginPath(); g.moveTo(-13, -3.5); g.quadraticCurveTo(-9, -0.5, -5, -3.5); g.moveTo(5, -3.5); g.quadraticCurveTo(9, -0.5, 13, -3.5); g.stroke();
+    g.strokeStyle = rgba(skLo, 0.9); g.lineWidth = 1.2; g.beginPath(); g.moveTo(0.5, -2); g.quadraticCurveTo(-0.5, 4, -2.5, 6.5); g.quadraticCurveTo(0, 8.2, 3, 7); g.stroke();
+    if (!night) { g.fillStyle = 'rgba(220,110,100,0.16)'; ellipse(g, 11, 3, 4, 2.5); g.fill(); }
+    g.restore();
   }
   function duvetShape(g, him) {
     g.fillStyle = room.duvet; g.beginPath();
@@ -655,13 +748,15 @@
     else { g.moveTo(350, 540); g.quadraticCurveTo(380, 536, 420, 535); g.lineTo(420, 548); g.quadraticCurveTo(380, 549, 352, 554); }
     g.closePath(); g.fill();
     if (!him) return;
-    g.fillStyle = mix(room.skin, room.duvet, 0.1); g.lineCap = 'round'; g.strokeStyle = room.skin; g.lineWidth = 11;   // an arm over the covers
+    g.fillStyle = mix(room.skin, room.duvet, 0.1); g.lineCap = 'round'; g.strokeStyle = room.skin; g.lineWidth = 9;   // an arm over the covers
     g.beginPath(); g.moveTo(386, 512); g.quadraticCurveTo(430, 524, 470, 520); g.stroke();
-    g.fillStyle = '#6f7480'; ellipse(g, 384, 512, 12, 9); g.fill();
+    g.fillStyle = room.skin; ellipse(g, 474, 520, 7, 5); g.fill();   // his hand
+    g.save(); g.translate(388, 513); g.rotate(0.12); g.fillStyle = room.tee; rrect(g, -16, -8, 26, 16, 7); g.fill();   // a T-shirt sleeve
+    g.strokeStyle = rgba(room.dark, 0.2); g.lineWidth = 1.2; g.beginPath(); g.moveTo(9, -7); g.lineTo(9, 7); g.stroke(); g.restore();
     cat(g, 866, 484);   // the cat, curled up by his feet
-    g.fillStyle = room.hood; g.beginPath();   // his hoodie, thrown over the end of the bed
+    g.fillStyle = room.shirt; g.beginPath();   // his overshirt, thrown over the end of the bed
     g.moveTo(958, 532); g.quadraticCurveTo(984, 520, 1000, 540); g.lineTo(1002, 610); g.quadraticCurveTo(990, 620, 980, 606); g.quadraticCurveTo(966, 570, 958, 532); g.fill();
-    g.strokeStyle = rgba(room.hoodHi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
+    g.strokeStyle = rgba(room.shirtHi, 0.8); g.lineWidth = 2; g.beginPath(); g.moveTo(968, 540); g.quadraticCurveTo(986, 560, 990, 600); g.stroke();
   }
 
   /* ---------------- the animals ----------------
@@ -1291,7 +1386,7 @@
     g.clearRect(0, 0, b[2], b[3]); g.save(); g.translate(-b[0], -b[1]);
     arm(g, A.sh[0], A.sh[1], el[0], el[1], A.hand[0], A.hand[1]);
     g.globalCompositeOperation = 'destination-out';   // what's behind his back and the chair stays hidden
-    g.beginPath(); g.moveTo(286, 600); g.quadraticCurveTo(278, 470, 300, 446); g.quadraticCurveTo(372, 418, 444, 446); g.quadraticCurveTo(466, 470, 458, 600); g.closePath(); g.fill();
+    backPath(g); g.fill();
     rrect(g, 290, 470, 164, 150, 26); g.fill();
     g.restore(); g.globalCompositeOperation = 'source-over';
   }
