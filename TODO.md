@@ -17,7 +17,8 @@ configuration table explains every key. After each change, restart the server
       ```
       Watch the first day: if the battery runs low during the off time, shorten
       `off_minutes`.
-- [ ] **"The iPad went quiet" alerts on your phone:** needs the Home Assistant
+- [x] **"The iPad went quiet" alerts on your phone:** done 2026-11-09 through ntfy;
+      add the Home Assistant app later too if you like. needs the Home Assistant
       app (its notify service), or an [ntfy](https://ntfy.sh) topic, which needs
       no smart home at all.
       ```json
