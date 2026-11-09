@@ -18,8 +18,17 @@
   #bed { left: 0; } #desk { left: 1024px; }
 
   #info { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; pointer-events: none; }
-  .sky { color: #16202e; text-shadow: 0 0 16px rgba(255,255,255,0.6), 0 0 3px rgba(255,255,255,0.45); }
-  body.ph-golden .sky, body.ph-night .sky { color: #fbf3e6; text-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 18px rgba(10,6,20,0.6); }
+  /* The words sit over towers, window frames and lit windows, so they always get cream ink
+     and a soft shade behind them, darker at night, like dusk gathering in the room's corners. */
+  .sky { color: #fbf3e6; text-shadow: 0 1px 2px rgba(0,0,0,0.65), 0 0 14px rgba(6,8,16,0.7); }
+  .shade { position: absolute; pointer-events: none; }
+  #shade-l { left: -60px; top: -70px; width: 660px; height: 440px;
+    background: -webkit-radial-gradient(38% 46%, ellipse closest-side, rgba(8,10,18,0.5), rgba(8,10,18,0.32) 55%, rgba(8,10,18,0));
+    background: radial-gradient(ellipse closest-side at 38% 46%, rgba(8,10,18,0.5), rgba(8,10,18,0.32) 55%, rgba(8,10,18,0)); }
+  #shade-r { left: 500px; top: -40px; width: 620px; height: 380px;
+    background: -webkit-radial-gradient(64% 46%, ellipse closest-side, rgba(8,10,18,0.5), rgba(8,10,18,0.32) 55%, rgba(8,10,18,0));
+    background: radial-gradient(ellipse closest-side at 64% 46%, rgba(8,10,18,0.5), rgba(8,10,18,0.32) 55%, rgba(8,10,18,0)); }
+  body.ph-day .shade { opacity: 0.85; }
   .ground { color: #f7f0e6; text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 14px rgba(0,0,0,0.6); }
   #clock { position: absolute; left: 50px; top: 26px; }
   #time { font-size: 150px; line-height: 1; letter-spacing: -4px; }
@@ -33,7 +42,7 @@
   #w-days { margin-top: 4px; display: flex; justify-content: flex-end; }
   .day { margin-left: 16px; font-size: 18px; line-height: 1.25; }
   .day i { font-size: 17px; opacity: 0.85; margin-right: 4px; }
-  .day .lo { opacity: 0.6; }
+  .day .lo { opacity: 0.75; }
   #wind { position: absolute; right: 44px; top: 640px; text-align: right; }
   #wind-speed { font-size: 56px; line-height: 1; }
   #wind-speed small { font-size: 24px; margin-left: 6px; font-style: italic; }
@@ -103,6 +112,7 @@
     </div>
   </div>
   <div id="info">
+    <div class="shade" id="shade-l"></div><div class="shade" id="shade-r"></div>
     <div id="clock" class="sky"><div><span id="time">--:--</span><span id="ampm"></span></div><div id="date"></div></div>
     <div id="weather" class="sky"><div id="w-temp"></div><div id="w-text">Fetching the weather</div><div id="w-sun"></div><div id="w-more"></div><div id="w-days"></div></div>
     <div id="wind" class="ground"><div id="wind-speed"></div><div id="wind-words"></div></div>
