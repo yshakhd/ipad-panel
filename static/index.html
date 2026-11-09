@@ -73,7 +73,13 @@
   #units { font-size: 26px; letter-spacing: 1px; padding: 6px 4px; }
   #units span { display: inline-block; padding: 4px 8px; color: rgba(169,179,193,0.75); }
   #units span.on { color: #F2EDE4; border-bottom: 2px solid #F5B04A; }
-  #msg { display: none; position: absolute; top: 86px; left: 40px; max-width: 640px; font-size: 32px;
+  #lead { position: absolute; top: 86px; left: 40px; max-width: 640px; }
+  #notes { margin-top: 10px; font-size: 22px; line-height: 1.35; color: #ece6dc; }
+  #notes div:before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 4px; margin: 0 10px 2px 2px; background: #A9B3C1; vertical-align: middle; }
+  #notes .n-alert:before { background: #ff7a45; }
+  #notes .n-ev:before { background: #F5B04A; }
+  #w-more { margin-top: 10px; font-size: 17px; font-style: italic; line-height: 1.35; color: #d9d4ca; }
+  #msg { display: none; font-size: 32px;
     line-height: 1.25; padding: 4px 0 4px 18px; border-left: 3px solid #F5B04A; }
 
   #clock { position: absolute; left: 28px; bottom: 100px; line-height: 0.78; }
@@ -199,7 +205,7 @@
       <div id="units" class="num tap shadow"><span data-u="F">°F</span><span data-u="C">°C</span></div>
     </div>
   </div>
-  <div id="msg" class="shadow"></div>
+  <div id="lead" class="shadow"><div id="msg"></div><div id="notes"></div></div>
 
   <div id="clock" class="shadow"><span id="time" class="num">--:--</span><span id="ampm"></span></div>
 
@@ -207,6 +213,7 @@
     <div id="arc"></div>
     <div id="w-now" class="flex"><div id="w-temp" class="num">--</div><div id="w-text" class="grow"></div></div>
     <div id="w-days"></div>
+    <div id="w-more"></div>
   </div>
 
   <div id="inst" class="flex tap">
@@ -262,6 +269,7 @@
   <div id="tiles"></div>
 </div>
 <div id="toast"></div>
+<script src="extras.js"></script>
 <script src="scene.js"></script>
 
 <script>
@@ -305,6 +313,7 @@
     $('ampm').textContent = h < 12 ? 'am' : 'pm';
     $('date').textContent = DAYS[d.getDay()] + ', ' + MONTHS[d.getMonth()] + ' ' + d.getDate();
     var isNight = night[0] > night[1] ? (h >= night[0] || h < night[1]) : (h >= night[0] && h < night[1]);
+    isNight = isNight || Extras.away();   // dim when nobody's home too
     setBodyClass('night', isNight);
     $('status').textContent = lastOk && Date.now() - lastOk > 30000 ? 'Lost connection to the panel server' : '';
   }
@@ -618,6 +627,7 @@
     renderInst(s);
     renderWeather(s.weather);
     renderHome(s.home);
+    Extras.render(s);
     var m = $('msg');
     if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; }
     else m.style.display = 'none';

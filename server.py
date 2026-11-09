@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
+import extras
 import ha
 import photos
 import sysinfo
@@ -150,6 +151,7 @@ def weather(cfg):
             "wind_dir": cur["wind_direction_10m"],
             "utc_offset": raw.get("utc_offset_seconds", 0),
             "sunrise": d["sunrise"][0], "sunset": d["sunset"][0],
+            "sunrise_next": d["sunrise"][1] if len(d["sunrise"]) > 1 else None,
             "days": [{"date": d["time"][i], "hi": d["temperature_2m_max"][i],
                       "lo": d["temperature_2m_min"][i],
                       "desc": WMO.get(d["weather_code"][i], "?"),
@@ -225,6 +227,7 @@ class Handler(SimpleHTTPRequestHandler):
             with state_lock:
                 msg = dict(message)
             w = weather(cfg)
+            extras.saw_ipad(self.client_address[0], self.headers.get("User-Agent", ""))
             return self._json({
                 "host": socket.gethostname(),
                 "server_time": time.time(),
@@ -234,6 +237,12 @@ class Handler(SimpleHTTPRequestHandler):
                 "weather": w,
                 "message": msg,
                 "home": ha.states(cfg),
+                "air": extras.air(cfg),
+                "alerts": extras.alerts(cfg),
+                "outlook": extras.outlook(cfg),
+                "calendar": extras.calendar(cfg),
+                "away": extras.away(cfg),
+                "events": extras.events(cfg),
                 "build": max(os.path.getmtime(os.path.join(STATIC, f)) for f in os.listdir(STATIC)),
                 "default_unit": "F" if cfg.get("units", "fahrenheit") == "fahrenheit" else "C",
                 "night": [cfg.get("night_dim_start_hour", 23), cfg.get("night_dim_end_hour", 7)],
@@ -278,6 +287,7 @@ def main():
     port = int(os.environ.get("PANEL_PORT", cfg.get("port", 8765)))
     cpu_percent()  # prime the CPU delta
     sysinfo.start()
+    extras.start(load_config)
     srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     print("iPad panel on http://0.0.0.0:%d" % port, flush=True)
     srv.serve_forever()

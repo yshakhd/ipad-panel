@@ -97,8 +97,11 @@
       c.style.webkitTransition = '-webkit-transform 0.5s ease-out'; c.style.transition = 'transform 0.5s ease-out';
     });
     v.clouds = place(view_, document.createElement('div'), 0, 0);
+    v.fw = place(view_, document.createElement('div'), 0, 0);   // fireworks, out over the river behind the towers
     v.city = place(view_, mk(v.w, v.h), 0, 0);
     v.lights = place(view_, mk(v.w, v.h), 0, 0);
+    v.haze = place(view_, document.createElement('div'), 0, 0);   // smoke or smog when the air is bad
+    v.haze.style.cssText += ';width:' + v.w + 'px;height:' + v.h + 'px;opacity:0;pointer-events:none';
     v.fx = place(view_, document.createElement('div'), 0, 0);   // steam, flag, beacons
     v.glass = place(view_, mk(v.w / 2, v.h / 2), 0, 0);
     v.glass.style.width = v.w + 'px'; v.glass.style.height = v.h + 'px';
@@ -426,6 +429,7 @@
       g.fillStyle = mix(leaf, '#000000', R() * 0.3);
       g.save(); g.translate(990 + Math.cos(a) * lr, 470 + Math.sin(a) * lr * 0.9 + (a > -1.5 ? 20 : 0)); g.rotate(a); ellipse(g, 0, 0, 9, 5); g.fill(); g.restore();
     }
+    decorate(g, 'desk');
     // light: the sunset coming in, or the room by screen light at night
     if (gold) { g.fillStyle = 'rgba(255,140,80,0.08)'; g.fillRect(0, 0, W, H); }
     if (night) {
@@ -446,9 +450,11 @@
       pts.push([x, y]); if (i) g.lineTo(x, y); else g.moveTo(x, y);
     }
     g.stroke();
+    var COLS = holiday() === 'winter' ? ['#ff5a5a', '#ffd84a', '#6ad1ff', '#8dff8a', '#ff7ad9'] : null;   // coloured for the holidays
     for (i = 1; i < pts.length - 1; i++) {
-      if (on) light(g, pts[i][0], pts[i][1] + 5, 15, '#ffc96e', phase === 'night' ? 0.6 : 0.4);
-      g.fillStyle = on ? '#fff1c8' : 'rgba(255,244,214,0.7)'; ellipse(g, pts[i][0], pts[i][1] + 5, 2.4, 3.4); g.fill();
+      var bc = COLS ? COLS[i % COLS.length] : '#ffc96e';
+      if (on) light(g, pts[i][0], pts[i][1] + 5, 15, bc, phase === 'night' ? 0.6 : 0.4);
+      g.fillStyle = COLS ? (on ? mix(bc, '#ffffff', 0.45) : mix(bc, '#ffffff', 0.25)) : on ? '#fff1c8' : 'rgba(255,244,214,0.7)'; ellipse(g, pts[i][0], pts[i][1] + 5, 2.4, 3.4); g.fill();
     }
   }
   function leafCol() { return phase === 'night' ? '#173322' : phase === 'golden' ? '#56702f' : '#3f7a3a'; }
@@ -533,6 +539,7 @@
     ellipse(g, 300, 672, 22, 8); g.fill(); ellipse(g, 342, 684, 22, 8); g.fill();
     g.fillStyle = rgba(room.dark, 0.2); ellipse(g, 292, 670, 10, 4); g.fill(); ellipse(g, 334, 682, 10, 4); g.fill();
     stack(g);
+    decorate(g, 'bed');
     // nightstand and clock
     g.fillStyle = room.wood; g.fillRect(30, 504, 172, 14); g.fillStyle = mix(room.wood, '#000000', 0.2); g.fillRect(38, 518, 156, 132);
     g.fillStyle = mix(room.wood, '#ffffff', 0.12); g.fillRect(48, 560, 136, 2); g.fillRect(104, 536, 24, 4);
@@ -949,6 +956,7 @@
   }
   function updateDog(t, dt) {
     updateBall(dt);
+    if (dog.door) { if (view === 'desk') doorEpisode(dog.door); dog.door = null; }
     if (!dog.on) {
       if (!dog.next) dog.next = t + (DOGP ? 2 : rnd(25, 90));
       if ((t > dog.next || dog.ask) && view === 'desk') {
@@ -958,7 +966,7 @@
       }
       return;
     }
-    var s = dog.steps[dog.si], f = DOG.stand[0], sxs = 1;
+    var s = dog.steps[dog.si], f = DOG.stand[0], sxs = 1, hop = 0;
     if (!s || view !== 'desk') { endEpisode(t); return; }
     if (s.st == null) s.st = t;
     var el = t - s.st;
@@ -991,6 +999,13 @@
       if (Math.abs(cs) < 0.72) { dog.dir = sn > 0 ? -1 : 1; f = DOG.gallop[Math.floor(dog.ph * 8) % 8]; }
       else f = cs > 0 ? DOG.front[0] : DOG.back[0];
       if (el > s.spin && Math.abs(cs) < 0.3) { dog.si++; dog.y = s.cy; }
+    } else if (s.bark) {   // at the door: a bark every 0.7 s, the front end lifting with each one
+      var bp_ = (el % 0.7) / 0.7, up = bp_ < 0.3 ? Math.sin(bp_ / 0.3 * Math.PI) : 0;
+      f = DOG.stand[0]; hop = up * 5;
+      var hd = dogHeadAt();
+      woofEl.style.opacity = up > 0.2 && el < s.bark - 0.3 ? 1 : 0;
+      tr(woofEl, 'translate3d(' + (hd[0] + 6).toFixed(0) + 'px,' + (hd[1] - 34 - bp_ * 8).toFixed(0) + 'px,0)');
+      if (el > s.bark) { dog.si++; woofEl.style.opacity = 0; }
     } else if (s.wait) { f = -1; if (el > s.wait) dog.si++; }
     else if (s.at) { dog.x = s.at[0]; dog.y = s.at[1]; dog.dir = -1; dog.si++; f = -1; }
     else {   // a clip: played once (forwards or back), or looped for d seconds
@@ -1008,7 +1023,7 @@
     dogEl.style.visibility = 'visible';
     if (f !== dog.f) { tr(dogSheet, 'translate3d(' + (-(f % DCOLS) * FW * DS) + 'px,' + (-Math.floor(f / DCOLS) * FH * DS) + 'px,0)'); dog.f = f; }
     var k2 = sc / DS;
-    tr(dogEl, 'translate3d(' + (dog.x - 85 * DS).toFixed(1) + 'px,' + (dog.y - DGY * DS).toFixed(1) + 'px,0) scale(' + (k2 * dog.dir * sxs).toFixed(3) + ',' + k2.toFixed(3) + ')');
+    tr(dogEl, 'translate3d(' + (dog.x - 85 * DS).toFixed(1) + 'px,' + (dog.y - hop - DGY * DS).toFixed(1) + 'px,0) scale(' + (k2 * dog.dir * sxs).toFixed(3) + ',' + k2.toFixed(3) + ')');
   }
   function dogMouth() {   // where the ball sits in its mouth, on screen, when it offers it up
     var sc = dogScale(SITAT[1]);
@@ -1552,6 +1567,59 @@
     var d = new Date(now() + (utcOff === null ? -new Date().getTimezoneOffset() * 60000 : utcOff * 1000));
     return d.getUTCHours() + d.getUTCMinutes() / 60;
   }
+  /* ---------------- holidays ----------------
+   * A carved pumpkin on the desk and the windowsill in the second half of October; coloured
+   * string lights and a little tree from December to Twelfth Night; fireworks over the river
+   * on the Fourth of July and at New Year. Preview with ?holiday=halloween|winter|fireworks. */
+  function holiday() {
+    var p = param('holiday');
+    if (p) return p;
+    var d = new Date(now() + (utcOff == null ? -new Date().getTimezoneOffset() * 60 : utcOff) * 1000), m = d.getUTCMonth() + 1, day = d.getUTCDate();
+    if (m === 10 && day >= 17) return 'halloween';
+    if (m === 12 || (m === 1 && day <= 6)) return 'winter';
+    return '';
+  }
+  function fireworksNow() {
+    if (param('holiday') === 'fireworks') return true;
+    var d = new Date(now() + (utcOff == null ? -new Date().getTimezoneOffset() * 60 : utcOff) * 1000), m = d.getUTCMonth() + 1, day = d.getUTCDate(), h = d.getUTCHours() + d.getUTCMinutes() / 60;
+    return (m === 7 && day === 4 && h >= 21.2 && h < 22.6) || (m === 12 && day === 31 && h >= 23.95) || (m === 1 && day === 1 && h < 0.5);
+  }
+  function pumpkin(g, x, y, s) {   // sitting on (x, y); carved face lit from inside when the light goes
+    var lit = phase !== 'day' || oc > 0.6, i;
+    g.save(); g.translate(x, y); g.scale(s, s);
+    if (lit) light(g, 0, -12, 46, '#ff9a3c', 0.35);
+    var body = phase === 'night' ? '#a4501c' : '#e07a22', rib = phase === 'night' ? '#7a3812' : '#b85a14';
+    g.fillStyle = 'rgba(0,0,0,0.25)'; ellipse(g, 0, 0, 22, 3.5); g.fill();
+    for (i = -2; i <= 2; i++) { g.fillStyle = Math.abs(i) === 2 ? rib : body; ellipse(g, i * 6.5, -12, 9 + (2 - Math.abs(i)) * 1.2, 12.5); g.fill(); }
+    g.strokeStyle = rib; g.lineWidth = 1; for (i = -1; i <= 1; i += 2) { g.beginPath(); g.moveTo(i * 4.5, -23); g.quadraticCurveTo(i * 7, -12, i * 4.5, -1); g.stroke(); }
+    g.fillStyle = '#4c6a2a'; g.beginPath(); g.moveTo(-1.5, -23); g.quadraticCurveTo(0, -30, 4, -31); g.lineTo(4, -28); g.quadraticCurveTo(2, -27, 1.5, -23); g.fill();
+    g.fillStyle = lit ? '#ffd36a' : '#3a1a08';
+    g.beginPath(); g.moveTo(-9, -16); g.lineTo(-3, -16); g.lineTo(-6, -21); g.closePath(); g.moveTo(9, -16); g.lineTo(3, -16); g.lineTo(6, -21); g.closePath(); g.fill();   // eyes
+    g.beginPath(); g.moveTo(-11, -10); g.quadraticCurveTo(0, -1, 11, -10); g.lineTo(7, -9); g.lineTo(5, -6); g.lineTo(2, -8); g.lineTo(-1, -5); g.lineTo(-4, -8); g.lineTo(-7, -6); g.closePath(); g.fill();   // grin
+    g.restore();
+  }
+  function littleTree(g, x, y, s) {   // a tabletop tree with a few lights
+    var night = phase === 'night', i;
+    g.save(); g.translate(x, y); g.scale(s, s);
+    g.fillStyle = night ? '#5a3f2a' : '#b5651d'; g.fillRect(-7, -8, 14, 8); g.fillStyle = 'rgba(0,0,0,0.25)'; ellipse(g, 0, 0, 14, 2.5); g.fill();
+    var green = night ? '#173a2a' : '#2f6b42';
+    for (i = 0; i < 3; i++) {   // three tiers, widest at the bottom
+      var base = -8 - i * 13, half = 20 - i * 5;
+      g.fillStyle = mix(green, '#ffffff', i * 0.05); g.beginPath(); g.moveTo(0, base - 26); g.lineTo(half, base); g.quadraticCurveTo(0, base + 3, -half, base); g.closePath(); g.fill();
+    }
+    g.fillStyle = '#ffd84a'; g.beginPath(); g.arc(0, -60, 3.2, 0, 6.2832); g.fill();
+    var bulbs = [[-11, -11, '#ff5a5a'], [9, -13, '#6ad1ff'], [-5, -24, '#ffd84a'], [7, -27, '#ff7ad9'], [-3, -38, '#8dff8a'], [14, -9, '#ffd84a'], [3, -45, '#6ad1ff']];
+    for (i = 0; i < bulbs.length; i++) {
+      if (night || oc > 0.5) light(g, bulbs[i][0], bulbs[i][1], 7, bulbs[i][2], 0.55);
+      g.fillStyle = bulbs[i][2]; g.beginPath(); g.arc(bulbs[i][0], bulbs[i][1], 1.8, 0, 6.2832); g.fill();
+    }
+    g.restore();
+  }
+  function decorate(g, name) {
+    var h = holiday();
+    if (h === 'halloween') { if (name === 'desk') pumpkin(g, 780, 512, 1); else pumpkin(g, 812, 440, 0.8); }
+    if (h === 'winter') { if (name === 'desk') littleTree(g, 780, 514, 1); else littleTree(g, 812, 441, 0.75); }
+  }
   function asleep() { var h = localHour(); return sleepH < wakeH ? h >= sleepH && h < wakeH : h >= sleepH || h < wakeH; }
   function windNow() { return windKmh == null ? 8 : windKmh; }
   function sideWind() {   // which way the wind pushes things across this window: +1 right, -1 left
@@ -1567,7 +1635,8 @@
     room.rim = ROOM[phase].rim && (phase === 'night' || o < 0.5) ? ROOM[phase].rim : null;
     clouds = []; fxList = [];
     ['bed', 'desk'].forEach(function (n) { var v = V[n]; drawSky(v); buildSun(v); buildCity(v, n); buildLights(v); buildClouds(v); buildFx(v); placeSky(v); });
-    drawDeskRoom(); drawBedRoom(); buildDog(); buildCat(); buildPeople(); buildWx();
+    drawDeskRoom(); drawBedRoom(); buildDog(); buildCat(); buildPeople(); buildWx(); paintHaze();
+    if (noteEl.style.opacity === '1' && lastNote) paintNote(lastNote);
     builtAt = Date.now();
   }
   function setView(v, animate) {
@@ -1602,12 +1671,130 @@
     if (!forced.wind) windKmh = w.wind;
     windDir = w.wind_dir == null ? 270 : w.wind_dir;
     var v = forced.view || (asleep() ? 'bed' : 'desk');
-    var key = k + '/' + ph + '/' + v + '/' + Math.floor(litFraction() * 100);
+    var key = k + '/' + ph + '/' + v + '/' + Math.floor(litFraction() * 100) + '/' + holiday();
     var changed = v !== view;
     if (key !== built || Date.now() - builtAt > 5 * 60 * 1000) {
       kind = k; phase = ph;
       setView(v, !!built && changed); built = key; rebuild();
     } else { placeSky(V.bed); placeSky(V.desk); }   // the same sky, but the sun and moon move with the clock
+  }
+
+  /* ---------------- bad air: a haze over the skyline ----------------
+   * The US air quality index from the server. Above 50 a pale haze; over 150 the orange-brown
+   * of wildfire smoke, as in June 2023. Preview with ?aqi=180. */
+  var aqi = param('aqi') ? +param('aqi') : 0;
+  function paintHaze() {
+    var a = aqi <= 50 ? 0 : aqi <= 100 ? 0.16 : aqi <= 150 ? 0.32 : aqi <= 200 ? 0.5 : 0.62;
+    var col = aqi > 150 ? (phase === 'night' ? '92,58,38' : '222,128,52') : aqi > 100 ? (phase === 'night' ? '78,66,60' : '214,178,128') : (phase === 'night' ? '64,62,70' : '208,200,184');
+    ['bed', 'desk'].forEach(function (n) {
+      var h = V[n].haze;
+      h.style.background = '-webkit-linear-gradient(top, rgba(' + col + ',' + (a * 0.55).toFixed(2) + '), rgba(' + col + ',' + a.toFixed(2) + ') 70%, rgba(' + col + ',' + (a * 0.8).toFixed(2) + '))';
+      h.style.background = 'linear-gradient(to bottom, rgba(' + col + ',' + (a * 0.55).toFixed(2) + '), rgba(' + col + ',' + a.toFixed(2) + ') 70%, rgba(' + col + ',' + (a * 0.8).toFixed(2) + '))';
+      h.style.opacity = a ? 1 : 0;
+    });
+  }
+
+  /* ---------------- fireworks ----------------
+   * Bursts drawn once as sprites, then grown and faded with CSS transforms. */
+  var BOOM = { list: [], next: 0, sheets: null };
+  function burstSprite(col) {
+    var c = mk(160, 160), g = c.getContext('2d'), R = Math.random, i, n = 46;
+    g.globalCompositeOperation = 'lighter';
+    var gl = g.createRadialGradient(80, 80, 0, 80, 80, 80); gl.addColorStop(0, rgba(col, 0.35)); gl.addColorStop(1, rgba(col, 0));
+    g.fillStyle = gl; g.fillRect(0, 0, 160, 160);
+    for (i = 0; i < n; i++) {
+      var a = i / n * 6.2832 + R() * 0.1, r = 52 + R() * 22, x = 80 + Math.cos(a) * r, y = 80 + Math.sin(a) * r + r * 0.12;
+      var gr = g.createLinearGradient(80 + Math.cos(a) * r * 0.45, 80 + Math.sin(a) * r * 0.45, x, y);
+      gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(1, rgba(col, 0.9));
+      g.strokeStyle = gr; g.lineWidth = 1.6; g.beginPath(); g.moveTo(80 + Math.cos(a) * r * 0.45, 80 + Math.sin(a) * r * 0.45); g.lineTo(x, y); g.stroke();
+      g.fillStyle = mix(col, '#ffffff', 0.6); g.beginPath(); g.arc(x, y, 1.8, 0, 6.2832); g.fill();
+    }
+    return c;
+  }
+  function fireworks(t, dt) {
+    var v = V[view], on = fireworksNow() && (phase !== 'day'), i;
+    if (!on && !BOOM.list.length) return;
+    if (!BOOM.sheets) { BOOM.sheets = ['#ff5a5a', '#ffd84a', '#6ad1ff', '#ff7ad9', '#8dff8a', '#ffffff'].map(burstSprite); }
+    if (on && t > BOOM.next) {
+      BOOM.next = t + rnd(0.35, 1.3);
+      var el = mk(160, 160);
+      el.getContext('2d').drawImage(BOOM.sheets[Math.floor(Math.random() * BOOM.sheets.length)], 0, 0);
+      el.style.position = 'absolute'; el.style.left = '0px'; el.style.top = '0px';
+      v.fw.appendChild(el);
+      BOOM.list.push({ el: el, v: v, t0: t, x: rnd(v.w * 0.08, v.w * 0.92), y: rnd(v.h * 0.12, v.hy - 30), s: rnd(0.5, 1.05), life: rnd(1.6, 2.3) });
+    }
+    for (i = BOOM.list.length - 1; i >= 0; i--) {
+      var b = BOOM.list[i], k = (t - b.t0) / b.life;
+      if (k >= 1 || b.v !== v) { b.el.parentNode && b.el.parentNode.removeChild(b.el); BOOM.list.splice(i, 1); continue; }
+      var grow = 1 - Math.pow(1 - Math.min(1, k * 2.2), 3), sc = b.s * (0.15 + 0.85 * grow);
+      b.el.style.opacity = (k < 0.45 ? 1 : 1 - (k - 0.45) / 0.55).toFixed(2);
+      tr(b.el, 'translate3d(' + (b.x - 80).toFixed(1) + 'px,' + (b.y - 80 + k * k * 26).toFixed(1) + 'px,0) scale(' + sc.toFixed(3) + ')');
+    }
+  }
+
+  /* ---------------- the doorbell, and messages ----------------
+   * The doorbell sends the dog galloping to the door (off to the right) to bark, and he looks
+   * round; a door opening gets a trot and a wagging tail. A new message is stuck on his
+   * monitor as a note, and he glances at it. */
+  var woofEl = document.createElement('div');
+  woofEl.style.cssText = 'position:absolute;left:0;top:0;font:italic 600 22px Newsreader,Georgia,serif;color:#fbf3e6;text-shadow:0 1px 3px rgba(0,0,0,0.6);opacity:0;pointer-events:none;-webkit-transition:opacity 0.25s;transition:opacity 0.25s';
+  woofEl.textContent = 'Woof!';
+  $('desk').appendChild(woofEl);
+  var doorLook = 0, noteLook = 0;
+  function doorEpisode(kind) {
+    var wasOn = dog.on, lane = 744;
+    dog.ball = null; ball.on = false; ballEl.style.display = 'none'; dog.pet = false;
+    if (!wasOn || dog.x < -40 || dog.x > W + 40) { dog.x = -150; dog.y = lane; dog.dir = 1; }
+    var g = kind === 'doorbell' ? 'gallop' : 'trot';
+    dog.steps = [{ go: [Math.max(dog.x, 400), lane], g: g }, { go: [800, lane], g: g }, { face: 1 },
+      kind === 'doorbell' ? { bark: 3.6 } : { clip: 'stand', fps: 4, d: 2.4, wag: 1 },
+      { clip: 'stand', fps: 4, d: 0.5 }, { go: [W + 150, lane], g: 'trot' }];
+    dog.si = 0; dog.on = true; dog.v = wasOn ? dog.v : 0; dogEl.style.display = 'block';
+    doorLook = 6.5;
+  }
+  var noteEl = mk(74, 74);
+  noteEl.style.cssText = 'position:absolute;left:702px;top:356px;opacity:0;-webkit-transition:opacity 0.3s,-webkit-transform 0.35s;transition:opacity 0.3s,transform 0.35s';
+  V.desk.box.appendChild(noteEl);
+  function paintNote(text) {
+    var g = noteEl.getContext('2d'), words = text.split(/\s+/), lines = [], cur = '', i;
+    g.clearRect(0, 0, 74, 74);
+    g.save(); g.translate(37, 37); g.rotate(-0.07);
+    g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(-28, -27, 58, 58);
+    g.fillStyle = phase === 'night' ? '#c9b85a' : '#ffe36e'; g.fillRect(-30, -30, 58, 58);
+    g.fillStyle = 'rgba(0,0,0,0.06)'; g.fillRect(-30, -30, 58, 9);
+    g.fillStyle = '#2b2a33'; g.font = 'italic 600 11px Newsreader, Georgia, serif';
+    for (i = 0; i < words.length && lines.length < 4; i++) {
+      var t2 = cur ? cur + ' ' + words[i] : words[i];
+      if (g.measureText(t2).width > 50 && cur) { lines.push(cur); cur = words[i]; } else cur = t2;
+    }
+    if (cur && lines.length < 4) lines.push(cur);
+    if (i < words.length || (lines.length === 4 && cur !== lines[3])) lines[lines.length - 1] = lines[lines.length - 1].replace(/\s*\S*$/, '') + '…';
+    for (i = 0; i < lines.length; i++) g.fillText(lines[i], -25, -10 + i * 12);
+    g.restore();
+  }
+  var lastNote = '';
+  function note(text, isNew) {
+    lastNote = text;
+    if (!text) { noteEl.style.opacity = 0; return; }
+    paintNote(text);
+    if (isNew && view === 'desk') {   // slapped on: from a little bigger, settling onto the screen
+      noteEl.style.webkitTransition = noteEl.style.transition = 'none';
+      tr(noteEl, 'scale(1.35) rotate(6deg)'); noteEl.style.opacity = 0;
+      noteEl.offsetWidth;
+      noteEl.style.webkitTransition = 'opacity 0.3s, -webkit-transform 0.35s'; noteEl.style.transition = 'opacity 0.3s, transform 0.35s';
+      noteLook = 3.5;
+    }
+    tr(noteEl, 'scale(1) rotate(0deg)'); noteEl.style.opacity = 1;
+  }
+
+  /* ---------------- taps on the iPad ----------------
+   * Tap the sleeping cat to wake it; tap the floor to call the dog (fetch and a visit, in turn). */
+  var callNext = 'fetch';
+  function tapAt(x, y) {
+    if (view !== 'desk') return false;
+    if (!kitty.steps && Math.abs(x - kitty.x) < 50 && y > kitty.y - 50 && y < kitty.y + 12) { kitty.ask = true; return true; }
+    if (!dog.on && y > 560 && !(x > 250 && x < 470 && y < 700)) { dog.ask = callNext; callNext = callNext === 'fetch' ? 'visit' : 'fetch'; return true; }
+    return false;
   }
 
   /* ---------------- main loop ---------------- */
@@ -1647,6 +1834,8 @@
       updateDog(t, dt); updateCat(t, dt);
       if (kitty.keys && t > kitty.keyAt) { catKey(); kitty.keyAt = t + rnd(0.1, 0.25); code.next = Math.max(code.next, t + 1.5); }
       var look = handsTick(t, dt);
+      if (doorLook > 0) { doorLook -= dt; look = 13; }   // round towards the door
+      else if (noteLook > 0) { noteLook -= dt; look = 6; }   // a glance at the new note
       var aim = look !== null ? look : !ed.done && ed.t0 > 0 && t > ed.t0 - 1 ? 7 : code.think && t < code.think ? -3 : 0, ay = look !== null && look < 0 ? 3 : code.think && t < code.think ? -3 : 0;
       headA += (aim - headA) * Math.min(1, dt * 2); headY += (ay - headY) * Math.min(1, dt * 2);
       if (guy.head) tr(guy.head, 'translate3d(' + (headA * 0.5).toFixed(2) + 'px,' + headY.toFixed(2) + 'px,0) rotate(' + headA.toFixed(2) + 'deg)');
@@ -1663,6 +1852,7 @@
     } else if (duvet) {
       tr(duvet, 'scaleY(' + (1 + 0.022 * (0.5 + 0.5 * Math.sin(t * 6.2832 / 4.6))).toFixed(4) + ')');   // slow breathing
     }
+    fireworks(t, dt);
     drawWx(t, dt);
   }
 
@@ -1684,7 +1874,12 @@
     setDays: function (n) { dayShift = n; if (lastW) setWeather(lastW); },
     callDog: function (k) { dog.ask = k || 'visit'; },
     wakeCat: function () { kitty.ask = true; },
-    busy: function () { return { dog: dog.on, cat: !!kitty.steps }; }
+    busy: function () { return { dog: dog.on, cat: !!kitty.steps }; },
+    setAir: function (n) { if (param('aqi')) return; n = +n || 0; if (n !== aqi) { aqi = n; if (built) paintHaze(); } },
+    door: function (kind) { dog.door = kind || 'doorbell'; },   // the doorbell rang, or a door opened
+    note: note,                                                  // the message as a note on his monitor
+    tap: tapAt                                                   // a tap at stage coordinates; true if it did something
+
   };
   if (forced.view) setView(forced.view, false);
   loadList();

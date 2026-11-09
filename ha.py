@@ -181,3 +181,31 @@ def action(cfg, entity_id, act):
     with _lock:
         _cache["at"] = 0  # force a refresh on the next poll
     return True, "ok"
+
+
+def raw(cfg):
+    """Every Home Assistant state by entity id (cached for 2 s), or None. Server-side only."""
+    ha = _cfg(cfg)
+    if not ha.get("enabled"):
+        return None
+    with _lock:
+        if _cache["states"] is not None and time.time() - _cache["at"] < 2:
+            return _cache["states"]
+    try:
+        all_states = _request(ha, "GET", "/api/states")
+    except (OSError, urllib.error.URLError, ValueError):
+        with _lock:
+            return _cache["states"]
+    with _lock:
+        _cache.update(states={e["entity_id"]: e for e in all_states}, at=time.time())
+        return _cache["states"]
+
+
+def call(cfg, domain, service, data):
+    """Call a Home Assistant service from the server (charger, notifications)."""
+    ha = _cfg(cfg)
+    if not ha.get("enabled"):
+        raise OSError("Home Assistant disabled")
+    _request(ha, "POST", "/api/services/%s/%s" % (domain, service), data)
+    with _lock:
+        _cache["at"] = 0

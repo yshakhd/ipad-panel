@@ -117,6 +117,12 @@
   // softness reads as depth of field, and it halves their memory.
   var GS = +(param('gs') || 0.5);
 
+  // fireworks burst behind the hills; a haze of smoke or smog sits over the land, behind him
+  var fwBox = document.createElement('div'), hazeEl = document.createElement('div');
+  fwBox.style.cssText = 'position:absolute;left:0;top:0;width:' + W + 'px;height:' + H + 'px;overflow:hidden;pointer-events:none';
+  hazeEl.style.cssText = 'position:absolute;left:0;top:0;width:' + W + 'px;height:' + H + 'px;pointer-events:none;opacity:0';
+  land.parentNode.insertBefore(fwBox, land);
+  land.parentNode.insertBefore(hazeEl, cloudBox);
   wx.width = W / 2; wx.height = H / 2; wx.style.width = W + 'px'; wx.style.height = H + 'px';
 
   function fitStage() {
@@ -241,6 +247,42 @@
     }
   }
 
+  /* ---------------- holidays ----------------
+   * A jack-o'-lantern in the field and by the cottage door in late October; snow on the roof,
+   * coloured lights on the cottage and the tree from December to Twelfth Night; fireworks over
+   * the hills on the Fourth of July and at New Year. Preview with ?holiday=halloween|winter|fireworks. */
+  function localDate() { var off = lastW && lastW.utc_offset != null ? lastW.utc_offset : -new Date().getTimezoneOffset() * 60; return new Date(Date.now() + timeShift + off * 1000); }
+  function holiday() {
+    var p = param('holiday');
+    if (p) return p;
+    var d = localDate(), m = d.getUTCMonth() + 1, day = d.getUTCDate();
+    if (m === 10 && day >= 17) return 'halloween';
+    if (m === 12 || (m === 1 && day <= 6)) return 'winter';
+    return '';
+  }
+  function fireworksNow() {
+    if (param('holiday') === 'fireworks') return true;
+    var d = localDate(), m = d.getUTCMonth() + 1, day = d.getUTCDate(), h = d.getUTCHours() + d.getUTCMinutes() / 60;
+    return (m === 7 && day === 4 && h >= 21.2 && h < 22.6) || (m === 12 && day === 31 && h >= 23.95) || (m === 1 && day === 1 && h < 0.5);
+  }
+  function jackOLantern(g, x, y, s) {
+    var lit = phase !== 'day' || pal.oc > 0.6, i;
+    g.save(); g.translate(x, y); g.scale(s, s);
+    if (lit) { var gl = g.createRadialGradient(0, -12, 0, 0, -12, 50); gl.addColorStop(0, 'rgba(255,160,70,0.4)'); gl.addColorStop(1, 'rgba(255,160,70,0)'); g.fillStyle = gl; g.fillRect(-50, -62, 100, 100); }
+    var body = phase === 'night' ? '#9a4a1a' : '#e07a22', rib = phase === 'night' ? '#6e3410' : '#b85a14';
+    g.fillStyle = 'rgba(0,0,0,0.22)'; ellipse(g, 2, 0, 24, 4); g.fill();
+    for (i = -2; i <= 2; i++) { g.fillStyle = Math.abs(i) === 2 ? rib : body; ellipse(g, i * 6.5, -12, 9 + (2 - Math.abs(i)) * 1.2, 12.5); g.fill(); }
+    g.fillStyle = '#4c6a2a'; g.beginPath(); g.moveTo(-1.5, -23); g.quadraticCurveTo(0, -30, 4, -31); g.lineTo(4, -28); g.quadraticCurveTo(2, -27, 1.5, -23); g.fill();
+    g.fillStyle = lit ? '#ffd36a' : '#3a1a08';
+    g.beginPath(); g.moveTo(-9, -16); g.lineTo(-3, -16); g.lineTo(-6, -21); g.closePath(); g.moveTo(9, -16); g.lineTo(3, -16); g.lineTo(6, -21); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(-11, -10); g.quadraticCurveTo(0, -1, 11, -10); g.lineTo(7, -9); g.lineTo(5, -6); g.lineTo(2, -8); g.lineTo(-1, -5); g.lineTo(-4, -8); g.lineTo(-7, -6); g.closePath(); g.fill();
+    g.restore();
+  }
+  var BULBS = ['#ff5a5a', '#ffd84a', '#6ad1ff', '#8dff8a', '#ff7ad9'];
+  function bulb(g, x, y, c, r) {
+    if (phase !== 'day' || pal.oc > 0.5) { var gl = g.createRadialGradient(x, y, 0, x, y, r * 4); gl.addColorStop(0, rgba(c, 0.55)); gl.addColorStop(1, rgba(c, 0)); g.fillStyle = gl; g.fillRect(x - r * 4, y - r * 4, r * 8, r * 8); }
+    g.fillStyle = mix(c, '#ffffff', 0.35); g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill();
+  }
   function cottage(g, x, y) {
     var night = phase === 'night';
     g.fillStyle = 'rgba(0,0,0,0.12)'; ellipse(g, x + 4, y + 1, 22, 3); g.fill();
@@ -254,6 +296,14 @@
       gl.addColorStop(0, 'rgba(255,200,110,0.35)'); gl.addColorStop(1, 'rgba(255,200,110,0)');
       g.fillStyle = gl; g.fillRect(x - 30, y - 38, 60, 60);
     }
+    var hol = holiday(), i;
+    if (hol === 'winter' || kind === 'snow' || kind === 'blizzard') {   // snow on the roof
+      g.fillStyle = night ? '#c9d2e6' : '#ffffff';
+      g.beginPath(); g.moveTo(x - 19, y - 12); g.lineTo(x, y - 28); g.lineTo(x + 19, y - 12); g.quadraticCurveTo(x + 9, y - 15, x, y - 14.5); g.quadraticCurveTo(x - 10, y - 15, x - 19, y - 12); g.fill();
+      g.fillRect(x + 6.5, y - 30, 5, 2.5);
+    }
+    if (hol === 'winter') for (i = 0; i <= 6; i++) bulb(g, x - 15 + i * 5, y - 12 + Math.abs(i - 3) * 0.6, BULBS[i % 5], 0.9);   // lights along the eaves
+    if (hol === 'halloween') jackOLantern(g, x - 20, y + 1, 0.32);
   }
 
   /* The real sun: elevation and compass bearing for this place and moment (low-precision
@@ -371,6 +421,10 @@
     for (var x = 0; x <= W; x += 8) { if (x) g.lineTo(x, midY(x) + 1); else g.moveTo(x, midY(x) + 1); }
     g.stroke();
     tree(g, 172, midY(172) + 6, 1, R);
+    if (holiday() === 'winter') {   // a string of coloured lights wound round the tree
+      var tr0 = seeded(7), ty = midY(172) + 6;
+      for (i = 0; i < 26; i++) { var u = i / 26, bx = 172 + Math.sin(u * 6.2832 * 3) * (62 - u * 30), by = ty - 50 - u * 95 + tr0() * 6; bulb(g, bx, by, BULBS[i % 5], 1.6); }
+    }
     cottage(g, 925, midY(925) + 4);
 
     gr = g.createLinearGradient(0, 455, 0, H);
@@ -391,6 +445,7 @@
       g.fillStyle = fl[i % fl.length]; g.globalAlpha = 0.85; g.beginPath(); g.arc(fx, fy, fr, 0, 6.2832); g.fill();
     }
     g.globalAlpha = 1;
+    if (holiday() === 'halloween') jackOLantern(g, 846, 606, 1.25);   // in the field, half in the grass
     var litter = kind === 'snow' || kind === 'blizzard' ? 0 : Math.round(80 * season.turn * (1.2 - season.cover * 0.6));
     for (i = 0; i < litter; i++) {   // fallen leaves blown into the field
       var qx = R() * W, qt = nearY(qx), qy = qt + 10 + Math.pow(R(), 1.2) * (H - qt - 10), qs = 1 + (qy - 460) / 300 * 3;
@@ -1002,7 +1057,7 @@
   /* ---------------- build + main loop ---------------- */
   function rebuild() {
     pal = palette(phase || 'day', kind || 'clear');
-    drawBackdrop(); buildSun(); placeMoon(); buildClouds(); buildFigure(); buildGrass(); buildLeaves(); buildWx();
+    drawBackdrop(); buildSun(); placeMoon(); buildClouds(); buildFigure(); buildGrass(); buildLeaves(); buildWx(); paintHaze();
     builtAt = Date.now();
   }
   function minutesOf(iso) { var p = iso.split('T')[1].split(':'); return +p[0] * 60 + +p[1]; }
@@ -1035,8 +1090,55 @@
     // wind blowing from the west pushes the grass to the right of the screen
     dirSign = windDir > 180 || windDir === 0 ? 1 : -1;
     season = seasonAt(Date.now() + timeShift);
-    var key = k + '/' + ph + '/' + [season.turn, season.cover, season.bloom, season.dry].map(function (v) { return Math.round(v * 20); }).join(',');
+    var key = k + '/' + ph + '/' + [season.turn, season.cover, season.bloom, season.dry].map(function (v) { return Math.round(v * 20); }).join(',') + '/' + holiday();
     if (key !== builtKey || Date.now() - builtAt > 5 * 60 * 1000) { kind = k; phase = ph; builtKey = key; rebuild(); }
+  }
+
+  /* ---------------- bad air: a haze over the land (US AQI from the server; preview ?aqi=180) ---------------- */
+  var aqi = param('aqi') ? +param('aqi') : 0;
+  function paintHaze() {
+    var a = aqi <= 50 ? 0 : aqi <= 100 ? 0.14 : aqi <= 150 ? 0.28 : aqi <= 200 ? 0.45 : 0.58, night = phase === 'night';
+    var col = aqi > 150 ? (night ? '92,58,38' : '222,128,52') : aqi > 100 ? (night ? '78,66,60' : '214,178,128') : (night ? '64,62,70' : '208,200,184');
+    var g1 = 'rgba(' + col + ',' + (a * 0.6).toFixed(2) + ')', g2 = 'rgba(' + col + ',' + a.toFixed(2) + ')', g3 = 'rgba(' + col + ',' + (a * 0.35).toFixed(2) + ')';
+    hazeEl.style.background = '-webkit-linear-gradient(top, ' + g1 + ', ' + g2 + ' 52%, ' + g3 + ')';
+    hazeEl.style.background = 'linear-gradient(to bottom, ' + g1 + ', ' + g2 + ' 52%, ' + g3 + ')';
+    hazeEl.style.opacity = a ? 1 : 0;
+  }
+
+  /* ---------------- fireworks over the hills ---------------- */
+  var BOOM = { list: [], next: 0, sheets: null };
+  function burstSprite(col) {
+    var c = mk(160, 160), g = c.getContext('2d'), R = Math.random, i, n = 46;
+    g.globalCompositeOperation = 'lighter';
+    var gl = g.createRadialGradient(80, 80, 0, 80, 80, 80); gl.addColorStop(0, rgba(col, 0.35)); gl.addColorStop(1, rgba(col, 0));
+    g.fillStyle = gl; g.fillRect(0, 0, 160, 160);
+    for (i = 0; i < n; i++) {
+      var a = i / n * 6.2832 + R() * 0.1, r = 52 + R() * 22, x0 = 80 + Math.cos(a) * r * 0.45, y0 = 80 + Math.sin(a) * r * 0.45, x = 80 + Math.cos(a) * r, y = 80 + Math.sin(a) * r + r * 0.12;
+      var gr = g.createLinearGradient(x0, y0, x, y); gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(1, rgba(col, 0.9));
+      g.strokeStyle = gr; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x, y); g.stroke();
+      g.fillStyle = mix(col, '#ffffff', 0.6); g.beginPath(); g.arc(x, y, 1.8, 0, 6.2832); g.fill();
+    }
+    return c;
+  }
+  function fireworks(t) {
+    var on = fireworksNow() && phase !== 'day', i;
+    if (!on && !BOOM.list.length) return;
+    if (!BOOM.sheets) BOOM.sheets = ['#ff5a5a', '#ffd84a', '#6ad1ff', '#ff7ad9', '#8dff8a', '#ffffff'].map(burstSprite);
+    if (on && t > BOOM.next) {
+      BOOM.next = t + rnd(0.4, 1.4);
+      var el = mk(160, 160); el.getContext('2d').drawImage(BOOM.sheets[Math.floor(Math.random() * BOOM.sheets.length)], 0, 0);
+      el.style.position = 'absolute'; el.style.left = '0px'; el.style.top = '0px';
+      fwBox.appendChild(el);
+      var bx = rnd(60, W - 60);
+      BOOM.list.push({ el: el, t0: t, x: bx, y: rnd(110, farY(bx) - 40), s: rnd(0.45, 0.95), life: rnd(1.6, 2.3) });
+    }
+    for (i = BOOM.list.length - 1; i >= 0; i--) {
+      var b = BOOM.list[i], k = (t - b.t0) / b.life;
+      if (k >= 1) { fwBox.removeChild(b.el); BOOM.list.splice(i, 1); continue; }
+      var grow = 1 - Math.pow(1 - Math.min(1, k * 2.2), 3), sc = b.s * (0.15 + 0.85 * grow), tf = 'translate3d(' + (b.x - 80).toFixed(1) + 'px,' + (b.y - 80 + k * k * 26).toFixed(1) + 'px,0) scale(' + sc.toFixed(3) + ')';
+      b.el.style.opacity = (k < 0.45 ? 1 : 1 - (k - 0.45) / 0.55).toFixed(2);
+      b.el.style.webkitTransform = tf; b.el.style.transform = tf;
+    }
   }
 
   // ?timer=1 drives frames with timers: headless browsers barely run requestAnimationFrame
@@ -1076,6 +1178,7 @@
     drawGrass(t, dt);
     drawLeaves(t, dt);
     drawWx(t);
+    fireworks(t);
     if (DEBUG) { frames++; document.title = 'frames ' + frames + ' job ' + (job ? job.i + '/' + job.s.length + ' ' + job.mode : 'idle') + ' photos ' + list.length; }
   }
   var DEBUG = !!param('debug'), frames = 0, SIM = +(param('sim') || 0), simDone = false;
@@ -1135,7 +1238,9 @@
     // start painting an <img> (already loaded) right away; src is what a tap on the painting shows
     paint: function (img, src) { clearTimeout(cycle); current = src || null; paintFrom(img); cycle = setTimeout(nextPainting, paintSecs * 1000); },
     // photo URLs to cycle through, and seconds per painting
-    setPhotos: function (urls, secs) { list = urls.slice(); li = 0; if (secs) paintSecs = secs; }
+    setPhotos: function (urls, secs) { list = urls.slice(); li = 0; if (secs) paintSecs = secs; },
+    // the US air quality index: above 50 a haze, above 150 the orange of wildfire smoke
+    setAir: function (n) { if (param('aqi')) return; n = +n || 0; if (n !== aqi) { aqi = n; if (builtKey) paintHaze(); } }
   };
   if (forced.wx || forced.phase) { kind = kind || 'clear'; phase = phase || 'day'; }
   loadList();

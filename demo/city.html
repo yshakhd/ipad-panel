@@ -28,6 +28,7 @@
   #weather { position: absolute; right: 44px; top: 40px; width: 420px; text-align: right; }
   #w-temp { font-size: 80px; line-height: 0.95; letter-spacing: -3px; }
   #w-text { font-size: 21px; line-height: 1.3; margin-top: 4px; }
+  #w-more { font-size: 18px; font-style: italic; margin-top: 2px; }
   #w-sun { font-size: 18px; font-style: italic; margin-top: 1px; opacity: 0.85; }
   #w-days { margin-top: 4px; display: flex; justify-content: flex-end; }
   .day { margin-left: 16px; font-size: 18px; line-height: 1.25; }
@@ -103,7 +104,7 @@
   </div>
   <div id="info">
     <div id="clock" class="sky"><div><span id="time">--:--</span><span id="ampm"></span></div><div id="date"></div></div>
-    <div id="weather" class="sky"><div id="w-temp"></div><div id="w-text">Fetching the weather</div><div id="w-sun"></div><div id="w-days"></div></div>
+    <div id="weather" class="sky"><div id="w-temp"></div><div id="w-text">Fetching the weather</div><div id="w-sun"></div><div id="w-more"></div><div id="w-days"></div></div>
     <div id="wind" class="ground"><div id="wind-speed"></div><div id="wind-words"></div></div>
   </div>
   <div id="viewer"><div id="viewer-img"></div></div>
@@ -124,7 +125,7 @@
   <div class="chips" id="views"><button type="button" data-v="">By the clock</button><button type="button" data-v="desk">Desk</button><button type="button" data-v="bed">Bed</button></div>
 
   <label>Animals <span>they also come by on their own</span></label>
-  <div class="chips" id="pets"><button type="button" data-dog="visit">Dog, come here</button><button type="button" data-dog="fetch">Fetch</button><button type="button" data-dog="tail">Chase your tail</button><button type="button" data-cat="1">Wake the cat</button></div>
+  <div class="chips" id="pets"><button type="button" data-dog="visit">Dog, come here</button><button type="button" data-dog="fetch">Fetch</button><button type="button" data-dog="tail">Chase your tail</button><button type="button" data-cat="1">Wake the cat</button><button type="button" data-bell="1">Ring the doorbell</button><button type="button" data-note="1">Leave him a note</button></div>
 
   <label for="wind-range">Wind <span id="wind-val"></span></label>
   <input id="wind-range" type="range" min="0" max="80" step="1" value="10">
@@ -286,6 +287,18 @@
     $('to-meadow').href = href; $('seg-meadow').href = href;
   }
 
+  function fetchAir() {   // live US air quality: a haze over the scene when it's poor
+    var x = new XMLHttpRequest();
+    x.open('GET', 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + place.lat + '&longitude=' + place.lon + '&current=us_aqi', true);
+    x.onload = function () {
+      try {
+        var a = Math.round(JSON.parse(x.responseText).current.us_aqi), words = a <= 50 ? 'good' : a <= 100 ? 'moderate' : a <= 150 ? 'unhealthy for sensitive groups' : a <= 200 ? 'unhealthy' : a <= 300 ? 'very unhealthy' : 'hazardous';
+        City.setAir(a);
+        $('w-more').textContent = a > 50 ? 'Air quality ' + a + ', ' + words + '.' : '';
+      } catch (e) {}
+    };
+    x.send();
+  }
   function fetchWeather() {
     $('place-status').textContent = 'Fetching the weather for ' + place.name;
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + place.lat + '&longitude=' + place.lon +
@@ -303,6 +316,7 @@
           utc_offset: r.utc_offset_seconds || 0, tz: r.timezone, sunrise: r.daily.sunrise[0], sunset: r.daily.sunset[0], days: days };
         $('place-status').textContent = 'Live weather for ' + place.name + '.';
         render();
+        fetchAir();
       } catch (e) { offline(); }
     };
     x.onerror = offline;
@@ -324,9 +338,11 @@
   $('kinds').onclick = function (e) { var c = e.target.getAttribute('data-code'); if (c === null) return; manual.code = +c; render(); };
   $('views').onclick = function (e) { var v = e.target.getAttribute('data-v'); if (v === null) return; viewPick = v; City.showView(v); render(); };
   $('pets').onclick = function (e) {
-    var dk = e.target.getAttribute('data-dog'), ct = e.target.getAttribute('data-cat');
-    if (!dk && !ct) return;
+    var dk = e.target.getAttribute('data-dog'), ct = e.target.getAttribute('data-cat'), bell = e.target.getAttribute('data-bell'), nt = e.target.getAttribute('data-note');
+    if (!dk && !ct && !bell && !nt) return;
     if (City.view() !== 'desk') { viewPick = 'desk'; City.showView('desk'); render(); }   // they live by the desk
+    if (bell) { City.door('doorbell'); $('place-status').textContent = 'Someone’s at the door.'; return; }
+    if (nt) { City.note(['Laundry is done', 'Dinner at 7', 'Call Mom back', 'Package at the door'][Math.floor(Math.random() * 4)], true); $('place-status').textContent = 'A note on his monitor.'; return; }
     var busy = City.busy();
     if (dk) { if (busy.dog) { $('place-status').textContent = 'The dog is busy. Try again in a moment.'; return; } City.callDog(dk); }
     if (ct) { if (busy.cat) { $('place-status').textContent = 'The cat is already up.'; return; } City.wakeCat(); }
@@ -374,6 +390,11 @@
     $('viewer').className = 'on';
   };
   $('viewer').onclick = function () { $('viewer').className = ''; };
+  $('world').onclick = function (e) {   // tap the sleeping cat to wake it, or the floor to call the dog
+    if (e.target.id === 'photo-hit') return;
+    var r = $('stage').getBoundingClientRect(), k = r.width / 1024;
+    City.tap((e.clientX - r.left) / k, (e.clientY - r.top) / k);
+  };
   setInterval(function () {   // a message lights up his phone now and then
     if (City.view() !== 'bed' || Math.random() > 0.25) return;
     $('phone').style.opacity = 1; setTimeout(function () { $('phone').style.opacity = 0; }, 4000);

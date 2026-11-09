@@ -53,5 +53,32 @@
   "city": {
     "sleep_hour": 1,
     "wake_hour": 8
+  },
+  "calendar": {
+    "ics": [
+      "https://calendar.google.com/calendar/ical/.../basic.ics"
+    ],
+    "days": 3
+  },
+  "presence": [
+    "person.you"
+  ],
+  "scene_events": {
+    "doorbell": [
+      "binary_sensor.doorbell"
+    ],
+    "door": [
+      "binary_sensor.front_door"
+    ]
+  },
+  "charger": {
+    "entity": "switch.ipad_charger",
+    "on_minutes": 120,
+    "off_minutes": 120
+  },
+  "watchdog": {
+    "minutes": 15,
+    "notify": "notify.mobile_app_your_phone",
+    "ntfy": ""
   }
 }

@@ -99,6 +99,11 @@
     box-shadow: 0 0 0 10px #101216, 0 20px 60px rgba(0,0,0,0.6); }
   #viewer p { position: absolute; left: 0; right: 0; bottom: 18px; margin: 0; text-align: center; color: #e9eef5; font-style: italic; font-size: 18px; opacity: 0.8; }
   body.night #stage { opacity: 0.45; }
+  #notes { margin: 10px 0 0 6px; max-width: 420px; font-size: 21px; line-height: 1.35; }
+  #notes div:before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 4px; margin: 0 10px 2px 2px; background: currentColor; opacity: 0.55; vertical-align: middle; }
+  #notes .n-alert:before { background: #ff7a45; opacity: 1; }
+  #notes .n-ev:before { background: #ffc24a; opacity: 1; }
+  #w-more { font-size: 18px; font-style: italic; margin-top: 2px; line-height: 1.3; }
 </style>
 </head>
 <body>
@@ -120,11 +125,13 @@
       <div><span id="time">--:--</span><span id="ampm"></span></div>
       <div id="date"></div>
       <div id="msg"></div>
+      <div id="notes"></div>
     </div>
     <div id="weather" class="sky">
       <div id="w-temp"></div>
       <div id="w-text"></div>
       <div id="w-sun"></div>
+      <div id="w-more"></div>
       <div id="w-days" class="flex"></div>
     </div>
     <div id="wind" class="ground">
@@ -143,6 +150,7 @@
   <div id="viewer" class="tap"><div id="viewer-img"></div><p>Tap anywhere to go back to the city</p></div>
 </div>
 <script src="sky.js"></script>
+<script src="extras.js"></script>
 <script src="city.js"></script>
 <script>
 (function () {
@@ -180,6 +188,13 @@
     clearTimeout(onTap.v); onTap.v = setTimeout(function () { $('viewer').className = 'tap'; }, 30000);
   });
   onTap($('viewer'), function () { $('viewer').className = 'tap'; });
+  // taps on the scene itself: wake the cat, call the dog (cursor:pointer so iOS 9 sends them)
+  $('world').style.cursor = 'pointer';
+  onTap($('world'), function (e) {
+    if ((' ' + e.target.className + ' ').indexOf(' tap ') >= 0) return;
+    var r = $('stage').getBoundingClientRect(), k = r.width / 1024;
+    City.tap((e.clientX - r.left) / k, (e.clientY - r.top) / k);
+  });
 
   function clock12(iso) { var p = iso.split('T')[1].split(':'), h = +p[0]; return (h % 12 || 12) + ':' + p[1] + (h < 12 ? ' am' : ' pm'); }
   function windWords(kmh, dir) {
@@ -198,6 +213,7 @@
     setBodyClass('ph-day', ph === 'day'); setBodyClass('ph-golden', ph === 'golden'); setBodyClass('ph-night', ph === 'night');
     var real = new Date().getHours();
     var isNight = night[0] > night[1] ? (real >= night[0] || real < night[1]) : (real >= night[0] && real < night[1]);
+    isNight = isNight || Extras.away();   // dim when nobody's home too
     setBodyClass('night', isNight);
     City.dim(isNight);
     $('status').textContent = lastOk && Date.now() - lastOk > 30000 ? 'Lost connection to the panel server' : '';
@@ -246,6 +262,8 @@
     if (s.city) City.setHours(s.city.sleep_hour, s.city.wake_hour);
     renderWeather(s.weather);
     renderSys(s);
+    City.setAir(s.air ? s.air.aqi : 0);
+    Extras.render(s, { door: City.door, message: City.note });
     var m = $('msg');
     if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; } else m.style.display = 'none';
     tick();
