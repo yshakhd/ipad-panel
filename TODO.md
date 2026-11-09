@@ -34,8 +34,9 @@ configuration table explains every key. After each change, restart the server
 - [ ] Swap the demo entities under `home_assistant.entities` for your real ones.
 
 ## Doesn't need any devices
-- [ ] **Calendar:** paste your Google Calendar's secret iCal address (Settings >
-      your calendar > Secret address in iCal format).
+- [x] **Calendar:** on since 2026-11-09 (the link is in config.json). To add another
+      calendar, paste its secret iCal address (Settings > that calendar > Secret
+      address in iCal format) into the same `ics` list.
       ```json
       "calendar": { "ics": ["https://calendar.google.com/calendar/ical/.../basic.ics"], "days": 3 }
       ```
