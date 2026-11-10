@@ -198,8 +198,8 @@
     return d.getUTCHours() + d.getUTCMinutes() / 60;
   }
   function hm(iso) { var p = iso.split('T')[1].split(':'); return +p[0] + p[1] / 60; }
-  function sunTimes(w) {   // sunrise and sunset (local hours) on the day shown: live for today, worked out from the sun for other days
-    if (!dayN) return [hm(w.sunrise), hm(w.sunset)];
+  function sunTimes(w) {   // sunrise and sunset (local hours) on the day shown: live for today, worked out from the sun for other days,
+    // or { polar: 'up' | 'down' } when it never rises or never sets
     var off = (w.utc_offset || 0) * 1000, d = new Date(Date.now() + off + dayN * 86400000), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - off;
     var rise = null, set = null, prev = Sky.sun(m0, place.lat, place.lon).el, i;
     for (i = 1; i <= 288; i++) {
@@ -208,6 +208,8 @@
       if (prev >= -0.833 && el < -0.833) set = f;
       prev = el;
     }
+    if (rise === null && set === null) return { polar: prev > -0.833 ? 'up' : 'down' };   // midnight sun, or polar night
+    if (!dayN) return [hm(w.sunrise), hm(w.sunset)];
     return [rise === null ? hm(w.sunrise) : rise, set === null ? hm(w.sunset) : set];
   }
   function fmt(h) { var hh = Math.floor(h), mm = Math.round((h - hh) * 60); if (mm === 60) { hh++; mm = 0; } return { t: (hh % 12 || 12) + ':' + pad(mm), ap: hh % 24 < 12 ? 'am' : 'pm' }; }
@@ -224,7 +226,7 @@
     $('w-text').appendChild(document.createElement('br'));
     $('w-text').appendChild(document.createTextNode((feels ? 'Feels like ' + T(w.feels) + '°, humidity ' : 'Humidity ') + w.humidity + '%.'));
     var st = sunTimes(w), now = localNow(), rise = st[0], set = st[1];
-    $('w-sun').textContent = now < rise ? 'Sunrise at ' + fmt(rise).t + ' ' + fmt(rise).ap : now < set ? 'Sunset at ' + fmt(set).t + ' ' + fmt(set).ap : 'Sunrise at ' + fmt(rise).t + ' ' + fmt(rise).ap;
+    $('w-sun').textContent = st.polar ? (st.polar === 'up' ? 'The sun doesn’t set today' : 'The sun doesn’t rise today') : now < rise ? 'Sunrise at ' + fmt(rise).t + ' ' + fmt(rise).ap : now < set ? 'Sunset at ' + fmt(set).t + ' ' + fmt(set).ap : 'Sunrise at ' + fmt(rise).t + ' ' + fmt(rise).ap;
     var kmh = w.wind, from = w.wind_dir == null ? '' : ' from the ' + COMPASS[Math.round(w.wind_dir / 45) % 8];
     $('wind-speed').innerHTML = kmh < 2 ? 'Calm' : (unit === 'F' ? Math.round(kmh * 0.621) + '<small>mph</small>' : Math.round(kmh) + '<small>km/h</small>');
     $('wind-words').textContent = kmh < 2 ? 'Still air. The grass is resting.' :

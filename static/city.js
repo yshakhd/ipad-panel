@@ -1879,7 +1879,6 @@
     world.style.webkitTransition = world.style.transition = animate ? '-webkit-transform 7s ease-in-out, transform 7s ease-in-out' : 'none';
     tr(world, 'translate3d(' + (v === 'bed' ? 0 : -W) + 'px,0,0)');
   }
-  function minutesOf(iso) { var p = iso.split('T')[1].split(':'); return +p[0] * 60 + +p[1]; }
   function setWeather(w) {
     if (!w || w.error) { if (!built) { kind = kind || 'clear'; phase = phase || 'day'; setView(view, false); rebuild(); built = 'none'; } return; }
     lastW = w;
@@ -1893,14 +1892,7 @@
     var k = forced.wx ? kind : (KIND[w.code] || 'cloudy'), ph = phase;
     if (!forced.phase) {
       ph = w.is_day ? 'day' : 'night';
-      if (w.sunrise && w.sunset) {
-        var nowM = localHour() * 60, rise = minutesOf(w.sunrise), set = minutesOf(w.sunset);
-        ph = Math.abs(nowM - rise) < 45 || Math.abs(nowM - set) < 45 ? 'golden' : nowM > rise && nowM < set ? 'day' : 'night';
-      }
-      if (dayShift) {   // another day of the year: today's sunrise and sunset don't apply, so go by the sun itself
-        var el = Sky.sun(now(), lat, lon).el;
-        ph = el > 8 ? 'day' : el > -5 ? 'golden' : 'night';
-      }
+      if (w.lat != null) ph = Sky.phase(now(), lat, lon);   // by the sun's height, so the far north comes out right
     }
     if (!forced.wind) windKmh = w.wind;
     windDir = w.wind_dir == null ? 270 : w.wind_dir;

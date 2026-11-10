@@ -308,7 +308,9 @@
 
   /* The real sun: elevation and compass bearing for this place and moment (low-precision
    * NOAA formulas, well under a degree off). We look south, so east is on the left.
-   * Bearing maps to x (due south = centre), elevation to height above the hills. */
+   * Bearing maps to x (due south = centre), elevation to height above the far hills at that
+   * x, so the sun rises and sets on the hilltops. Low elevations get stretched (a power curve),
+   * so a sun that only reaches 4 degrees, like a November noon in the far north, still clears them. */
   var RAD = Math.PI / 180;
   function sunPosition(ms) { return Sky.sun(ms, lat, lon); }
   function moonPosition(ms) { return Sky.moon(ms, lat, lon); }
@@ -317,7 +319,8 @@
     // south of it we face north, so east is on the right.
     var off = lat >= 0 ? p.az - 180 : ((p.az + 180) % 360) - 180;
     if (lat < 0) off = -off;
-    return [512 + off / 120 * 470, 352 - p.el / 75 * 292, p.el];
+    var x = 512 + off / 120 * 470, h = farY(Math.max(0, Math.min(W, x))) - 6;
+    return [x, p.el > 0 ? Math.max(36, h - 300 * Math.pow(p.el / 75, 0.7)) : h - p.el * 12, p.el];   // below the horizon: only the glow peeks over
   }
   function sunXY() { return toScreen(sunPosition(Date.now() + timeShift)); }
   var SUN_R = 260;
@@ -1060,7 +1063,6 @@
     drawBackdrop(); buildSun(); placeMoon(); buildClouds(); buildFigure(); buildGrass(); buildLeaves(); buildWx(); paintHaze();
     builtAt = Date.now();
   }
-  function minutesOf(iso) { var p = iso.split('T')[1].split(':'); return +p[0] * 60 + +p[1]; }
   var dayShift = +param('days') || 0;   // preview another day, e.g. ?days=9
   var lastW = null, timeOverride = (function () { var m = /^(\d+):(\d+)$/.exec(param('time') || ''); return m ? +m[1] + m[2] / 60 : null; })();
   function setWeather(w) {
@@ -1075,15 +1077,7 @@
     var k = forced.wx ? kind : (KIND[w.code] || 'cloudy'), ph = phase;
     if (!forced.phase) {
       ph = w.is_day ? 'day' : 'night';
-      if (w.sunrise && w.sunset) {
-        var d = new Date(Date.now() + timeShift + (w.utc_offset || 0) * 1000), now = d.getUTCHours() * 60 + d.getUTCMinutes();
-        var rise = minutesOf(w.sunrise), set = minutesOf(w.sunset);
-        ph = Math.abs(now - rise) < 45 || Math.abs(now - set) < 45 ? 'golden' : now > rise && now < set ? 'day' : 'night';
-      }
-      if (dayShift) {   // another day of the year: today's sunrise and sunset don't apply, so go by the sun itself
-        var el = Sky.sun(Date.now() + timeShift, lat, lon).el;
-        ph = el > 8 ? 'day' : el > -5 ? 'golden' : 'night';
-      }
+      if (w.lat != null) ph = Sky.phase(Date.now() + timeShift, lat, lon);   // by the sun's height, so the far north comes out right
     }
     if (!forced.wind) windKmh = w.wind;
     windDir = w.wind_dir == null ? 270 : w.wind_dir;

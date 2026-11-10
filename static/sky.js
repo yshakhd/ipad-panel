@@ -27,6 +27,10 @@
     return { lam: L + 6.289 * RAD * Math.sin(M), beta: 5.128 * RAD * Math.sin(F) };
   }
   function sun(ms, lat, lon) { var n = days(ms), q = eclToEq(sunLon(n), 0, n); return horizontal(q.ra, q.dec, ms, lat, lon); }
+  /* Day, golden or night, from how high the sun is rather than the clock: near the poles a
+   * winter sun can skim the horizon all day (golden light from rise to set), the summer sun
+   * may never set, and in polar night the noon twilight still glows. */
+  function phase(ms, lat, lon) { var el = sun(ms, lat, lon).el; return el > 8 ? 'day' : el > -5 ? 'golden' : 'night'; }
   // el, az, lit (0 new to 1 full) and waxing
   function moon(ms, lat, lon) {
     var n = days(ms), m = moonLon(n), q = eclToEq(m.lam, m.beta, n), p = horizontal(q.ra, q.dec, ms, lat, lon), s = sunLon(n);
@@ -53,5 +57,5 @@
     return { turn: at(1), cover: at(2), bloom: at(3), dry: at(4), doy: doy };
   }
 
-  window.Sky = { days: days, sun: sun, moon: moon, season: season, sunLon: sunLon, moonLon: moonLon };
+  window.Sky = { days: days, sun: sun, phase: phase, moon: moon, season: season, sunLon: sunLon, moonLon: moonLon };
 })();

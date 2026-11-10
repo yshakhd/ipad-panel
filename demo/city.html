@@ -248,8 +248,8 @@
     return d.getUTCHours() + d.getUTCMinutes() / 60;
   }
   function hm(iso) { var p = iso.split('T')[1].split(':'); return +p[0] + p[1] / 60; }
-  function sunTimes(w) {   // sunrise and sunset (local hours) on the day shown: live for today, worked out from the sun for other days
-    if (!dayN) return [hm(w.sunrise), hm(w.sunset)];
+  function sunTimes(w) {   // sunrise and sunset (local hours) on the day shown: live for today, worked out from the sun for other days,
+    // or { polar: 'up' | 'down' } when it never rises or never sets
     var off = (w.utc_offset || 0) * 1000, d = new Date(Date.now() + off + dayN * 86400000), m0 = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - off;
     var rise = null, set = null, prev = Sky.sun(m0, place.lat, place.lon).el, i;
     for (i = 1; i <= 288; i++) {
@@ -258,6 +258,8 @@
       if (prev >= -0.833 && el < -0.833) set = f;
       prev = el;
     }
+    if (rise === null && set === null) return { polar: prev > -0.833 ? 'up' : 'down' };   // midnight sun, or polar night
+    if (!dayN) return [hm(w.sunrise), hm(w.sunset)];
     return [rise === null ? hm(w.sunrise) : rise, set === null ? hm(w.sunset) : set];
   }
   function fmt(h) { var hh = Math.floor(h), mm = Math.round((h - hh) * 60); if (mm === 60) { hh++; mm = 0; } return { t: (hh % 12 || 12) + ':' + pad(mm), ap: hh % 24 < 12 ? 'am' : 'pm' }; }
@@ -276,9 +278,12 @@
     var feels = Math.abs(T(w.feels) - T(w.temp)) >= 3;
     $('w-text').textContent = w.desc + ' in ' + place.name + (feels ? ', feels like ' + T(w.feels) + '°.' : '.');
     var st = sunTimes(w), now = localNow(), rise = st[0], set = st[1], riseNext = now < rise || now >= set;
-    var r = fmt(rise), s = fmt(set);
-    $('w-sun').textContent = riseNext ? 'Sunrise at ' + r.t + ' ' + r.ap : 'Sunset at ' + s.t + ' ' + s.ap;
-    $('bc-sun').textContent = riseNext ? 'Sunrise ' + r.t + ' ' + r.ap : 'Sunset ' + s.t + ' ' + s.ap;
+    if (st.polar) $('w-sun').textContent = $('bc-sun').textContent = st.polar === 'up' ? 'The sun doesn’t set today' : 'The sun doesn’t rise today';
+    else {
+      var r = fmt(rise), s = fmt(set);
+      $('w-sun').textContent = riseNext ? 'Sunrise at ' + r.t + ' ' + r.ap : 'Sunset at ' + s.t + ' ' + s.ap;
+      $('bc-sun').textContent = riseNext ? 'Sunrise ' + r.t + ' ' + r.ap : 'Sunset ' + s.t + ' ' + s.ap;
+    }
     var html = '';
     for (var i = 1; i < Math.min(4, w.days.length); i++) {
       var dd = w.days[i], p = dd.date.split('-');
