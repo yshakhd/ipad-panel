@@ -319,8 +319,12 @@
     // south of it we face north, so east is on the right.
     var off = lat >= 0 ? p.az - 180 : ((p.az + 180) % 360) - 180;
     if (lat < 0) off = -off;
-    var x = 512 + off / 120 * 470, h = farY(Math.max(0, Math.min(W, x))) - 6;
-    return [x, p.el > 0 ? Math.max(36, h - 300 * Math.pow(p.el / 75, 0.7)) : h - p.el * 12, p.el];   // below the horizon: only the glow peeks over
+    // e: height above the visible horizon. Sunrise is when the disc's top edge clears it, at
+    // -0.833 degrees (the air bends the light, plus the disc's half-width), the same line the
+    // sunrise times use; so at e = 0 the disc (radius 24) sits just under the hilltop, and on a
+    // polar-night day it stays down with only its glow showing.
+    var x = 512 + off / 120 * 470, h = farY(Math.max(0, Math.min(W, x))) + 25, e = p.el + 0.833;
+    return [x, e > 0 ? Math.max(36, h - 300 * Math.pow(e / 75, 0.7)) : h - e * 50, p.el];
   }
   function sunXY() { return toScreen(sunPosition(Date.now() + timeShift)); }
   var SUN_R = 260;
