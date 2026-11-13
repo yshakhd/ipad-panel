@@ -20,6 +20,11 @@ var Wx = (function () {
     '#wxc-head { position: absolute; left: 24px; top: 14px; width: 620px; white-space: nowrap; overflow: hidden; }',
     '#wxc-place { font-size: 30px; font-style: italic; }',
     '#wxc-upd { font-size: 17px; margin-left: 12px; }',
+    '#wxc-tabs { position: absolute; left: 340px; top: 11px; border-radius: 21px; border: 1px solid rgba(233,238,246,0.18); padding: 3px; }',
+    '#wxc-tabs span { display: inline-block; height: 34px; line-height: 34px; padding: 0 16px; border-radius: 17px; font-size: 18px; cursor: pointer; color: #b8c4d8; }',
+    '#wxc-tabs span.on { background: #e9eef6; color: #0c1424; }',
+    '#wxc .pg { display: none; } #wxc .pg.on { display: block; }',
+    '#wxc-mg { position: absolute; left: 20px; top: 66px; }',
     '#wxc-close { position: absolute; right: 20px; top: 10px; height: 42px; line-height: 40px; padding: 0 20px 0 18px; border-radius: 21px;',
     '  border: 1px solid rgba(233,238,246,0.28); font-size: 19px; cursor: pointer; }',
     '#wxc-close:active, #wxc .btn:active { background: rgba(233,238,246,0.16); }',
@@ -108,15 +113,16 @@ var Wx = (function () {
     root.innerHTML =
       '<div id="wxc-in">' +
         '<div id="wxc-head"><span id="wxc-place"></span><span id="wxc-upd" class="m"></span></div>' +
-        '<div id="wxc-close" class="btn">Close</div>' +
-        '<div id="wxc-radar"><div id="wxc-load">Loading radar…</div><img id="wxc-frame" alt=""><canvas id="wxc-over" width="640" height="640"></canvas>' +
+        '<div id="wxc-tabs"></div><div id="wxc-close" class="btn">Close</div>' +
+        '<div class="pg on" id="wxc-pg-now"><div id="wxc-radar"><div id="wxc-load">Loading radar…</div><img id="wxc-frame" alt=""><canvas id="wxc-over" width="640" height="640"></canvas>' +
           '<div id="wxc-modes"><span data-k="rain" class="on">Rain and snow</span><span data-k="vel">Velocity</span></div>' +
           '<div id="wxc-key"><span id="wxc-key-t"></span><i id="wxc-key-g"></i><span id="wxc-key-lo"></span><b id="wxc-key-hi"></b></div>' +
           '<div id="wxc-warn"></div>' +
           '<div id="wxc-bar"><div id="wxc-play" class="btn on"></div><div id="wxc-ticks"></div><div id="wxc-clock"><span class="n" id="wxc-ft"></span><div id="wxc-fa" class="m"></div></div></div>' +
         '</div>' +
         '<div id="wxc-credit" class="m">Radar: NOAA NEXRAD via the Iowa Environmental Mesonet. Map: Esri, HERE, Garmin, OpenStreetMap contributors. Data: National Weather Service, Open-Meteo.</div>' +
-        '<div id="wxc-side"><div id="wxc-alert"></div><div id="wxc-temp" class="n"></div><div id="wxc-cond"></div><div id="wxc-rows"></div><div id="wxc-metar"></div></div>' +
+        '<div id="wxc-side"><div id="wxc-alert"></div><div id="wxc-temp" class="n"></div><div id="wxc-cond"></div><div id="wxc-rows"></div><div id="wxc-metar"></div></div></div>' +
+        '<div class="pg" id="wxc-pg-48"><canvas id="wxc-mg" width="984" height="636"></canvas></div>' +
       '</div>';
     document.body.appendChild(root);
     $('wxc-frame').style.visibility = 'hidden';
@@ -128,6 +134,21 @@ var Wx = (function () {
     root.addEventListener('touchstart', poke, false);
     window.addEventListener('resize', fit, false);
     over = $('wxc-over').getContext('2d');
+    var tabs = '';
+    for (i = 0; i < PAGES.length; i++) tabs += '<span data-p="' + PAGES[i][0] + '"' + (i ? '' : ' class="on"') + '>' + PAGES[i][1] + '</span>';
+    $('wxc-tabs').innerHTML = tabs;
+    var ts = $('wxc-tabs').getElementsByTagName('span');
+    for (i = 0; i < ts.length; i++) tap(ts[i], function (e) { showPage(e.target.getAttribute('data-p')); });
+    tap($('wxc-mg'), function (e) { var r = $('wxc-mg').getBoundingClientRect(); mgPick = (e.clientX - r.left) * 984 / r.width; meteogram(); });
+  }
+  var PAGES = [['now', 'Radar'], ['48', 'Next 48 hours']], page = 'now', mgPick = null;
+  function showPage(p) {
+    page = p;
+    var ts = $('wxc-tabs').getElementsByTagName('span'), i;
+    for (i = 0; i < ts.length; i++) cls(ts[i], 'on', ts[i].getAttribute('data-p') === p);
+    for (i = 0; i < PAGES.length; i++) cls($('wxc-pg-' + PAGES[i][0]), 'on', PAGES[i][0] === p);
+    if (p === 'now') step(); else clearTimeout(playT);
+    if (p === '48') { mgPick = null; meteogram(); }
   }
   function fit() {
     if (!root) return;
@@ -178,6 +199,7 @@ var Wx = (function () {
     readings();
     overlay();
     frames();
+    if (page === '48') meteogram();
   }
 
   /* ---------------- the readings column ---------------- */
@@ -329,11 +351,173 @@ var Wx = (function () {
   }
   function step() {
     clearTimeout(playT);
-    if (!playing || !root || root.className.indexOf('on') < 0 || !list.length) return;
+    if (!playing || page !== 'now' || !root || root.className.indexOf('on') < 0 || !list.length) return;
     var n = list.length, next = (fi + 1) % n, tries = 0;
     while (!ready(next) && tries++ < n) next = (next + 1) % n;
     if (ready(next)) show(next);
     playT = setTimeout(step, fi === n - 1 ? 1600 : 450);   // linger on the latest scan
+  }
+
+  /* ---------------- next 48 hours: a meteogram, the forecaster's chart ----------------
+   * Stacked lanes on one time axis: temperature with dew point and feels-like, rain and
+   * snow (amount bars, chance line, a bolt where storms are possible), low/mid/high cloud,
+   * wind with gusts and barbs, and pressure. Night hours are shaded. Tap for one hour's numbers. */
+  var DAYN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var NUM = '600 16px "Big Shoulders Display", sans-serif', TXT = '14px Newsreader, Georgia, serif';
+  function tU(c) { return imp() ? c * 9 / 5 + 32 : c; }
+  function nice(lo, hi, steps) {
+    var st = steps[steps.length - 1];
+    for (var i = 0; i < steps.length; i++) if ((hi - lo) / steps[i] <= 5) { st = steps[i]; break; }
+    lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st;
+    if (hi === lo) hi = lo + st;
+    return [lo, hi, st];
+  }
+  function barb(g, x, y, dir, kt) {   // standard wind barb: staff points to where the wind comes from
+    var a = dir * Math.PI / 180, ux = Math.sin(a), uy = -Math.cos(a), px = -uy, py = ux, len = 22, pos = len;
+    if (kt < 3) { g.beginPath(); g.arc(x, y, 3.5, 0, 6.2832); g.stroke(); return; }
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + ux * len, y + uy * len); g.stroke();
+    var r = Math.round(kt / 5) * 5;
+    function S(d) { return [x + ux * d, y + uy * d]; }
+    while (r >= 50) { var p0 = S(pos), p1 = S(pos - 7); g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p0[0] + px * 9, p0[1] + py * 9); g.lineTo(p1[0], p1[1]); g.closePath(); g.fill(); r -= 50; pos -= 9; }
+    while (r >= 10) { var q = S(pos); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q[0] + px * 9 + ux * 3, q[1] + py * 9 + uy * 3); g.stroke(); r -= 10; pos -= 4; }
+    if (r >= 5) { if (pos === len) pos -= 4; var hq = S(pos); g.beginPath(); g.moveTo(hq[0], hq[1]); g.lineTo(hq[0] + px * 5 + ux * 1.6, hq[1] + py * 5 + uy * 1.6); g.stroke(); }
+  }
+  function meteogram() {
+    var f = data && data.forecast, g = $('wxc-mg').getContext('2d'), W = 984, H = 636, L = 56, RG = 44;
+    g.clearRect(0, 0, W, H);
+    if (!f || !f.hourly) return;
+    var h = f.hourly, i0 = hourIndex(f), n = Math.min(49, h.time.length - i0), j, v;
+    var dx = (W - L - RG) / (n - 1);
+    function X(k) { return L + k * dx; }
+    function at(key, k) { return h[key][i0 + k]; }
+    var LT = [52, 170], LR = [256, 76], LC = [360, 48], LW = [436, 56], LB = 506, LP = [568, 56];
+    function title(t, y, col) { g.font = TXT; g.textAlign = 'left'; g.fillStyle = col || '#8e9db6'; g.fillText(t, L, y - 8); }   // above its lane
+    function span(k) { var a = Math.max(L, X(k) - dx / 2), b = Math.min(W - RG, X(k) + dx / 2); return [a, b - a]; }
+    function gridY(y, lab) { g.strokeStyle = 'rgba(233,238,246,0.07)'; g.lineWidth = 1; g.beginPath(); g.moveTo(L, y + 0.5); g.lineTo(W - RG, y + 0.5); g.stroke(); if (lab != null) { g.font = NUM; g.textAlign = 'right'; g.fillStyle = '#8e9db6'; g.fillText(lab, L - 8, y + 5); } }
+
+    // night bands, midnights and the hour labels along the top
+    for (j = 0; j < n; j++) if (!at('is_day', j)) { var sp = span(j); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(sp[0], 30, sp[1] + 0.5, H - 30); }
+    g.font = TXT; g.textAlign = 'left'; g.fillStyle = '#e9eef6';
+    var t0 = at('time', 0).split('T')[0].split('-');
+    var firstMid = 99;
+    for (j = 1; j < n; j++) if (at('time', j).substr(11, 2) === '00') { firstMid = j; break; }
+    if (X(firstMid) - L > 90) g.fillText(DAYN[new Date(+t0[0], +t0[1] - 1, +t0[2]).getDay()], L + 4, 18);
+    for (j = 1; j < n; j++) {
+      var tm = at('time', j), hr = +tm.substr(11, 2);
+      if (hr === 0) {
+        var dd = tm.split('T')[0].split('-');
+        g.strokeStyle = 'rgba(233,238,246,0.22)'; g.beginPath(); g.moveTo(X(j) + 0.5, 26); g.lineTo(X(j) + 0.5, H); g.stroke();
+        g.fillStyle = '#e9eef6'; g.textAlign = 'left'; g.fillText(DAYN[new Date(+dd[0], +dd[1] - 1, +dd[2]).getDay()], X(j) + 5, 18);
+      } else if (hr % 6 === 0 && X(j) > L + 90) {
+        g.fillStyle = '#8e9db6'; g.textAlign = 'center'; g.fillText(hr === 12 ? 'noon' : (hr % 12) + (hr < 12 ? ' am' : ' pm'), X(j), 18);
+      }
+    }
+
+    // temperature, dew point, feels like
+    var T = [], D = [], F = [], lo = 1e9, hi = -1e9;
+    for (j = 0; j < n; j++) { T[j] = tU(at('temperature_2m', j)); D[j] = tU(at('dew_point_2m', j)); F[j] = tU(at('apparent_temperature', j)); lo = Math.min(lo, T[j], D[j], F[j]); hi = Math.max(hi, T[j], D[j], F[j]); }
+    var sc = nice(lo, hi, imp() ? [5, 10, 20] : [2, 5, 10]);
+    function YT(val) { return LT[0] + LT[1] - (val - sc[0]) / (sc[1] - sc[0]) * LT[1]; }
+    for (v = sc[0]; v <= sc[1]; v += sc[2]) gridY(YT(v), v + '°');
+    var fz = imp() ? 32 : 0;
+    if (fz > sc[0] && fz < sc[1]) {
+      g.strokeStyle = 'rgba(127,200,255,0.7)'; g.setLineDash && g.setLineDash([5, 4]); g.beginPath(); g.moveTo(L, YT(fz)); g.lineTo(W - RG, YT(fz)); g.stroke(); g.setLineDash && g.setLineDash([]);
+      g.font = TXT; g.fillStyle = '#7fc8ff'; g.textAlign = 'right'; g.fillText('freezing', W - RG - 4, YT(fz) - 5);
+    }
+    function line(arr, Y, col, w, dash) {
+      g.strokeStyle = col; g.lineWidth = w; g.lineJoin = 'round';
+      if (dash && g.setLineDash) g.setLineDash(dash);
+      g.beginPath(); for (var k = 0; k < arr.length; k++) { if (k) g.lineTo(X(k), Y(arr[k])); else g.moveTo(X(k), Y(arr[k])); } g.stroke();
+      if (dash && g.setLineDash) g.setLineDash([]);
+    }
+    line(F, YT, 'rgba(255,154,74,0.55)', 1.5, [4, 4]);
+    line(D, YT, '#6fd48f', 2);
+    line(T, YT, '#ff9a4a', 2.5);
+    var mx = 0, mn = 0;
+    for (j = 1; j < n; j++) { if (T[j] > T[mx]) mx = j; if (T[j] < T[mn]) mn = j; }
+    g.font = NUM; g.textAlign = 'center'; g.fillStyle = '#ffb27a';
+    g.fillText(Math.round(T[mx]) + '°', Math.min(W - RG - 10, Math.max(L + 300, X(mx))), Math.max(LT[0] + 14, YT(T[mx]) - 8));
+    g.fillText(Math.round(T[mn]) + '°', Math.min(W - RG - 10, Math.max(L + 12, X(mn))), YT(T[mn]) + 20);
+    title('Temperature', LT[0], '#ff9a4a');
+    g.fillStyle = '#6fd48f'; g.fillText('Dew point', L + 96, LT[0] - 8);
+    g.fillStyle = 'rgba(255,154,74,0.75)'; g.fillText('Feels like', L + 172, LT[0] - 8);
+
+    // rain and snow: amount bars, chance line, storms
+    var P = [], maxA = imp() ? 2.54 : 2;
+    for (j = 0; j < n; j++) { P[j] = at('precipitation', j) || 0; maxA = Math.max(maxA, P[j]); }
+    gridY(LR[0]); gridY(LR[0] + LR[1]);
+    g.font = NUM; g.textAlign = 'right'; g.fillStyle = '#8e9db6';
+    g.fillText(imp() ? (maxA / 25.4).toFixed(2) + '"' : maxA.toFixed(1), L - 8, LR[0] + 12);
+    g.textAlign = 'left'; g.fillText('100%', W - RG + 4, LR[0] + 12); g.fillText('0', W - RG + 4, LR[0] + LR[1] + 4);
+    for (j = 0; j < n; j++) {
+      if (P[j] <= 0) continue;
+      var bh = Math.max(2, P[j] / maxA * LR[1]);
+      g.fillStyle = (at('snowfall', j) || 0) > 0 ? '#dfe7ff' : '#4aa8ff';
+      g.fillRect(X(j) - dx * 0.35, LR[0] + LR[1] - bh, dx * 0.7, bh);
+    }
+    g.strokeStyle = 'rgba(160,210,255,0.9)'; g.lineWidth = 1.5; g.beginPath();
+    for (j = 0; j < n; j++) { var py2 = LR[0] + LR[1] - (at('precipitation_probability', j) || 0) / 100 * LR[1]; if (j) g.lineTo(X(j), py2); else g.moveTo(X(j), py2); }
+    g.stroke();
+    for (j = 0; j < n; j++) if ((at('cape', j) || 0) >= 500 && (at('precipitation_probability', j) || 0) >= 30) {   // storms possible
+      var bx = X(j), by = LR[0] + 4; g.fillStyle = '#ffe14a'; g.beginPath(); g.moveTo(bx + 2, by); g.lineTo(bx - 4, by + 10); g.lineTo(bx, by + 10); g.lineTo(bx - 2, by + 18); g.lineTo(bx + 5, by + 7); g.lineTo(bx + 1, by + 7); g.closePath(); g.fill();
+    }
+    title('Rain and snow per hour', LR[0], '#4aa8ff'); g.fillStyle = 'rgba(160,210,255,0.9)'; g.fillText('Chance', L + 160, LR[0] - 8);
+    g.fillStyle = '#dfe7ff'; g.fillText('Snow', L + 222, LR[0] - 8);
+
+    // clouds by height
+    var rows = [['High', 'cloud_cover_high'], ['Mid', 'cloud_cover_mid'], ['Low', 'cloud_cover_low']], rh = LC[1] / 3;
+    for (var c = 0; c < 3; c++) {
+      var yc = LC[0] + c * rh;
+      g.font = TXT; g.textAlign = 'right'; g.fillStyle = '#8e9db6'; g.fillText(rows[c][0], L - 8, yc + rh / 2 + 4);
+      for (j = 0; j < n; j++) { var cc = at(rows[c][1], j) || 0; if (cc < 5) continue; var cs = span(j); g.fillStyle = 'rgba(205,215,232,' + (cc / 100 * 0.85).toFixed(2) + ')'; g.fillRect(cs[0], yc + 1, cs[1] + 0.5, rh - 2); }
+    }
+    title('Cloud cover', LC[0]);
+
+    // wind and gusts, with barbs every 3 hours
+    var Sp = [], G = [], wmax = 0, k2 = imp() ? 0.6214 : 1;
+    for (j = 0; j < n; j++) { Sp[j] = at('wind_speed_10m', j) * k2; G[j] = Math.max(Sp[j], (at('wind_gusts_10m', j) || 0) * k2); wmax = Math.max(wmax, G[j]); }
+    var ws = nice(0, Math.max(wmax, 10), [5, 10, 20]);
+    function YW(val) { return LW[0] + LW[1] - val / ws[1] * LW[1]; }
+    for (v = 0; v <= ws[1]; v += ws[2] * 2) gridY(YW(v), v);
+    g.fillStyle = 'rgba(159,208,255,0.18)'; g.beginPath();
+    for (j = 0; j < n; j++) { if (j) g.lineTo(X(j), YW(G[j])); else g.moveTo(X(j), YW(G[j])); }
+    for (j = n - 1; j >= 0; j--) g.lineTo(X(j), YW(Sp[j]));
+    g.closePath(); g.fill();
+    line(Sp, YW, '#9fd0ff', 2);
+    g.strokeStyle = 'rgba(233,238,246,0.8)'; g.fillStyle = 'rgba(233,238,246,0.8)'; g.lineWidth = 1.3;
+    for (j = 0; j < n; j += 3) barb(g, X(j), LB + 14, at('wind_direction_10m', j) || 0, (at('wind_speed_10m', j) || 0) * 0.54);
+    title('Wind (' + (imp() ? 'mph' : 'km/h') + ')', LW[0], '#9fd0ff'); g.fillStyle = 'rgba(159,208,255,0.75)'; g.fillText('Gusts', L + 94, LW[0] - 8);
+
+    // pressure
+    var Pr = [], plo = 1e9, phi = -1e9, pk = imp() ? 0.02953 : 1;
+    for (j = 0; j < n; j++) { Pr[j] = at('pressure_msl', j) * pk; plo = Math.min(plo, Pr[j]); phi = Math.max(phi, Pr[j]); }
+    var ps = nice(plo, phi, imp() ? [0.05, 0.1, 0.2, 0.5] : [2, 5, 10, 20]);
+    function YP(val) { return LP[0] + LP[1] - (val - ps[0]) / (ps[1] - ps[0]) * LP[1]; }
+    gridY(YP(ps[0]), imp() ? ps[0].toFixed(2) : ps[0]); gridY(YP(ps[1]), imp() ? ps[1].toFixed(2) : ps[1]);
+    line(Pr, YP, '#c9b6ff', 2);
+    title('Pressure (' + (imp() ? 'inches' : 'hPa') + ')', LP[0], '#c9b6ff');
+
+    // now, and the picked hour
+    var mins = +(f.current.time || '').substr(14, 2) || 0, xn = X(mins / 60);
+    g.strokeStyle = '#ff9a4a'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(xn, 26); g.lineTo(xn, H); g.stroke();
+    if (mgPick != null) {
+      var sel = Math.max(0, Math.min(n - 1, Math.round((mgPick - L) / dx))), xs = X(sel), tt = at('time', sel), hh = +tt.substr(11, 2);
+      var dp = tt.split('T')[0].split('-');
+      g.strokeStyle = 'rgba(233,238,246,0.85)'; g.lineWidth = 1; g.beginPath(); g.moveTo(xs + 0.5, 30); g.lineTo(xs + 0.5, H); g.stroke();
+      var lines = [
+        DAYN[new Date(+dp[0], +dp[1] - 1, +dp[2]).getDay()].substr(0, 3) + ' ' + (hh === 12 ? 'noon' : hh === 0 ? 'midnight' : (hh % 12) + (hh < 12 ? ' am' : ' pm')),
+        temp(at('temperature_2m', sel)) + ', dew point ' + temp(at('dew_point_2m', sel)),
+        'Feels like ' + temp(at('apparent_temperature', sel)),
+        (at('precipitation_probability', sel) || 0) + '% chance' + ((at('precipitation', sel) || 0) >= 0.1 ? ', ' + amount(at('precipitation', sel)) : ''),
+        'Wind ' + COMPASS[Math.round((at('wind_direction_10m', sel) || 0) / 22.5) % 16] + ' ' + speed(at('wind_speed_10m', sel)) + ', gusts ' + speed(at('wind_gusts_10m', sel)),
+        'Pressure ' + press(at('pressure_msl', sel))
+      ];
+      var bw = 230, bxp = xs + 12 + bw > W ? xs - 12 - bw : xs + 12, byp = 44;
+      g.fillStyle = 'rgba(12,20,36,0.94)'; g.fillRect(bxp, byp, bw, 20 + lines.length * 20);
+      g.strokeStyle = 'rgba(233,238,246,0.25)'; g.strokeRect(bxp + 0.5, byp + 0.5, bw, 20 + lines.length * 20);
+      g.textAlign = 'left';
+      for (j = 0; j < lines.length; j++) { g.font = j ? TXT : 'italic 16px Newsreader, Georgia, serif'; g.fillStyle = j ? '#e9eef6' : '#ffb27a'; g.fillText(lines[j], bxp + 12, byp + 22 + j * 20); }
+    }
   }
 
   return {

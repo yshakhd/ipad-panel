@@ -1880,7 +1880,14 @@
     tr(world, 'translate3d(' + (v === 'bed' ? 0 : -W) + 'px,0,0)');
   }
   function setWeather(w) {
-    if (!w || w.error) { if (!built) { kind = kind || 'clear'; phase = phase || 'day'; setView(view, false); rebuild(); built = 'none'; } return; }
+    if (!w || w.error) {   // no weather yet (the forecast service is down): a clear sky, lit by the real sun
+      if (!built) {
+        if (w && w.lat != null) { lat = w.lat; lon = w.lon; }
+        kind = kind || 'clear'; phase = phase || Sky.phase(now(), lat, lon);
+        setView(view, false); rebuild(); built = 'none';
+      }
+      return;
+    }
     lastW = w;
     if (w.lat != null) { lat = w.lat; lon = w.lon; }
     utcOff = w.utc_offset == null ? null : w.utc_offset;

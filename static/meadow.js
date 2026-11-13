@@ -1070,7 +1070,15 @@
   var dayShift = +param('days') || 0;   // preview another day, e.g. ?days=9
   var lastW = null, timeOverride = (function () { var m = /^(\d+):(\d+)$/.exec(param('time') || ''); return m ? +m[1] + m[2] / 60 : null; })();
   function setWeather(w) {
-    if (!w || w.error) { if (!builtKey) { builtKey = 'none'; rebuild(); } return; }
+    if (!w || w.error) {   // no weather yet (the forecast service is down): a clear sky, lit by the real sun
+      if (!builtKey) {
+        if (w && w.lat != null) { lat = w.lat; lon = w.lon; }
+        kind = kind || 'clear';
+        if (!forced.phase) phase = Sky.phase(Date.now(), lat, lon);
+        builtKey = 'none'; rebuild();
+      }
+      return;
+    }
     if (w.lat != null) { lat = w.lat; lon = w.lon; }
     lastW = w;
     if (timeOverride !== null) {   // show another time of day today (location-local hours)

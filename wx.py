@@ -43,7 +43,8 @@ _cache = {}            # url -> (data, fetched at)
 _frames = {}           # (kind, ts) -> jpeg bytes
 _building = {}         # (kind, ts) -> lock, so two requests don't build the same frame
 _map = {}              # (lat, lon) -> (base RGB, labels RGBA)
-_pool = ThreadPoolExecutor(max_workers=6)
+_pool = ThreadPoolExecutor(max_workers=8)   # tile downloads only
+_bg = ThreadPoolExecutor(max_workers=1)     # snapshots and frame building, one at a time
 _opened = [0.0]        # when the console last asked for data
 
 
@@ -317,10 +318,36 @@ def forecast(cfg):
 
 
 # ---------------- what /api/wx returns ----------------
+_ready = {"data": None, "at": 0, "busy": False}
+
+
 def summary(cfg):
+    """Answer at once from the last snapshot (the background loop keeps it fresh); only the
+    very first request waits for the National Weather Service and Open-Meteo."""
     if cfg.get("latitude") is None:
         return {"error": "Set latitude/longitude in config.json"}
     _opened[0] = time.time()
+    if Image is not None:
+        _bg.submit(_warm, cfg, ("rain", "vel"))   # usually all built already
+    age = time.time() - _ready["at"]
+    if _ready["data"] and age < 900:
+        if age > 90 and not _ready["busy"]:
+            _ready["busy"] = True
+            _bg.submit(_snapshot, cfg)
+        return _ready["data"]
+    return _snapshot(cfg)
+
+
+def _snapshot(cfg):
+    try:
+        data = _build(cfg)
+        _ready.update(data=data, at=time.time())
+        return data
+    finally:
+        _ready["busy"] = False
+
+
+def _build(cfg):
     p = _points(cfg) or {}
     rel = (p.get("relativeLocation") or {}).get("properties") or {}
     site = _site(cfg)
@@ -334,7 +361,6 @@ def summary(cfg):
         radar = {"size": SIZE, "home": [SIZE / 2, SIZE / 2], "px_per_mile": round(_px_per_mile(cfg), 4),
                  "site": "K" + site, "site_xy": site_xy,
                  "rain": _frame_list(cfg, "rain"), "vel": _frame_list(cfg, "vel")}
-        _pool.submit(_warm, cfg, ("rain", "vel"))
     return {
         "place": cfg.get("place_name") or rel.get("city", ""),
         "office": p.get("gridId"), "radar": radar,
@@ -344,15 +370,14 @@ def summary(cfg):
 
 
 def _loop(load_config):
-    """Keep the newest rain frame and the readings warm, so a tap opens the console at once.
+    """Keep the snapshot and the newest rain frames warm, so a tap opens the console at once.
     The velocity loop is only kept up while someone has looked at the console lately."""
     while True:
         try:
             cfg = load_config()
             if cfg.get("latitude") is not None and Image is not None:
+                _snapshot(cfg)
                 _warm(cfg, ("rain", "vel") if time.time() - _opened[0] < 900 else ("rain",))
-                forecast(cfg)
-                observation(cfg)
         except Exception as e:
             print("wx: %s" % e, flush=True)
         time.sleep(150)

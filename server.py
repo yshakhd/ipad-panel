@@ -126,9 +126,25 @@ WMO = {0: "Clear", 1: "Mostly clear", 2: "Partly cloudy", 3: "Overcast", 45: "Fo
        99: "Thunderstorm"}
 
 
+WEATHER_FILE = os.path.join(ROOT, "cache", "weather.json")
+
+
+def _saved_weather():
+    """The last good forecast from disk, so a restart during an outage still has weather."""
+    try:
+        with open(WEATHER_FILE) as f:
+            saved = json.load(f)
+        if time.time() - saved["at"] < 6 * 3600:
+            weather_cache.update(data=saved["data"], at=saved["at"])
+    except (OSError, ValueError, KeyError):
+        pass
+
+
 def weather(cfg):
     if cfg.get("latitude") is None or cfg.get("longitude") is None:
         return {"error": "Set latitude/longitude in config.json"}
+    if not weather_cache["data"]:
+        _saved_weather()
     if weather_cache["data"] and time.time() - weather_cache["at"] < 600:
         return weather_cache["data"]
     q = urllib.parse.urlencode({
@@ -159,9 +175,19 @@ def weather(cfg):
                       "rain": d["precipitation_probability_max"][i]} for i in range(len(d["time"]))],
         }
         weather_cache.update(data=data, at=time.time())
+        try:
+            os.makedirs(os.path.dirname(WEATHER_FILE), exist_ok=True)
+            with open(WEATHER_FILE + ".tmp", "w") as f:
+                json.dump({"data": data, "at": weather_cache["at"]}, f)
+            os.replace(WEATHER_FILE + ".tmp", WEATHER_FILE)
+        except OSError:
+            pass
         return data
     except Exception as e:  # keep serving stale data if the API hiccups
-        return weather_cache["data"] or {"error": "Weather unavailable: %s" % e}
+        if weather_cache["data"]:
+            weather_cache["at"] = time.time() - 600 + 60   # try again in a minute
+            return weather_cache["data"]
+        return {"error": "Weather unavailable: %s" % e, "lat": cfg["latitude"], "lon": cfg["longitude"]}
 
 
 class Handler(SimpleHTTPRequestHandler):
