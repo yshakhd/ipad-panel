@@ -317,6 +317,177 @@ def forecast(cfg):
     return _json("https://api.open-meteo.com/v1/forecast?" + q, 600)
 
 
+# ---------------- the sounding: the air above home, hour by hour (Open-Meteo's GFS/HRRR) ----------------
+LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300, 250, 200]
+RD, CP, LV, EPS, G = 287.04, 1005.7, 2.501e6, 0.622, 9.80665
+
+
+def _es(tc):   # saturation vapour pressure, hPa
+    return 6.112 * math.exp(17.67 * tc / (tc + 243.5))
+
+
+def _rs(p, tc):   # saturation mixing ratio, kg/kg
+    e = min(_es(tc), p * 0.5)
+    return EPS * e / (p - e)
+
+
+def _interp(p, prof, k):
+    """prof: levels sorted from the ground up (falling pressure); linear in ln p."""
+    for a, b in zip(prof, prof[1:]):
+        if a["p"] >= p >= b["p"]:
+            f = math.log(a["p"] / p) / math.log(a["p"] / b["p"])
+            return a[k] + (b[k] - a[k]) * f
+    return None
+
+
+def _parcel(p0, t0, td0, top=100):
+    """A surface parcel: dry up to its cloud base (LCL, Bolton 1980), then pseudo-adiabatic."""
+    tk, tdk = t0 + 273.15, td0 + 273.15
+    tl = 1 / (1 / (tdk - 56) + math.log(tk / tdk) / 800) + 56
+    pl = p0 * (tl / tk) ** (CP / RD)
+    r0 = _rs(p0, td0)
+    path, p = [], p0
+    while p > pl:
+        path.append((p, tk * (p / p0) ** (RD / CP) - 273.15, r0))
+        p -= 5
+    path.append((pl, tl - 273.15, r0))
+    p, t = pl, tl
+
+    def slope(pp, tt):
+        r = _rs(pp, tt - 273.15)
+        return (RD * tt + LV * r) / (CP + LV * LV * r * EPS / (RD * tt * tt)) / pp
+    while p - 5 >= top:
+        k1 = slope(p, t)
+        k2 = slope(p - 5, t - 5 * k1)
+        t -= 5 * (k1 + k2) / 2
+        p -= 5
+        path.append((p, t - 273.15, _rs(p, t - 273.15)))
+    return path, pl, tl - 273.15
+
+
+def _uv(ws, wd):
+    a = math.radians(wd)
+    return -ws * math.sin(a), -ws * math.cos(a)
+
+
+def _sounding_hour(h, i, elev):
+    p0, t0, td0 = h["surface_pressure"][i], h["temperature_2m"][i], h["dew_point_2m"][i]
+    if None in (p0, t0, td0):
+        return None
+    prof = [{"p": p0, "t": t0, "td": td0, "z": 0.0, "ws": None, "wd": None}]
+    for lv in LEVELS:
+        if lv >= p0 - 2:
+            continue   # under the ground here
+        v = [h["%s_%dhPa" % (k, lv)][i] for k in ("temperature", "dew_point", "wind_speed", "wind_direction", "geopotential_height")]
+        if None in v:
+            continue
+        prof.append({"p": lv, "t": v[0], "td": v[1], "ws": v[2], "wd": v[3], "z": v[4] - elev})
+    if len(prof) < 6:
+        return None
+    path, pl, tl = _parcel(p0, t0, td0)
+
+    def tv(t, r):
+        return (t + 273.15) * (1 + 0.61 * r)
+    # buoyancy layer by layer, with the virtual temperature correction
+    layers = []
+    for a, b in zip(path, path[1:]):
+        te_a, te_b = _interp(a[0], prof, "t"), _interp(b[0], prof, "t")
+        if te_a is None or te_b is None:
+            break
+        re_a, re_b = _rs(a[0], _interp(a[0], prof, "td")), _rs(b[0], _interp(b[0], prof, "td"))
+        bu = (tv(a[1], a[2]) - tv(te_a, re_a) + tv(b[1], b[2]) - tv(te_b, re_b)) / 2
+        layers.append((a[0], b[0], bu, RD * bu * math.log(a[0] / b[0])))
+    pos = [k for k, l in enumerate(layers) if l[2] > 0]
+    cape = cin = 0.0
+    lfc = el = None
+    if pos:
+        k0, k1 = pos[0], pos[-1]
+        lfc, el = layers[k0][0], layers[k1][1]
+        cape = max(0.0, sum(l[3] for l in layers[k0:k1 + 1]))
+        cin = sum(l[3] for l in layers[:k0] if l[3] < 0)
+    t500p = next((t for p, t, r in path if p <= 500), None)
+    t500e = _interp(500, prof, "t")
+    # precipitable water, ground to 300 hPa
+    pw = 0.0
+    for a, b in zip(prof, prof[1:]):
+        if b["p"] < 300:
+            break
+        q = [EPS * _es(x["td"]) / (x["p"] - (1 - EPS) * _es(x["td"])) for x in (a, b)]
+        pw += (q[0] + q[1]) / 2 * (a["p"] - b["p"]) * 100 / G
+    # freezing level above the ground, and any warm layer over freezing ground
+    frz = 0.0 if t0 <= 0 else None
+    for a, b in zip(prof, prof[1:]):
+        if frz is None and a["t"] > 0 >= b["t"]:
+            frz = a["z"] + (b["z"] - a["z"]) * a["t"] / (a["t"] - b["t"])
+    low = [x for x in prof if x["p"] >= 600]
+    warm_nose = max(x["t"] for x in low[1:]) if len(low) > 1 else -99
+    sat = [x for x in low if x["t"] - x["td"] < 3]
+    # what would fall: a warm layer aloft over freezing ground melts snow that refreezes (ice);
+    # with no warm layer aloft, snow survives to the ground when it is cold or the freezing
+    # level is low (melting takes a few hundred metres of above-freezing air)
+    frz_m = frz if frz is not None else 0
+    if t0 <= 0.5 and warm_nose > 0.5:
+        kind = "ice"
+    elif warm_nose <= 0.5 and (t0 <= 1.5 or frz_m < 300):
+        kind = "snow"
+    elif warm_nose <= 0.5 and t0 <= 4 and frz_m < 700:
+        kind = "mix"
+    else:
+        kind = "rain"
+
+    def at_z(z, k):
+        for a, b in zip(prof[1:], prof[2:]):
+            if a["z"] <= z <= b["z"]:
+                f = (z - a["z"]) / (b["z"] - a["z"])
+                return a[k] + (b[k] - a[k]) * f
+        return None
+    shear = None
+    lowest = prof[1]
+    u6 = at_z(6000, "ws"), at_z(6000, "wd")
+    if None not in u6 and lowest["ws"] is not None:
+        ua, va = _uv(lowest["ws"], lowest["wd"])
+        ub, vb = _uv(*u6)
+        shear = math.hypot(ub - ua, vb - va)
+    t700, t500 = _interp(700, prof, "t"), t500e
+    z700, z500 = _interp(700, prof, "z"), _interp(500, prof, "z")
+    lr = (t700 - t500) / ((z500 - z700) / 1000) if None not in (t700, t500, z700, z500) else None
+    thin = [x for k, x in enumerate(path) if k % 5 == 0 or abs(x[0] - pl) < 0.01 or k == len(path) - 1]   # every 25 hPa, plus cloud base
+    return {
+        "time": h["time"][i],
+        "lv": [[round(x["p"], 1), round(x["t"], 1), round(x["td"], 1),
+                None if x["ws"] is None else round(x["ws"]), None if x["wd"] is None else round(x["wd"]),
+                round(x["z"])] for x in prof],
+        "parcel": [[round(p, 1), round(t, 2)] for p, t, r in thin],
+        "idx": {"cape": round(cape), "cin": round(cin), "lfc": lfc and round(lfc), "el": el and round(el),
+                "lcl_p": round(pl), "lcl_z": round(_interp(pl, prof, "z") or 0),
+                "li": None if t500p is None or t500e is None else round(t500e - t500p, 1),
+                "pw": round(pw, 1), "frz": None if frz is None else round(frz), "lr": lr and round(lr, 1),
+                "shear": None if shear is None else round(shear), "kind": kind,
+                "moist": len(sat) >= 2},
+    }
+
+
+def sounding(cfg):
+    keys = ["%s_%dhPa" % (k, lv) for k in ("temperature", "dew_point", "wind_speed", "wind_direction", "geopotential_height") for lv in LEVELS]
+    q = urllib.parse.urlencode({
+        "latitude": cfg["latitude"], "longitude": cfg["longitude"],
+        "hourly": ",".join(keys + ["temperature_2m", "dew_point_2m", "surface_pressure"]),
+        "forecast_hours": 25, "timezone": "auto", "wind_speed_unit": "kmh",
+    })
+    d = _json("https://api.open-meteo.com/v1/gfs?" + q, 1800)
+    if not d or "hourly" not in d:
+        return None
+    h, out = d["hourly"], []
+    for i in range(len(h["time"])):
+        try:
+            hr = _sounding_hour(h, i, d.get("elevation") or 0)
+        except (ValueError, ZeroDivisionError, TypeError):
+            hr = None
+        if hr:
+            out.append(hr)
+    return out
+
+
 # ---------------- what /api/wx returns ----------------
 _ready = {"data": None, "at": 0, "busy": False}
 
@@ -365,6 +536,7 @@ def _build(cfg):
         "place": cfg.get("place_name") or rel.get("city", ""),
         "office": p.get("gridId"), "radar": radar,
         "forecast": forecast(cfg), "obs": observation(cfg), "warnings": warnings(cfg),
+        "sounding": sounding(cfg),
         "server_time": time.time(),
     }
 

@@ -15,19 +15,33 @@ var Wx = (function () {
     '#wxc.on { display: block; } #wxc.in { opacity: 1; }',
     '#wxc-in { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; color: #e9eef6;',
     '  font-family: "Newsreader", Georgia, serif; -webkit-transform-origin: 0 0; transform-origin: 0 0; }',
-    '#wxc .n { font-family: "Big Shoulders Display", sans-serif; font-weight: 600; letter-spacing: 0.5px; }',
-    '#wxc .m { color: #8e9db6; }',
+    '#wxc .wxn { font-family: "Big Shoulders Display", sans-serif; font-weight: 600; letter-spacing: 0.5px; }',
+    '#wxc .wxm { color: #8e9db6; }',
     '#wxc-head { position: absolute; left: 24px; top: 14px; width: 620px; white-space: nowrap; overflow: hidden; }',
     '#wxc-place { font-size: 30px; font-style: italic; }',
     '#wxc-upd { font-size: 17px; margin-left: 12px; }',
     '#wxc-tabs { position: absolute; left: 340px; top: 11px; border-radius: 21px; border: 1px solid rgba(233,238,246,0.18); padding: 3px; }',
     '#wxc-tabs span { display: inline-block; height: 34px; line-height: 34px; padding: 0 16px; border-radius: 17px; font-size: 18px; cursor: pointer; color: #b8c4d8; }',
     '#wxc-tabs span.on { background: #e9eef6; color: #0c1424; }',
-    '#wxc .pg { display: none; } #wxc .pg.on { display: block; }',
+    '#wxc .wxp { display: none; } #wxc .wxp.on { display: block; }',
     '#wxc-mg { position: absolute; left: 20px; top: 66px; }',
+    '#wxc-sk { position: absolute; left: 14px; top: 62px; }',
+    '#wxc-skbar { position: absolute; left: 66px; top: 664px; width: 560px; height: 40px; }',
+    '#wxc-skbar span { position: absolute; top: 0; height: 40px; cursor: pointer; }',
+    '#wxc-skbar span:after { content: ""; position: absolute; left: 2px; right: 2px; top: 17px; height: 6px; border-radius: 3px; background: rgba(233,238,246,0.3); }',
+    '#wxc-skbar span.wxd:after { background: rgba(233,238,246,0.5); }',
+    '#wxc-skbar span.on:after { top: 13px; height: 14px; border-radius: 4px; background: #ff9a4a; }',
+    '#wxc-skt { position: absolute; left: 636px; top: 662px; line-height: 1.05; } #wxc-skt .wxn { font-size: 24px; } #wxc-skt div { font-size: 14px; font-style: italic; }',
+    '#wxc-sknote { position: absolute; left: 22px; top: 714px; width: 980px; font-size: 13px; }',
+    '#wxc-skside { position: absolute; left: 730px; top: 66px; width: 274px; }',
+    '#wxc-sksum { font-size: 19px; line-height: 1.3; margin-bottom: 12px; min-height: 100px; }',
+    '#wxc-skrows .wxr { border-top: 1px solid rgba(233,238,246,0.1); padding: 5px 0 4px; overflow: hidden; }',
+    '#wxc-skrows .wxk { float: left; font-size: 16px; line-height: 27px; color: #8e9db6; }',
+    '#wxc-skrows .wxv { float: right; font-size: 23px; line-height: 27px; text-align: right; }',
+    '#wxc-skrows .wxv em { font-family: "Newsreader", Georgia, serif; font-weight: 400; font-size: 14px; letter-spacing: 0; color: #b8c4d8; margin-left: 5px; }',
     '#wxc-close { position: absolute; right: 20px; top: 10px; height: 42px; line-height: 40px; padding: 0 20px 0 18px; border-radius: 21px;',
     '  border: 1px solid rgba(233,238,246,0.28); font-size: 19px; cursor: pointer; }',
-    '#wxc-close:active, #wxc .btn:active { background: rgba(233,238,246,0.16); }',
+    '#wxc-close:active, #wxc .wxb:active { background: rgba(233,238,246,0.16); }',
     '#wxc-radar { position: absolute; left: 20px; top: 64px; width: 640px; height: 640px; overflow: hidden; border-radius: 6px; background: #24272d; }',
     '#wxc-radar img, #wxc-radar canvas { position: absolute; left: 0; top: 0; width: 640px; height: 640px; }',
     '#wxc-load { position: absolute; left: 0; top: 300px; width: 640px; text-align: center; font-size: 20px; font-style: italic; color: #8e9db6; }',
@@ -51,20 +65,20 @@ var Wx = (function () {
     '#wxc-ticks span.ok:after { background: rgba(233,238,246,0.5); }',
     '#wxc-ticks span.on:after { top: 9px; height: 12px; border-radius: 4px; background: #ff9a4a; }',
     '#wxc-clock { position: absolute; right: 14px; bottom: 12px; text-align: right; line-height: 1.05; }',
-    '#wxc-clock .n { font-size: 24px; } #wxc-clock div { font-size: 14px; font-style: italic; }',
+    '#wxc-clock .wxn { font-size: 24px; } #wxc-clock div { font-size: 14px; font-style: italic; }',
     '#wxc-credit { position: absolute; left: 22px; top: 714px; width: 980px; font-size: 13px; }',
     '#wxc-side { position: absolute; left: 684px; top: 58px; width: 318px; }',
     '#wxc-alert { display: none; margin: 4px 0 10px; padding: 8px 12px; border-radius: 6px; font-size: 17px; line-height: 1.25; border-left: 5px solid; background: rgba(255,255,255,0.06); }',
-    '#wxc-alert .m { font-size: 15px; font-style: italic; }',
+    '#wxc-alert .wxm { font-size: 15px; font-style: italic; }',
     '#wxc-temp { font-size: 108px; line-height: 0.9; font-weight: 400; margin-left: -4px; }',
     '#wxc-temp small { font-size: 0.42em; margin-left: 4px; color: #8e9db6; }',
     '#wxc-cond { font-size: 19px; margin: 6px 0 10px; line-height: 1.25; }',
-    '#wxc-rows .r { border-top: 1px solid rgba(233,238,246,0.1); padding: 5px 0 4px; overflow: hidden; }',
-    '#wxc-rows .k { float: left; font-size: 17px; line-height: 28px; color: #8e9db6; }',
-    '#wxc-rows .v { float: right; font-size: 24px; line-height: 28px; text-align: right; }',
-    '#wxc-rows .v em { font-family: "Newsreader", Georgia, serif; font-weight: 400; font-size: 15px; letter-spacing: 0; color: #b8c4d8; margin-left: 6px; }',
+    '#wxc-rows .wxr { border-top: 1px solid rgba(233,238,246,0.1); padding: 5px 0 4px; overflow: hidden; }',
+    '#wxc-rows .wxk { float: left; font-size: 17px; line-height: 28px; color: #8e9db6; }',
+    '#wxc-rows .wxv { float: right; font-size: 24px; line-height: 28px; text-align: right; }',
+    '#wxc-rows .wxv em { font-family: "Newsreader", Georgia, serif; font-weight: 400; font-size: 15px; letter-spacing: 0; color: #b8c4d8; margin-left: 6px; }',
     '#wxc-metar { margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(233,238,246,0.1); }',
-    '#wxc-metar .m { font-size: 14px; font-style: italic; }',
+    '#wxc-metar .wxm { font-size: 14px; font-style: italic; }',
     '#wxc-metar code { display: block; margin-top: 3px; font-family: Menlo, Courier, monospace; font-size: 12.5px; line-height: 1.45; color: #ffc995; word-wrap: break-word; }'
   ].join('\n');
 
@@ -112,17 +126,21 @@ var Wx = (function () {
     root = document.createElement('div'); root.id = 'wxc';
     root.innerHTML =
       '<div id="wxc-in">' +
-        '<div id="wxc-head"><span id="wxc-place"></span><span id="wxc-upd" class="m"></span></div>' +
-        '<div id="wxc-tabs"></div><div id="wxc-close" class="btn">Close</div>' +
-        '<div class="pg on" id="wxc-pg-now"><div id="wxc-radar"><div id="wxc-load">Loading radar…</div><img id="wxc-frame" alt=""><canvas id="wxc-over" width="640" height="640"></canvas>' +
+        '<div id="wxc-head"><span id="wxc-place"></span><span id="wxc-upd" class="wxm"></span></div>' +
+        '<div id="wxc-tabs"></div><div id="wxc-close" class="wxb">Close</div>' +
+        '<div class="wxp on" id="wxc-pg-now"><div id="wxc-radar"><div id="wxc-load">Loading radar…</div><img id="wxc-frame" alt=""><canvas id="wxc-over" width="640" height="640"></canvas>' +
           '<div id="wxc-modes"><span data-k="rain" class="on">Rain and snow</span><span data-k="vel">Velocity</span></div>' +
           '<div id="wxc-key"><span id="wxc-key-t"></span><i id="wxc-key-g"></i><span id="wxc-key-lo"></span><b id="wxc-key-hi"></b></div>' +
           '<div id="wxc-warn"></div>' +
-          '<div id="wxc-bar"><div id="wxc-play" class="btn on"></div><div id="wxc-ticks"></div><div id="wxc-clock"><span class="n" id="wxc-ft"></span><div id="wxc-fa" class="m"></div></div></div>' +
+          '<div id="wxc-bar"><div id="wxc-play" class="wxb on"></div><div id="wxc-ticks"></div><div id="wxc-clock"><span class="wxn" id="wxc-ft"></span><div id="wxc-fa" class="wxm"></div></div></div>' +
         '</div>' +
-        '<div id="wxc-credit" class="m">Radar: NOAA NEXRAD via the Iowa Environmental Mesonet. Map: Esri, HERE, Garmin, OpenStreetMap contributors. Data: National Weather Service, Open-Meteo.</div>' +
-        '<div id="wxc-side"><div id="wxc-alert"></div><div id="wxc-temp" class="n"></div><div id="wxc-cond"></div><div id="wxc-rows"></div><div id="wxc-metar"></div></div></div>' +
-        '<div class="pg" id="wxc-pg-48"><canvas id="wxc-mg" width="984" height="636"></canvas></div>' +
+        '<div id="wxc-credit" class="wxm">Radar: NOAA NEXRAD via the Iowa Environmental Mesonet. Map: Esri, HERE, Garmin, OpenStreetMap contributors. Data: National Weather Service, Open-Meteo.</div>' +
+        '<div id="wxc-side"><div id="wxc-alert"></div><div id="wxc-temp" class="wxn"></div><div id="wxc-cond"></div><div id="wxc-rows"></div><div id="wxc-metar"></div></div></div>' +
+        '<div class="wxp" id="wxc-pg-48"><canvas id="wxc-mg" width="984" height="636"></canvas></div>' +
+        '<div class="wxp" id="wxc-pg-sky"><canvas id="wxc-sk" width="700" height="596"></canvas><div id="wxc-skbar"></div>' +
+          '<div id="wxc-skt"><span class="wxn" id="wxc-skh"></span><div id="wxc-skd" class="wxm"></div></div>' +
+          '<div id="wxc-skside"><div id="wxc-sksum"></div><div id="wxc-skrows"></div></div>' +
+          '<div id="wxc-sknote" class="wxm">The air above home from the NOAA GFS and HRRR models (via Open-Meteo). Temperatures in °C, heights above the ground.</div></div>' +
       '</div>';
     document.body.appendChild(root);
     $('wxc-frame').style.visibility = 'hidden';
@@ -141,7 +159,7 @@ var Wx = (function () {
     for (i = 0; i < ts.length; i++) tap(ts[i], function (e) { showPage(e.target.getAttribute('data-p')); });
     tap($('wxc-mg'), function (e) { var r = $('wxc-mg').getBoundingClientRect(); mgPick = (e.clientX - r.left) * 984 / r.width; meteogram(); });
   }
-  var PAGES = [['now', 'Radar'], ['48', 'Next 48 hours']], page = 'now', mgPick = null;
+  var PAGES = [['now', 'Radar'], ['48', 'Next 48 hours'], ['sky', 'Sounding']], page = 'now', mgPick = null, skSel = 0;
   function showPage(p) {
     page = p;
     var ts = $('wxc-tabs').getElementsByTagName('span'), i;
@@ -149,6 +167,7 @@ var Wx = (function () {
     for (i = 0; i < PAGES.length; i++) cls($('wxc-pg-' + PAGES[i][0]), 'on', PAGES[i][0] === p);
     if (p === 'now') step(); else clearTimeout(playT);
     if (p === '48') { mgPick = null; meteogram(); }
+    if (p === 'sky') { skSel = 0; skewT(); }
   }
   function fit() {
     if (!root) return;
@@ -200,6 +219,7 @@ var Wx = (function () {
     overlay();
     frames();
     if (page === '48') meteogram();
+    if (page === 'sky') skewT();
   }
 
   /* ---------------- the readings column ---------------- */
@@ -208,7 +228,7 @@ var Wx = (function () {
     for (var i = 0; i < h.time.length; i++) if (h.time[i] === now) return i;
     return 0;
   }
-  function row(k, v, note) { return '<div class="r"><span class="k">' + k + '</span><span class="v n">' + v + (note ? '<em>' + note + '</em>' : '') + '</span></div>'; }
+  function row(k, v, note) { return '<div class="wxr"><span class="wxk">' + k + '</span><span class="wxv wxn">' + v + (note ? '<em>' + note + '</em>' : '') + '</span></div>'; }
   function cloudBase(obs, c, h, i) {
     var L = obs && obs.clouds || [], j, words = { FEW: 'few', SCT: 'scattered', BKN: 'broken', OVC: 'overcast', VV: 'sky hidden' };
     for (j = 0; j < L.length; j++) if (/BKN|OVC|VV/.test(L[j].amount) && L[j].base != null) return [height(L[j].base), words[L[j].amount]];
@@ -219,7 +239,7 @@ var Wx = (function () {
   }
   function readings() {
     var f = data.forecast, obs = data.obs, side = $('wxc-rows');
-    if (!f || !f.current) { side.innerHTML = '<div class="r m">Forecast numbers are unavailable.</div>'; return; }
+    if (!f || !f.current) { side.innerHTML = '<div class="wxr wxm">Forecast numbers are unavailable.</div>'; return; }
     var c = f.current, h = f.hourly, i = hourIndex(f), back = Math.max(0, i - 3);
     $('wxc-temp').innerHTML = temp(c.temperature_2m).replace('°', '<small>°' + (imp() ? 'F' : 'C') + '</small>');
     var feels = Math.abs(c.apparent_temperature - c.temperature_2m) >= 1.5 ? 'Feels like ' + temp(c.apparent_temperature) + '. ' : '';
@@ -246,14 +266,14 @@ var Wx = (function () {
     if (h.is_day[i] && h.uv_index[i] >= 1) html += row('UV index', Math.round(h.uv_index[i]));
     side.innerHTML = html;
 
-    $('wxc-metar').innerHTML = obs && obs.raw ? '<div class="m">' + esc(obs.name) + ', ' + ago(iso(obs.time)) + '</div><code>' + esc(obs.raw) + '</code>' : '';
+    $('wxc-metar').innerHTML = obs && obs.raw ? '<div class="wxm">' + esc(obs.name) + ', ' + ago(iso(obs.time)) + '</div><code>' + esc(obs.raw) + '</code>' : '';
 
     var here = null, w = data.warnings || [];
     for (var j = 0; j < w.length; j++) if (w[j].here) { here = w[j]; break; }
     var al = $('wxc-alert');
     if (here) {
       al.style.display = 'block'; al.style.borderColor = here.color;
-      al.innerHTML = esc(here.event) + (here.ends ? '<div class="m">until ' + clock(iso(here.ends)) + '</div>' : '');
+      al.innerHTML = esc(here.event) + (here.ends ? '<div class="wxm">until ' + clock(iso(here.ends)) + '</div>' : '');
     } else al.style.display = 'none';
   }
 
@@ -518,6 +538,136 @@ var Wx = (function () {
       g.textAlign = 'left';
       for (j = 0; j < lines.length; j++) { g.font = j ? TXT : 'italic 16px Newsreader, Georgia, serif'; g.fillStyle = j ? '#e9eef6' : '#ffb27a'; g.fillText(lines[j], bxp + 12, byp + 22 + j * 20); }
     }
+  }
+
+  /* ---------------- the sounding: a Skew-T log-P diagram ----------------
+   * Pressure falls (log scale) up the page; isotherms lean 45 degrees to the right. Red is the
+   * temperature, green the dew point, dashed gold the path air rising from the ground would
+   * take (computed on the server); red shading is storm energy (CAPE), blue the lid (CIN).
+   * Faint background: dry adiabats (orange), moist adiabats (blue, dashed), mixing ratio (green). */
+  var SK = { X0: 50, Y0: 8, W: 560, H: 560, PB: 1050, PT: 175, TMIN: -40, TMAX: 50 };
+  function skY(p) { return SK.Y0 + SK.H - SK.H * Math.log(SK.PB / p) / Math.log(SK.PB / SK.PT); }
+  function skX(t, p) { return SK.X0 + (t - SK.TMIN + 42 * Math.log(SK.PB / p)) / (SK.TMAX - SK.TMIN) * SK.W; }   // the usual skew: about 29 degrees from 1000 to 500 mb
+  function es(t) { return 6.112 * Math.exp(17.67 * t / (t + 243.5)); }
+  function moistSlope(p, tk) { var e = Math.min(es(tk - 273.15), p * 0.5), r = 0.622 * e / (p - e); return (287.04 * tk + 2.501e6 * r) / (1005.7 + 2.501e6 * 2.501e6 * r * 0.622 / (287.04 * tk * tk)) / p; }
+  function lvAt(lv, p, k) {   // lv: [p, t, td, ws, wd, z] from the ground up; linear in ln p
+    for (var i = 0; i < lv.length - 1; i++) if (lv[i][0] >= p && p >= lv[i + 1][0]) { var f = Math.log(lv[i][0] / p) / Math.log(lv[i][0] / lv[i + 1][0]); return lv[i][k] + (lv[i + 1][k] - lv[i][k]) * f; }
+    return null;
+  }
+  function skewT() {
+    var snd = data && data.sounding, g = $('wxc-sk').getContext('2d'), i, p, t;
+    g.clearRect(0, 0, 700, 596);
+    if (!snd || !snd.length) { $('wxc-sksum').textContent = 'The sounding is unavailable right now.'; return; }
+    if (skSel >= snd.length) skSel = 0;
+    var hr = snd[skSel], lv = hr.lv, ix = hr.idx;
+    g.save(); g.beginPath(); g.rect(SK.X0, SK.Y0, SK.W, SK.H); g.clip();
+    // background: dry adiabats, moist adiabats, mixing ratio, isotherms, isobars
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(255,170,90,0.13)';
+    for (t = -30; t <= 170; t += 10) { g.beginPath(); for (p = SK.PB; p >= SK.PT; p -= 25) { var tt = (t + 273.15) * Math.pow(p / 1000, 0.2857) - 273.15; if (p === SK.PB) g.moveTo(skX(tt, p), skY(p)); else g.lineTo(skX(tt, p), skY(p)); } g.stroke(); }
+    g.strokeStyle = 'rgba(120,200,255,0.17)'; g.setLineDash && g.setLineDash([5, 4]);
+    for (t = -12; t <= 36; t += 6) { var tk = t + 273.15; g.beginPath(); g.moveTo(skX(t, 1000), skY(1000)); for (p = 1000; p > 200; p -= 10) { var k1 = moistSlope(p, tk), k2 = moistSlope(p - 10, tk - 10 * k1); tk -= 10 * (k1 + k2) / 2; g.lineTo(skX(tk - 273.15, p - 10), skY(p - 10)); } g.stroke(); }
+    g.strokeStyle = 'rgba(111,212,143,0.3)'; g.setLineDash && g.setLineDash([2, 4]);
+    var W_ = [1, 2, 4, 8, 16];
+    for (i = 0; i < W_.length; i++) { var r = W_[i] / 1000; g.beginPath(); for (p = SK.PB; p >= 600; p -= 25) { var e = r * p / (0.622 + r), lg = Math.log(e / 6.112), td = 243.5 * lg / (17.67 - lg); if (p === SK.PB) g.moveTo(skX(td, p), skY(p)); else g.lineTo(skX(td, p), skY(p)); } g.stroke(); }
+    g.setLineDash && g.setLineDash([]);
+    for (t = -100; t <= 50; t += 10) {
+      g.strokeStyle = t === 0 ? 'rgba(127,200,255,0.55)' : 'rgba(233,238,246,0.08)'; g.lineWidth = t === 0 ? 1.5 : 1;
+      g.beginPath(); g.moveTo(skX(t, SK.PB), skY(SK.PB)); g.lineTo(skX(t, SK.PT), skY(SK.PT)); g.stroke();
+    }
+    var ISO = [1000, 925, 850, 700, 500, 400, 300, 250, 200];
+    g.strokeStyle = 'rgba(233,238,246,0.1)'; g.lineWidth = 1;
+    for (i = 0; i < ISO.length; i++) { g.beginPath(); g.moveTo(SK.X0, Math.round(skY(ISO[i])) + 0.5); g.lineTo(SK.X0 + SK.W, Math.round(skY(ISO[i])) + 0.5); g.stroke(); }
+
+    // storm energy and the lid, between the rising-air path and the temperature
+    var pc = hr.parcel;
+    function shade(pTop, pBot, col) {
+      var pts = [], j;
+      for (j = 0; j < pc.length; j++) if (pc[j][0] <= pBot + 0.5 && pc[j][0] >= pTop - 0.5) pts.push(pc[j]);
+      if (pts.length < 2) return;
+      g.fillStyle = col; g.beginPath();
+      for (j = 0; j < pts.length; j++) { if (j) g.lineTo(skX(pts[j][1], pts[j][0]), skY(pts[j][0])); else g.moveTo(skX(pts[j][1], pts[j][0]), skY(pts[j][0])); }
+      for (j = pts.length - 1; j >= 0; j--) { var te = lvAt(lv, pts[j][0], 1); if (te != null) g.lineTo(skX(te, pts[j][0]), skY(pts[j][0])); }
+      g.closePath(); g.fill();
+    }
+    if (ix.lfc && ix.el && ix.cape > 0) shade(ix.el, ix.lfc, 'rgba(255,90,70,0.3)');
+    if (ix.lfc && ix.cin < -1) shade(ix.lfc, lv[0][0], 'rgba(90,150,255,0.25)');
+    function prof(k, col, w, dash) {
+      g.strokeStyle = col; g.lineWidth = w; g.lineJoin = 'round'; if (dash && g.setLineDash) g.setLineDash(dash);
+      g.beginPath();
+      for (var j = 0; j < (k === 'parcel' ? pc.length : lv.length); j++) {
+        var pp = k === 'parcel' ? pc[j][0] : lv[j][0], tv = k === 'parcel' ? pc[j][1] : lv[j][k];
+        if (j) g.lineTo(skX(tv, pp), skY(pp)); else g.moveTo(skX(tv, pp), skY(pp));
+      }
+      g.stroke(); if (dash && g.setLineDash) g.setLineDash([]);
+    }
+    prof('parcel', 'rgba(255,225,120,0.9)', 1.6, [6, 4]);
+    prof(2, '#5fd38d', 2.5);
+    prof(1, '#ff6a5a', 2.5);
+    var yl = skY(ix.lcl_p), xl = skX(lvAt(lv, ix.lcl_p, 1) || 0, ix.lcl_p);   // cloud base tick
+    g.strokeStyle = '#e9eef6'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(xl + 6, yl); g.lineTo(xl + 26, yl); g.stroke();
+    g.font = TXT; g.fillStyle = '#e9eef6'; g.textAlign = 'left'; g.fillText('cloud base', xl + 30, yl + 4);
+    g.restore();
+
+    // axes: pressure and height on the left, temperature along the bottom, barbs on the right
+    g.font = NUM; g.textAlign = 'right';
+    for (i = 0; i < ISO.length; i++) {
+      if (ISO[i] === 925) continue;   // too close to its neighbours to label
+      var yy = skY(ISO[i]), z = lvAt(lv, ISO[i], 5);
+      g.fillStyle = '#b8c4d8'; g.fillText(ISO[i], SK.X0 - 6, yy + 3);
+      if (z != null && z > 300) { g.font = '12px Newsreader, Georgia, serif'; g.fillStyle = '#8e9db6'; g.fillText(imp() ? Math.round(z * 3.2808 / 1000) + 'k ft' : (z / 1000).toFixed(1) + ' km', SK.X0 - 6, yy + 16); g.font = NUM; }
+    }
+    g.textAlign = 'center'; g.fillStyle = '#8e9db6';
+    for (t = -40; t <= 40; t += 10) g.fillText(t + '°', skX(t, SK.PB), SK.Y0 + SK.H + 18);
+    g.strokeStyle = 'rgba(233,238,246,0.85)'; g.fillStyle = 'rgba(233,238,246,0.85)'; g.lineWidth = 1.3;
+    var lastY = 1e9;
+    for (i = 1; i < lv.length; i++) {   // one barb per level, skipping levels that would overlap
+      var by2 = skY(lv[i][0]);
+      if (lv[i][3] == null || lv[i][0] < SK.PT || lastY - by2 < 24) continue;
+      barb(g, SK.X0 + SK.W + 40, by2, lv[i][4], lv[i][3] * 0.54); lastY = by2;
+    }
+    g.font = TXT; g.textAlign = 'left';
+    g.fillStyle = '#ff6a5a'; g.fillText('Temperature', SK.X0 + SK.W - 250, SK.Y0 + 18);
+    g.fillStyle = '#5fd38d'; g.fillText('Dew point', SK.X0 + SK.W - 162, SK.Y0 + 18);
+    g.fillStyle = 'rgba(255,225,120,0.95)'; g.fillText('Rising air', SK.X0 + SK.W - 92, SK.Y0 + 18);
+
+    skSide(hr);
+    skBar();
+  }
+  function skSide(hr) {
+    var ix = hr.idx, s1, s2 = '';
+    if (ix.cape >= 1000 && ix.cin > -50) s1 = 'Unstable: storms could grow quickly if something sets them off.';
+    else if (ix.cape >= 250) s1 = ix.cin <= -50 ? 'Some storm energy, held down by a lid of warm air.' : 'A little storm energy: thunder is possible.';
+    else s1 = 'Stable air: no thunderstorms.';
+    if (ix.kind === 'snow' && ix.moist) s2 = ' Cold from the clouds to the ground, so anything that falls is snow.';
+    else if (ix.kind === 'ice' && ix.moist) s2 = ' A warm layer aloft over freezing ground: watch for freezing rain or sleet.';
+    else if (ix.kind === 'mix' && ix.moist) s2 = ' Barely above freezing at the ground: rain and snow could mix.';
+    else if (ix.moist) s2 = ' Moist through the lower atmosphere: clouds, and rain if there’s lift.';
+    else s2 = ' Dry air in the lower atmosphere.';
+    $('wxc-sksum').textContent = s1 + s2;
+    var sh = ix.shear, shU = sh == null ? '--' : imp() ? Math.round(sh * 0.54) + ' kt' : Math.round(sh) + ' km/h';
+    var lrW = ix.lr == null ? '' : ix.lr >= 7.5 ? 'steep' : ix.lr >= 6 ? 'moderate' : 'gentle';
+    var kinds = { snow: 'Snow', ice: 'Ice risk', mix: 'Rain and snow', rain: 'Rain' };
+    $('wxc-skrows').innerHTML =
+      row('Storm energy', ix.cape < 25 ? 'None' : comma(ix.cape) + ' J/kg', ix.cape >= 2500 ? 'high' : ix.cape >= 1000 ? 'moderate' : ix.cape >= 100 ? 'low' : '') +
+      row('Lid (CIN)', ix.cin > -5 ? 'None' : comma(ix.cin) + ' J/kg', ix.cin > -5 ? '' : ix.cin <= -100 ? 'strong' : ix.cin <= -25 ? 'some' : 'weak') +
+      row('Lifted index', ix.li == null ? '--' : (ix.li > 0 ? '+' : '') + ix.li, ix.li == null ? '' : ix.li <= -4 ? 'very unstable' : ix.li < 0 ? 'unstable' : 'stable') +
+      row('Cloud base', height(ix.lcl_z)) +
+      row('Freezing level', ix.frz == null ? '--' : ix.frz < 30 ? 'Ground' : height(ix.frz)) +
+      row('Water in the air', imp() ? (ix.pw / 25.4).toFixed(2) + ' in' : Math.round(ix.pw) + ' mm', 'precipitable') +
+      row('Lapse rate', ix.lr == null ? '--' : ix.lr + '°/km', lrW) +
+      row('Wind shear', shU, sh != null && sh * 0.54 >= 40 ? '0–6 km, strong' : '0–6 km') +
+      row('Falls as', kinds[ix.kind] || '--', ix.moist ? '' : 'if anything');
+  }
+  function skBar() {
+    var snd = data.sounding, n = snd.length, w = 560 / n, html = '', i;
+    for (i = 0; i < n; i++) { var hh = +snd[i].time.substr(11, 2); html += '<span data-i="' + i + '" style="left:' + (i * w) + 'px;width:' + w + 'px" class="' + (hh >= 7 && hh < 19 ? 'wxd' : '') + (i === skSel ? ' on' : '') + '"></span>'; }
+    var b = $('wxc-skbar'); b.innerHTML = html;
+    var sp = b.getElementsByTagName('span');
+    for (i = 0; i < sp.length; i++) tap(sp[i], function (e) { skSel = +e.target.getAttribute('data-i'); skewT(); });
+    var tm = snd[skSel].time, h = +tm.substr(11, 2), d = tm.split('T')[0].split('-');
+    $('wxc-skh').textContent = h === 12 ? 'Noon' : h === 0 ? 'Midnight' : (h % 12) + (h < 12 ? ' am' : ' pm');
+    $('wxc-skd').textContent = skSel === 0 ? 'now' : DAYN[new Date(+d[0], +d[1] - 1, +d[2]).getDay()] + ', in ' + skSel + ' h';
   }
 
   return {
