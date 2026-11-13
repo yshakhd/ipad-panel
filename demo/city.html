@@ -19,7 +19,9 @@
      with live weather fetched in the browser instead of from the panel server. */
   html, body { margin: 0; height: 100%; background: #05060a; overflow: hidden;
     font-family: 'Newsreader', Georgia, serif; -webkit-font-smoothing: antialiased; }
-  #stage { position: absolute; left: 0; top: 0; width: 1024px; height: 768px; overflow: hidden; -webkit-transform-origin: 0 0; transform-origin: 0 0; }
+  /* fixed, not absolute: the unscaled 1024 px stage mustn't make the page wider than a narrow screen
+     (an iPad held upright), or the browser reports the wrong width and iPadOS zooms the page out */
+  #stage { position: fixed; left: 0; top: 0; width: 1024px; height: 768px; overflow: hidden; -webkit-transform-origin: 0 0; transform-origin: 0 0; }
   #world { position: absolute; left: 0; top: 0; width: 2048px; height: 768px; }
   .half { position: absolute; top: 0; width: 1024px; height: 768px; overflow: hidden; }
   .half > div { position: absolute; left: 0; top: 0; }
@@ -116,6 +118,7 @@
   #place-list li small { display: block; font-size: 13px; color: #a6afbf; }
   #place-list li.on, #place-list li:hover { background: rgba(255,154,74,0.18); }
   #place-status { font-size: 14px; color: #a6afbf; margin-top: 6px; min-height: 18px; }
+  #reload { position: absolute; right: 64px; top: 10px; font: inherit; font-size: 15px; background: none; border: 0; color: #a6afbf; cursor: pointer; padding: 6px; }
   #close { position: absolute; right: 12px; top: 10px; font: inherit; font-size: 15px; background: none; border: 0; color: #a6afbf; cursor: pointer; padding: 6px; }
   #panel .foot { margin-top: 16px; font-size: 14px; color: #a6afbf; }
   #panel a.link { color: #ffb36b; }
@@ -152,6 +155,7 @@
 <div id="scrim"></div>
 <div id="caption" role="status"></div>
 <div id="panel" role="dialog" aria-label="Scene controls">
+  <button id="reload" type="button" title="Get the latest version and redraw the scene">Reload</button>
   <button id="close" type="button" aria-label="Close">Close</button>
   <div class="seg" aria-label="Scene"><a id="seg-meadow" href="./">Meadow</a><a class="on" href="#" aria-current="page">City</a></div>
   <h2>The city apartment</h2>
@@ -435,6 +439,7 @@
   $('time-range').oninput = function () { timeH = +this.value; City.setTime(timeH); render(); };
   $('day-range').oninput = function () { dayN = +this.value; City.setDays(dayN); render(); };
   $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; dayN = 0; City.setDays(0); City.setTime(null); fetchWeather(); };
+  $('reload').onclick = function () { $('place-status').textContent = 'Getting the latest version'; Keep.freshReload(); };
   $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; Keep.set('unit', unit); render(); };
   var shown = place.label || (saved && +saved.lat === +place.lat && +saved.lon === +place.lon && saved.label) || '';   // the full name of the place in use
   Places.attach({ input: $('place'), button: $('find'), list: $('place-list'), status: $('place-status'), current: placeSet ? shown : '', pick: function (r) {   // suggestions as you type

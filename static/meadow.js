@@ -125,10 +125,14 @@
   land.parentNode.insertBefore(hazeEl, cloudBox);
   wx.width = W / 2; wx.height = H / 2; wx.style.width = W + 'px'; wx.style.height = H + 'px';
 
+  function viewSize() {   // the demo measures the screen itself, which a wide page can't inflate; the iPad page, as always
+    var d = document.documentElement;
+    return STANDALONE && d.clientWidth ? [d.clientWidth, d.clientHeight || window.innerHeight] : [window.innerWidth, window.innerHeight];
+  }
   function fitStage() {
-    var s = Math.min(window.innerWidth / W, window.innerHeight / H);
-    var top = STANDALONE && window.innerHeight > window.innerWidth ? 0 : (window.innerHeight - H * s) / 2;   // phones held upright: scene at the top
-    var t = 'translate(' + ((window.innerWidth - W * s) / 2) + 'px,' + top + 'px) scale(' + s + ')';
+    var v = viewSize(), s = Math.min(v[0] / W, v[1] / H);
+    var top = STANDALONE && v[1] > v[0] ? 0 : (v[1] - H * s) / 2;   // phones held upright: scene at the top
+    var t = 'translate(' + ((v[0] - W * s) / 2) + 'px,' + top + 'px) scale(' + s + ')';
     stage.style.webkitTransform = t; stage.style.transform = t;
   }
   // iPadOS sometimes reports the window's size before it has settled (opening from the Home Screen,
@@ -136,7 +140,7 @@
   // left the picture drawn small until the next visit. So re-measure on every hint, and once a second.
   function watchSize(fn) {
     var last = '';
-    function check() { var k = window.innerWidth + 'x' + window.innerHeight; if (k !== last) { last = k; fn(); } }
+    function check() { var k = viewSize().join('x') + '/' + window.innerWidth + 'x' + window.innerHeight; if (k !== last) { last = k; fn(); } }
     function soon() { check(); setTimeout(check, 250); setTimeout(check, 1000); }
     window.addEventListener('resize', soon, false);
     window.addEventListener('orientationchange', soon, false);

@@ -96,5 +96,17 @@ var Keep = (function () {
   document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(checkUpdate, 1500); }, false);
   window.addEventListener('pageshow', function () { setTimeout(checkUpdate, 1500); }, false);
 
-  return { get: get, set: set, savePhotos: savePhotos, loadPhotos: loadPhotos, clearPhotos: clearPhotos };
+  // The panel's Reload button: fetch fresh copies of this page and its scripts first (a plain
+  // reload may reuse copies up to 10 minutes old), then reload. Settings and photos stay.
+  function freshReload() {
+    var urls = [location.href.split('#')[0]], s = document.getElementsByTagName('script'), n, i, done = false;
+    for (i = 0; i < s.length; i++) if (s[i].src && s[i].src.indexOf(location.protocol + '//' + location.host) === 0) urls.push(s[i].src);
+    function go() { if (!done) { done = true; location.reload(); } }
+    if (!window.fetch) return go();
+    n = urls.length;
+    for (i = 0; i < urls.length; i++) fetch(urls[i], { cache: 'reload' }).then(function () { if (--n === 0) go(); }, function () { if (--n === 0) go(); });
+    setTimeout(go, 4000);   // don't wait forever on a slow connection
+  }
+
+  return { get: get, set: set, savePhotos: savePhotos, loadPhotos: loadPhotos, clearPhotos: clearPhotos, freshReload: freshReload };
 })();
