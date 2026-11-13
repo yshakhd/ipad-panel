@@ -348,15 +348,16 @@
   $('day-range').oninput = function () { dayN = +this.value; Meadow.setDays(dayN); render(); };
   $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; dayN = 0; Meadow.setDays(0); Meadow.setTime(null); fetchWeather(); };
   $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; Keep.set('unit', unit); render(); };
-  Places.attach({ input: $('place'), button: $('find'), list: $('place-list'), status: $('place-status'), pick: function (r) {   // suggestions as you type
-    place = { name: r.name, lat: r.lat, lon: r.lon }; placeSet = true; Keep.set('place', place);
+  var shown = place.label || (saved && +saved.lat === +place.lat && +saved.lon === +place.lon && saved.label) || '';   // the full name of the place in use
+  Places.attach({ input: $('place'), button: $('find'), list: $('place-list'), status: $('place-status'), current: placeSet ? shown : '', pick: function (r) {   // suggestions as you type
+    place = { name: r.name, lat: r.lat, lon: r.lon, label: r.label }; placeSet = true; Keep.set('place', place);
     manual = { code: null, wind: null }; timeH = null; Meadow.setTime(null); fetchWeather();
   } });
   $('find-here').onclick = function () {
     if (!navigator.geolocation) { $('place-status').textContent = 'This browser cannot share its location.'; return; }
     $('place-status').textContent = 'Asking for your location';
     navigator.geolocation.getCurrentPosition(function (p) {
-      place = { name: 'your area', lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2) }; placeSet = true; Keep.set('place', place);
+      place = { name: 'your area', lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2) }; placeSet = true; Keep.set('place', place); $('place').value = '';
       manual = { code: null, wind: null }; timeH = null; Meadow.setTime(null); fetchWeather();
     }, function () { $('place-status').textContent = 'Location was not shared. Search for a town instead.'; });
   };

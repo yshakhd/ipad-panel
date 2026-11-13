@@ -63,5 +63,38 @@ var Keep = (function () {
   function clearPhotos() {
     db(function (d) { if (d) { try { d.transaction('photos', 'readwrite').objectStore('photos').delete('list'); } catch (e) {} } });
   }
+  /* Updates. A Home Screen app hardly ever reloads (and has no reload button), so a fix could take
+   * days to arrive. When the app comes back to the front, and every 15 minutes, ask the server
+   * whether this page or its scripts changed (their ETags); if so, reload. The reload waits 11
+   * minutes after a change is first seen, because the browser may keep its copies for 10. */
+  var stampAt = null, changedAt = 0, busy = false;
+  function stamp(done) {
+    var urls = [location.href.split('#')[0].split('?')[0]], s = document.getElementsByTagName('script'), got = [], n, i;
+    for (i = 0; i < s.length; i++) if (s[i].src && s[i].src.indexOf(location.protocol + '//' + location.host) === 0) urls.push(s[i].src);
+    n = urls.length;
+    for (i = 0; i < urls.length; i++) (function (k) {
+      var x = new XMLHttpRequest();
+      x.open('HEAD', urls[k] + (urls[k].indexOf('?') < 0 ? '?' : '&') + 'fresh=' + Date.now(), true);
+      x.onload = function () { got[k] = x.status === 200 ? (x.getResponseHeader('ETag') || x.getResponseHeader('Last-Modified') || '') : '?'; if (--n === 0) done(got.join('|')); };
+      x.onerror = function () { got[k] = '?'; if (--n === 0) done(null); };
+      x.send();
+    })(i);
+  }
+  function checkUpdate() {
+    if (busy || location.protocol.indexOf('http') !== 0 || document.hidden) return;
+    if (changedAt && Date.now() - changedAt > 11 * 60000) { if (!/\bpanel\b/.test(document.body.className)) location.reload(); return; }   // not while the settings are open
+    busy = true;
+    stamp(function (st) {
+      busy = false;
+      if (!st || st.indexOf('?') >= 0) return;   // offline, or a file missing: try later
+      if (stampAt === null) stampAt = st;
+      else if (st !== stampAt && !changedAt) changedAt = Date.now();
+    });
+  }
+  setTimeout(checkUpdate, 5000);
+  setInterval(checkUpdate, 15 * 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(checkUpdate, 1500); }, false);
+  window.addEventListener('pageshow', function () { setTimeout(checkUpdate, 1500); }, false);
+
   return { get: get, set: set, savePhotos: savePhotos, loadPhotos: loadPhotos, clearPhotos: clearPhotos };
 })();
