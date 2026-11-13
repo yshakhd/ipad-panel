@@ -488,6 +488,134 @@ def sounding(cfg):
     return out
 
 
+# ---------------- the big picture: satellite, the forecasters' discussion, the storm outlook ----------------
+SAT = "https://cdn.star.nesdis.noaa.gov/GOES19/ABI/SECTOR/%s/GEOCOLOR/"
+_sat = {}   # (sector, stamp) -> jpeg bytes
+
+
+def _text(url, ttl):
+    now = time.time()
+    with _lock:
+        hit = _cache.get(url)
+    if hit and now - hit[1] < ttl:
+        return hit[0]
+    try:
+        data = _fetch(url).decode("utf-8", "replace")
+        with _lock:
+            _cache[url] = (data, now)
+        return data
+    except Exception:
+        return hit[0] if hit else None
+
+
+def _sector(cfg):
+    return ((cfg.get("weather_console") or {}).get("satellite") or "ne").lower()
+
+
+def satellite(cfg):
+    """The last hour of GOES-19 GeoColor for the region (true colour by day, infrared and city
+    lights at night), every 10 minutes."""
+    import re
+    sec = _sector(cfg)
+    page = _text(SAT % sec, 240)
+    if not page:
+        return []
+    stamps = sorted(set(re.findall(r"(\d{11})_GOES19-ABI-%s-GEOCOLOR-600x600\.jpg" % re.escape(sec), page)))
+    out = []
+    for st in stamps[-13:][::-2][::-1]:   # every other 5-minute scan, ending on the newest
+        t = datetime(int(st[:4]), 1, 1, tzinfo=timezone.utc) + timedelta(days=int(st[4:7]) - 1, hours=int(st[7:9]), minutes=int(st[9:11]))
+        out.append({"t": t.strftime("%Y-%m-%dT%H:%MZ"), "url": "/api/wx/sat/%s/%s.jpg" % (sec, st)})
+    return out
+
+
+SECTORS = {"ne": "the Northeast", "se": "the Southeast", "umv": "the Upper Mississippi Valley", "smv": "the Southern Mississippi Valley",
+           "cgl": "the Great Lakes", "sp": "the Southern Plains", "np": "the Northern Plains", "nr": "the Northern Rockies",
+           "sr": "the Southern Rockies", "psw": "the Pacific Southwest", "pnw": "the Pacific Northwest", "cgp": "the Central Plains"}
+
+
+def sat_frame(cfg, sec, stamp):
+    if sec != _sector(cfg) or not stamp.isdigit() or len(stamp) != 11:
+        return None
+    key = (sec, stamp)
+    with _lock:
+        if key in _sat:
+            return _sat[key]
+    try:
+        data = _fetch(SAT % sec + "%s_GOES19-ABI-%s-GEOCOLOR-600x600.jpg" % (stamp, sec), timeout=15)
+        if Image is not None:   # about a third of the size, for the iPad's memory and Wi-Fi
+            buf = io.BytesIO()
+            Image.open(io.BytesIO(data)).convert("RGB").save(buf, "JPEG", quality=78, optimize=True)
+            data = buf.getvalue()
+    except Exception:
+        return None
+    with _lock:
+        _sat[key] = data
+        for old in sorted(_sat)[:-16]:
+            _sat.pop(old, None)
+    return data
+
+
+def discussion(cfg):
+    """The latest Area Forecast Discussion from the local NWS office, split into its sections."""
+    import re
+    office = (_points(cfg) or {}).get("gridId")
+    if not office:
+        return None
+    lst = _json("https://api.weather.gov/products/types/AFD/locations/" + office, 600, {"Accept": "application/ld+json"})
+    items = (lst or {}).get("@graph") or []
+    if not items:
+        return None
+    prod = _json("https://api.weather.gov/products/" + items[0]["id"], 86400, {"Accept": "application/ld+json"})
+    text = (prod or {}).get("productText") or ""
+    issued = re.search(r"^\d{3,4} [AP]M [A-Z]{3,4} \w{3} \w{3} \d+ \d{4}$", text, re.M)
+    office_name = re.search(r"^National Weather Service (.+)$", text, re.M)
+    sections = []
+    for m in re.finditer(r"^\.([A-Z][A-Z0-9 /,&-]+?)\.\.\.(.*?)(?=^\.[A-Z][A-Z0-9 /,&-]+?\.\.\.|^\$\$|\Z)", text, re.M | re.S):
+        title, body = m.group(1).strip(), m.group(2)
+        if "WATCHES/WARNINGS" in title:
+            continue
+        body = body.replace("&&", "").strip()
+        paras = [" ".join(l.strip() for l in p.splitlines()).strip() for p in re.split(r"\n\s*\n", body)]
+        paras = [p for p in paras if p]
+        if paras:
+            sections.append({"title": title.capitalize().split("/")[0].strip(), "paras": paras})
+    return {"office": office_name.group(1) if office_name else office, "issued": issued.group(0) if issued else "",
+            "time": items[0].get("issuanceTime"), "sections": sections}
+
+
+SPC_RANK = ["TSTM", "MRGL", "SLGT", "ENH", "MDT", "HIGH"]
+SPC_NAMES = {"TSTM": "Thunder", "MRGL": "Marginal", "SLGT": "Slight", "ENH": "Enhanced", "MDT": "Moderate", "HIGH": "High"}
+SPC_COLORS = {"TSTM": "#c1e9c1", "MRGL": "#7fc57f", "SLGT": "#f6f67b", "ENH": "#e6c27a", "MDT": "#e67f7f", "HIGH": "#ff7fff"}
+
+
+def _inside(lon, lat, ring):
+    hit = False
+    for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+        if (y1 > lat) != (y2 > lat) and lon < (x2 - x1) * (lat - y1) / (y2 - y1) + x1:
+            hit = not hit
+    return hit
+
+
+def spc(cfg):
+    """The Storm Prediction Center's severe-storm outlook for home, today and the next two days."""
+    out = []
+    for day in (1, 2, 3):
+        d = _json("https://www.spc.noaa.gov/products/outlook/day%dotlk_cat.nolyr.geojson" % day, 1800)
+        best = None
+        for f in (d or {}).get("features", []):
+            lab = (f.get("properties") or {}).get("LABEL")
+            if lab not in SPC_RANK:
+                continue
+            g = f.get("geometry") or {}
+            polys = g.get("coordinates", []) if g.get("type") == "MultiPolygon" else [g.get("coordinates", [])]
+            if any(p and _inside(cfg["longitude"], cfg["latitude"], [tuple(c[:2]) for c in p[0]]) for p in polys):
+                if best is None or SPC_RANK.index(lab) > SPC_RANK.index(best):
+                    best = lab
+        out.append({"day": day, "label": best, "name": SPC_NAMES.get(best, "None"), "color": SPC_COLORS.get(best),
+                    "ok": d is not None})
+    return out
+
+
 # ---------------- what /api/wx returns ----------------
 _ready = {"data": None, "at": 0, "busy": False}
 
@@ -537,6 +665,7 @@ def _build(cfg):
         "office": p.get("gridId"), "radar": radar,
         "forecast": forecast(cfg), "obs": observation(cfg), "warnings": warnings(cfg),
         "sounding": sounding(cfg),
+        "satellite": satellite(cfg), "sat_area": SECTORS.get(_sector(cfg), ""), "discussion": discussion(cfg), "spc": spc(cfg),
         "server_time": time.time(),
     }
 

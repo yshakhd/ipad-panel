@@ -93,6 +93,22 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
     3-hour trend, wind and gusts, visibility, cloud base (from the nearest
     airport's report), freezing level, the next hour's rain chance and storm
     energy (CAPE). Below them, that airport's raw METAR.
+  - Next 48 hours: a meteogram, the forecaster's chart. Temperature with dew
+    point, feels-like and the freezing line; rain and snow per hour with the
+    chance (and a bolt where storms are possible); low, mid and high cloud;
+    wind with gusts and barbs; pressure. Tap it for one hour's numbers.
+  - Sounding: a Skew-T diagram of the air above home for any hour of the next
+    day, from the GFS and HRRR models: temperature, dew point, the path rising
+    air would take, storm energy and the lid shaded, and wind barbs by height.
+    The server works out CAPE, CIN, lifted index, cloud base, freezing level,
+    precipitable water, the 700-500 mb lapse rate, 0-6 km shear and whether
+    anything falling would be rain, snow, a mix or ice, with a plain-language
+    summary.
+  - Big picture: a GOES-19 satellite loop of the region (true colour by day,
+    infrared with city lights at night), the Storm Prediction Center's severe
+    storm outlook for home today and the next two days, and the latest Area
+    Forecast Discussion from your National Weather Service office, the
+    forecasters' own reasoning, to scroll through.
   - The server builds each radar frame once (map, radar and place names in a
     single 640 px JPEG) and keeps the newest one ready, so the iPad only
     flips through pictures. The scene stops drawing while the console is up,
@@ -145,7 +161,7 @@ To start the server on boot with systemd:
 | `scene_events` | `doorbell` and `door` lists of Home Assistant entities (binary sensors or event entities) that the city's dog reacts to |
 | `charger` | A Home Assistant smart plug the iPad charges from: `entity`, `on_minutes`, `off_minutes` (default 120 and 120). See below |
 | `watchdog` | Notifies you when the iPad stops checking in for `minutes` (default 15), and again when it's back: through the Home Assistant service in `notify` (e.g. `notify.mobile_app_your_phone`; default: a notification in Home Assistant) and/or an [ntfy](https://ntfy.sh) topic URL in `ntfy` |
-| `weather_console` | Optional overrides for the weather console: `radar` (a NEXRAD site such as `"KDIX"`), `station` (an airport such as `"KSMQ"`) and `states` (where to look for warning outlines, e.g. `["NJ", "NY"]`). By default all three come from the National Weather Service for your location |
+| `weather_console` | Optional overrides for the weather console: `radar` (a NEXRAD site such as `"KDIX"`), `station` (an airport such as `"KSMQ"`) `states` (where to look for warning outlines, e.g. `["NJ", "NY"]`) and `satellite` (a GOES-19 sector: `"ne"` by default, or `"se"`, `"cgl"`, `"sp"`, `"psw"`, `"pnw"` and others). By default all three come from the National Weather Service for your location |
 | `air_quality`, `weather_alerts` | Set to `false` to hide the air quality or the weather warnings |
 
 Photos are resized to 1600px (with EXIF rotation) and cached in
@@ -233,7 +249,9 @@ Type) and Big Shoulders Display (Patric King / XXIX), both under the SIL Open
 Font License; the license texts are in `static/fonts/`. Weather data from
 [Open-Meteo](https://open-meteo.com/) (CC BY 4.0). Radar: NOAA NEXRAD through the
 [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/). Warnings and
-station reports: the US National Weather Service. Console map: Esri's dark gray
+station reports, forecast discussions: the US National Weather Service. Severe
+storm outlooks: the NOAA Storm Prediction Center. Satellite: NOAA GOES-19 GeoColor
+from NESDIS STAR. Upper-air forecasts: NOAA GFS and HRRR through Open-Meteo. Console map: Esri's dark gray
 canvas (Esri, HERE, Garmin, OpenStreetMap contributors). The meadow is inspired by
 the hand-painted fields of Studio Ghibli films; this project isn't affiliated
 with them.

@@ -32,6 +32,26 @@ var Wx = (function () {
     '#wxc-skbar span.wxd:after { background: rgba(233,238,246,0.5); }',
     '#wxc-skbar span.on:after { top: 13px; height: 14px; border-radius: 4px; background: #ff9a4a; }',
     '#wxc-skt { position: absolute; left: 636px; top: 662px; line-height: 1.05; } #wxc-skt .wxn { font-size: 24px; } #wxc-skt div { font-size: 14px; font-style: italic; }',
+    '#wxc-sat { position: absolute; left: 20px; top: 66px; width: 600px; height: 600px; overflow: hidden; border-radius: 6px; background: #05080f; }',
+    '#wxc-sat img { position: absolute; left: 0; top: 0; width: 600px; height: 600px; }',
+    '#wxc-satcap { position: absolute; left: 12px; top: 12px; padding: 5px 10px; border-radius: 8px; background: rgba(12,20,36,0.82); font-size: 15px; }',
+    '#wxc-satbar { position: absolute; left: 0; bottom: 0; width: 600px; height: 56px;',
+    '  background: -webkit-linear-gradient(top, rgba(12,20,36,0), rgba(12,20,36,0.88) 55%); background: linear-gradient(to bottom, rgba(12,20,36,0), rgba(12,20,36,0.88) 55%); }',
+    '#wxc-satticks { position: absolute; left: 14px; width: 440px; bottom: 12px; height: 24px; }',
+    '#wxc-satticks span { position: absolute; top: 0; height: 24px; }',
+    '#wxc-satticks span:after { content: ""; position: absolute; left: 3px; right: 3px; top: 9px; height: 6px; border-radius: 3px; background: rgba(233,238,246,0.45); }',
+    '#wxc-satticks span.on:after { top: 6px; height: 12px; border-radius: 4px; background: #ff9a4a; }',
+    '#wxc-sattime { position: absolute; right: 14px; bottom: 12px; font-size: 24px; }',
+    '#wxc-bigside { position: absolute; left: 642px; top: 62px; width: 362px; }',
+    '#wxc-spc { overflow: hidden; margin-bottom: 14px; }',
+    '#wxc-spc .wxm { font-size: 15px; font-style: italic; margin-bottom: 6px; }',
+    '#wxc-spc div.d { float: left; width: 33%; font-size: 15px; color: #b8c4d8; }',
+    '#wxc-spc div.d b { display: block; font-family: "Big Shoulders Display", sans-serif; font-weight: 600; font-size: 22px; color: #e9eef6; letter-spacing: 0.5px; }',
+    '#wxc-spc div.d i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; }',
+    '#wxc-afdh { font-size: 15px; font-style: italic; padding-top: 10px; border-top: 1px solid rgba(233,238,246,0.12); }',
+    '#wxc-afd { height: 520px; overflow-y: scroll; -webkit-overflow-scrolling: touch; margin-top: 6px; padding-right: 8px; }',
+    '#wxc-afd h4 { margin: 12px 0 4px; font-weight: 400; font-style: italic; font-size: 18px; color: #ffb27a; }',
+    '#wxc-afd p { margin: 0 0 9px; font-size: 16.5px; line-height: 1.42; color: #d5dceb; }',
     '#wxc-sknote { position: absolute; left: 22px; top: 714px; width: 980px; font-size: 13px; }',
     '#wxc-skside { position: absolute; left: 730px; top: 66px; width: 274px; }',
     '#wxc-sksum { font-size: 19px; line-height: 1.3; margin-bottom: 12px; min-height: 100px; }',
@@ -141,6 +161,10 @@ var Wx = (function () {
           '<div id="wxc-skt"><span class="wxn" id="wxc-skh"></span><div id="wxc-skd" class="wxm"></div></div>' +
           '<div id="wxc-skside"><div id="wxc-sksum"></div><div id="wxc-skrows"></div></div>' +
           '<div id="wxc-sknote" class="wxm">The air above home from the NOAA GFS and HRRR models (via Open-Meteo). Temperatures in °C, heights above the ground.</div></div>' +
+        '<div class="wxp" id="wxc-pg-big"><div id="wxc-sat"><img id="wxc-satimg" alt=""><div id="wxc-satcap">GOES-19 satellite, the Northeast</div>' +
+          '<div id="wxc-satbar"><div id="wxc-satticks"></div><div id="wxc-sattime" class="wxn"></div></div></div>' +
+          '<div id="wxc-bigside"><div id="wxc-spc"></div><div id="wxc-afdh" class="wxm"></div><div id="wxc-afd"></div></div>' +
+          '<div id="wxc-sknote" class="wxm">Satellite: NOAA GOES-19 GeoColor (NESDIS STAR). Severe storm outlook: NOAA Storm Prediction Center. Discussion: National Weather Service.</div></div>' +
       '</div>';
     document.body.appendChild(root);
     $('wxc-frame').style.visibility = 'hidden';
@@ -159,7 +183,7 @@ var Wx = (function () {
     for (i = 0; i < ts.length; i++) tap(ts[i], function (e) { showPage(e.target.getAttribute('data-p')); });
     tap($('wxc-mg'), function (e) { var r = $('wxc-mg').getBoundingClientRect(); mgPick = (e.clientX - r.left) * 984 / r.width; meteogram(); });
   }
-  var PAGES = [['now', 'Radar'], ['48', 'Next 48 hours'], ['sky', 'Sounding']], page = 'now', mgPick = null, skSel = 0;
+  var PAGES = [['now', 'Radar'], ['48', 'Next 48 hours'], ['sky', 'Sounding'], ['big', 'Big picture']], page = 'now', mgPick = null, skSel = 0;
   function showPage(p) {
     page = p;
     var ts = $('wxc-tabs').getElementsByTagName('span'), i;
@@ -168,6 +192,7 @@ var Wx = (function () {
     if (p === 'now') step(); else clearTimeout(playT);
     if (p === '48') { mgPick = null; meteogram(); }
     if (p === 'sky') { skSel = 0; skewT(); }
+    if (p === 'big') { bigPicture(); satLoop(); } else satStop();
   }
   function fit() {
     if (!root) return;
@@ -191,6 +216,7 @@ var Wx = (function () {
     if (!root) return;
     window.WX_OPEN = false;
     clearTimeout(playT); clearTimeout(idleT); clearInterval(refreshT);
+    satStop();
     root.className = 'on';
     setTimeout(function () { if (!window.WX_OPEN) root.className = ''; }, 260);
     for (var u in imgs) if (imgs.hasOwnProperty(u)) imgs[u].src = '';   // let the old iPad have its memory back
@@ -220,6 +246,7 @@ var Wx = (function () {
     frames();
     if (page === '48') meteogram();
     if (page === 'sky') skewT();
+    if (page === 'big') { bigPicture(); satLoop(); }
   }
 
   /* ---------------- the readings column ---------------- */
@@ -668,6 +695,63 @@ var Wx = (function () {
     var tm = snd[skSel].time, h = +tm.substr(11, 2), d = tm.split('T')[0].split('-');
     $('wxc-skh').textContent = h === 12 ? 'Noon' : h === 0 ? 'Midnight' : (h % 12) + (h < 12 ? ' am' : ' pm');
     $('wxc-skd').textContent = skSel === 0 ? 'now' : DAYN[new Date(+d[0], +d[1] - 1, +d[2]).getDay()] + ', in ' + skSel + ' h';
+  }
+
+  /* ---------------- the big picture: satellite loop, storm outlook, the forecasters' discussion ---------------- */
+  var sat = { list: [], imgs: {}, i: 0, t: null };
+  function satLoop() {
+    var L = (data && data.satellite) || [], i, keep = {};
+    sat.list = L;
+    for (i = 0; i < L.length; i++) {
+      keep[L[i].url] = sat.imgs[L[i].url] || new Image();
+      if (!sat.imgs[L[i].url]) keep[L[i].url].src = L[i].url;
+    }
+    for (var u in sat.imgs) if (sat.imgs.hasOwnProperty(u) && !keep[u]) sat.imgs[u].src = '';
+    sat.imgs = keep;
+    var w = 440 / Math.max(1, L.length), html = '';
+    for (i = 0; i < L.length; i++) html += '<span style="left:' + (i * w) + 'px;width:' + w + 'px"></span>';
+    $('wxc-satticks').innerHTML = html;
+    if (!sat.t) satStep();
+  }
+  function satStep() {
+    clearTimeout(sat.t); sat.t = null;
+    var L = sat.list, n = L.length;
+    if (!n || page !== 'big' || !window.WX_OPEN) return;
+    var next = (sat.i + 1) % n, k = 0;
+    while (k++ < n && !(sat.imgs[L[next].url] && sat.imgs[L[next].url].complete && sat.imgs[L[next].url].naturalWidth)) next = (next + 1) % n;
+    var im = sat.imgs[L[next].url];
+    if (im && im.complete && im.naturalWidth) {
+      sat.i = next; $('wxc-satimg').src = L[next].url;
+      $('wxc-sattime').textContent = clock(iso(L[next].t));
+      var sp = $('wxc-satticks').getElementsByTagName('span');
+      for (k = 0; k < sp.length; k++) cls(sp[k], 'on', k === next);
+    }
+    sat.t = setTimeout(satStep, sat.i === n - 1 ? 1600 : 500);
+  }
+  function satStop() {
+    clearTimeout(sat.t); sat.t = null;
+    for (var u in sat.imgs) if (sat.imgs.hasOwnProperty(u)) sat.imgs[u].src = '';   // the old iPad's memory
+    sat.imgs = {}; sat.list = [];
+    if ($('wxc-satimg')) $('wxc-satimg').removeAttribute('src');
+  }
+  function bigPicture() {
+    $('wxc-satcap').textContent = 'GOES-19 satellite' + (data.sat_area ? ', ' + data.sat_area : '');
+    var sp = data.spc || [], html = '<div class="wxm">Severe storm outlook</div>', names = ['Today', 'Tomorrow'], i;
+    for (i = 0; i < sp.length; i++) {
+      var dn = i < 2 ? names[i] : DAYN[(new Date().getDay() + i) % 7];
+      html += '<div class="d">' + dn + '<b>' + (sp[i].label ? '<i style="background:' + sp[i].color + '"></i>' + esc(sp[i].name) : sp[i].ok ? 'None' : '--') + '</b></div>';
+    }
+    $('wxc-spc').innerHTML = html;
+    var d = data.discussion;
+    if (!d) { $('wxc-afdh').textContent = 'The forecast discussion is unavailable right now.'; $('wxc-afd').innerHTML = ''; return; }
+    $('wxc-afdh').textContent = 'Forecast discussion from the National Weather Service in ' + d.office + (d.time ? ', ' + clock(iso(d.time)) : '');
+    var out = '';
+    for (i = 0; i < d.sections.length; i++) {
+      out += '<h4>' + esc(d.sections[i].title) + '</h4>';
+      for (var j = 0; j < d.sections[i].paras.length; j++) out += '<p>' + esc(d.sections[i].paras[j]) + '</p>';
+    }
+    var box = $('wxc-afd');
+    if (box.getAttribute('data-t') !== d.time) { box.innerHTML = out; box.scrollTop = 0; box.setAttribute('data-t', d.time); }
   }
 
   return {

@@ -249,9 +249,10 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if self.path.startswith("/api/wx/radar/"):
-            parts = self.path.split("?")[0].split("/")   # /api/wx/radar/<kind>/<ts>.jpg
-            data = wx.frame(load_config(), parts[4], parts[5].split(".")[0]) if len(parts) == 6 else None
+        if self.path.startswith(("/api/wx/radar/", "/api/wx/sat/")):
+            parts = self.path.split("?")[0].split("/")   # /api/wx/radar/<kind>/<ts>.jpg, /api/wx/sat/<sector>/<stamp>.jpg
+            fn = wx.frame if parts[3] == "radar" else wx.sat_frame
+            data = fn(load_config(), parts[4], parts[5].split(".")[0]) if len(parts) == 6 else None
             if not data:
                 return self._json({"error": "not found"}, 404)
             self.send_response(200)
