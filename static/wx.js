@@ -174,7 +174,7 @@ var Wx = (function () {
     for (var i = 0; i < ms.length; i++) tap(ms[i], function (e) { setMode(e.target.getAttribute('data-k')); });
     root.addEventListener('click', poke, false);
     root.addEventListener('touchstart', poke, false);
-    window.addEventListener('resize', fit, false);
+    watchSize(fit);
     over = $('wxc-over').getContext('2d');
     var tabs = '';
     for (i = 0; i < PAGES.length; i++) tabs += '<span data-p="' + PAGES[i][0] + '"' + (i ? '' : ' class="on"') + '>' + PAGES[i][1] + '</span>';
@@ -193,6 +193,21 @@ var Wx = (function () {
     if (p === '48') { mgPick = null; meteogram(); }
     if (p === 'sky') { skSel = 0; skewT(); }
     if (p === 'big') { bigPicture(); satLoop(); } else satStop();
+  }
+  // iPadOS sometimes reports the window's size before it has settled (opening from the Home Screen,
+  // coming back from the background, a rotation while away) and then sends no resize event, which
+  // left the picture drawn small until the next visit. So re-measure on every hint, and once a second.
+  function watchSize(fn) {
+    var last = '';
+    function check() { var k = window.innerWidth + 'x' + window.innerHeight; if (k !== last) { last = k; fn(); } }
+    function soon() { check(); setTimeout(check, 250); setTimeout(check, 1000); }
+    window.addEventListener('resize', soon, false);
+    window.addEventListener('orientationchange', soon, false);
+    window.addEventListener('pageshow', soon, false);
+    window.addEventListener('focus', soon, false);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) soon(); }, false);
+    setInterval(check, 1000);
+    check();
   }
   function fit() {
     if (!root) return;

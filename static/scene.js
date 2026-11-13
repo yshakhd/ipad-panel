@@ -272,8 +272,22 @@
   }
 
   initSprites();
-  resize();
-  window.addEventListener('resize', resize, false);
+  // iPadOS sometimes reports the window's size before it has settled (opening from the Home Screen,
+  // coming back from the background, a rotation while away) and then sends no resize event, which
+  // left the picture drawn at the wrong size until the next visit. So re-measure on every hint, and once a second.
+  function watchSize(fn) {
+    var last = '';
+    function check() { var k = window.innerWidth + 'x' + window.innerHeight; if (k !== last) { last = k; fn(); } }
+    function soon() { check(); setTimeout(check, 250); setTimeout(check, 1000); }
+    window.addEventListener('resize', soon, false);
+    window.addEventListener('orientationchange', soon, false);
+    window.addEventListener('pageshow', soon, false);
+    window.addEventListener('focus', soon, false);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) soon(); }, false);
+    setInterval(check, 1000);
+    check();
+  }
+  watchSize(resize);
   window.requestAnimationFrame(frame);
   loadList();
   setInterval(loadList, 30 * 60 * 1000);
