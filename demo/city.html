@@ -102,6 +102,11 @@
   .row input[type=text] { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 5px 10px; border: 1px solid rgba(233,238,245,0.25); border-radius: 16px; background: #1a1f2b; color: #e9eef5; }
   #panel .file { display: inline-block; }
   #panel .file input { display: none; }
+  #place-list { display: none; list-style: none; margin: 6px 0 0; padding: 4px; border-radius: 12px; border: 1px solid rgba(233,238,245,0.18); background: #1a1f2b; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+  #place-list.open { display: block; }
+  #place-list li { padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 15px; color: #e9eef5; line-height: 1.25; }
+  #place-list li small { display: block; font-size: 13px; color: #a6afbf; }
+  #place-list li.on, #place-list li:hover { background: rgba(255,154,74,0.18); }
   #place-status { font-size: 14px; color: #a6afbf; margin-top: 6px; min-height: 18px; }
   #close { position: absolute; right: 12px; top: 10px; font: inherit; font-size: 15px; background: none; border: 0; color: #a6afbf; cursor: pointer; padding: 6px; }
   #panel .foot { margin-top: 16px; font-size: 14px; color: #a6afbf; }
@@ -178,7 +183,8 @@
   <input id="day-range" type="range" min="0" max="364" step="1" value="0">
 
   <label for="place">Place</label>
-  <div class="row"><input id="place" type="text" placeholder="Search a town" autocomplete="off"><button id="find" type="button">Go</button></div>
+  <div class="row"><input id="place" type="text" placeholder="Search a town" autocomplete="off" spellcheck="false"><button id="find" type="button">Go</button></div>
+  <ul id="place-list"></ul>
   <div class="row" style="margin-top:6px"><button id="find-here" type="button">Near me</button><button id="live" type="button">Live weather</button><button id="units" type="button">°F</button></div>
   <div id="place-status"></div>
 
@@ -201,6 +207,7 @@
   })();
 </script>
 <script src="../static/sky.js"></script>
+<script src="places.js"></script>
 <script src="../static/city.js"></script>
 <script>
 (function () {
@@ -417,23 +424,10 @@
   $('day-range').oninput = function () { dayN = +this.value; City.setDays(dayN); render(); };
   $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; dayN = 0; City.setDays(0); City.setTime(null); fetchWeather(); };
   $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; render(); };
-  function search() {
-    var name = $('place').value.replace(/^\s+|\s+$/g, ''); if (!name) return;
-    $('place-status').textContent = 'Looking for ' + name;
-    var x = new XMLHttpRequest();
-    x.open('GET', 'https://geocoding-api.open-meteo.com/v1/search?count=1&name=' + encodeURIComponent(name), true);
-    x.onload = function () {
-      try {
-        var r = JSON.parse(x.responseText).results[0];
-        place = { name: r.name, lat: r.latitude, lon: r.longitude }; placeSet = true;
-        manual = { code: null, wind: null }; timeH = null; City.setTime(null); fetchWeather();
-      } catch (e) { $('place-status').textContent = 'No town called ' + name + ' found. Try another spelling.'; }
-    };
-    x.onerror = function () { $('place-status').textContent = 'The town search is unavailable right now.'; };
-    x.send();
-  }
-  $('find').onclick = search;
-  $('place').onkeydown = function (e) { if (e.keyCode === 13) search(); };
+  Places.attach({ input: $('place'), button: $('find'), list: $('place-list'), status: $('place-status'), pick: function (r) {   // suggestions as you type
+    place = { name: r.name, lat: r.lat, lon: r.lon }; placeSet = true;
+    manual = { code: null, wind: null }; timeH = null; City.setTime(null); fetchWeather();
+  } });
   $('find-here').onclick = function () {
     if (!navigator.geolocation) { $('place-status').textContent = 'This browser cannot share its location.'; return; }
     $('place-status').textContent = 'Asking for your location';
