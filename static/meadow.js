@@ -1144,6 +1144,7 @@
   var last = 0, acc = 0, dimmed = false, figSkip = 0, drawn = 0, fpsAt = 0;
   function frame(now) {
     nextFrame(frame);
+    if (window.WX_OPEN) { last = 0; return; }   // the weather console is up: draw nothing
     if (!last) { last = now; return; }
     var dt = (now - last) / 1000; last = now;
     if (dt > 0.25) dt = 0.25;

@@ -21,7 +21,7 @@ How it came together, and how it runs on a 2012 iPad, is in
 | ![Golden hour](docs/images/meadow-golden.jpg) | ![Night, by lantern light](docs/images/meadow-night.jpg) | ![Rain and strong wind](docs/images/meadow-rain.jpg) |
 
 ## How it works
-A small Python server (standard library only, plus Pillow for photos) runs on
+A small Python server (standard library only, plus Pillow for photos and radar) runs on
 any computer on your network, later a Raspberry Pi. The iPad just opens a web
 page, so no jailbreak or app is needed. Everything the iPad runs is plain ES5
 JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
@@ -80,6 +80,23 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
     A new message is stuck to his monitor as a note, and he glances at it.
   - On the iPad, tap the sleeping cat to wake it, or tap the floor to call the
     dog (fetch and a visit, in turn).
+- **Weather console.** Tap the temperature on any scene for a dark,
+  full-screen weather page (US only for now: it leans on the National Weather
+  Service):
+  - The last hour of radar from the national NEXRAD mosaic, looping on a dark
+    map with range rings around home, and the outlines of active warnings
+    (flash flood, severe thunderstorm, tornado) in the NWS's own colours. Pause
+    it or tap a frame to step through.
+  - A velocity view from your nearest radar (storm-relative velocity: green
+    toward the radar, red away), the view forecasters use to spot rotation.
+  - The readings a forecaster checks first: dew point, pressure with its
+    3-hour trend, wind and gusts, visibility, cloud base (from the nearest
+    airport's report), freezing level, the next hour's rain chance and storm
+    energy (CAPE). Below them, that airport's raw METAR.
+  - The server builds each radar frame once (map, radar and place names in a
+    single 640 px JPEG) and keeps the newest one ready, so the iPad only
+    flips through pictures. The scene stops drawing while the console is up,
+    and it closes itself after 3 minutes.
 - **Home controls.** Tiles for lights, switches, fans, covers, locks, climate,
   media players and sensors from Home Assistant.
 - **Computer breakdown.** Tap the computer stats for per-core load and clock
@@ -128,6 +145,7 @@ To start the server on boot with systemd:
 | `scene_events` | `doorbell` and `door` lists of Home Assistant entities (binary sensors or event entities) that the city's dog reacts to |
 | `charger` | A Home Assistant smart plug the iPad charges from: `entity`, `on_minutes`, `off_minutes` (default 120 and 120). See below |
 | `watchdog` | Notifies you when the iPad stops checking in for `minutes` (default 15), and again when it's back: through the Home Assistant service in `notify` (e.g. `notify.mobile_app_your_phone`; default: a notification in Home Assistant) and/or an [ntfy](https://ntfy.sh) topic URL in `ntfy` |
+| `weather_console` | Optional overrides for the weather console: `radar` (a NEXRAD site such as `"KDIX"`), `station` (an airport such as `"KSMQ"`) and `states` (where to look for warning outlines, e.g. `["NJ", "NY"]`). By default all three come from the National Weather Service for your location |
 | `air_quality`, `weather_alerts` | Set to `false` to hide the air quality or the weather warnings |
 
 Photos are resized to 1600px (with EXIF rotation) and cached in
@@ -213,6 +231,9 @@ moves pre-drawn layers. [docs/STORY.md](docs/STORY.md) tells that story.
 Code: MIT, see [LICENSE](LICENSE). Bundled typefaces: Newsreader (Production
 Type) and Big Shoulders Display (Patric King / XXIX), both under the SIL Open
 Font License; the license texts are in `static/fonts/`. Weather data from
-[Open-Meteo](https://open-meteo.com/) (CC BY 4.0). The meadow is inspired by
+[Open-Meteo](https://open-meteo.com/) (CC BY 4.0). Radar: NOAA NEXRAD through the
+[Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/). Warnings and
+station reports: the US National Weather Service. Console map: Esri's dark gray
+canvas (Esri, HERE, Garmin, OpenStreetMap contributors). The meadow is inspired by
 the hand-painted fields of Studio Ghibli films; this project isn't affiliated
 with them.

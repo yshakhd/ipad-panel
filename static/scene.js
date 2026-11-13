@@ -164,6 +164,7 @@
   var last = 0, t0 = Date.now();
   function frame() {
     window.requestAnimationFrame(frame);
+    if (window.WX_OPEN) return;   // the weather console is up: draw nothing
     var now = Date.now();
     if (now - last < 33 || document.hidden) return;   // ~30fps cap
     last = now;

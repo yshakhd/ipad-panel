@@ -23,6 +23,7 @@ import extras
 import ha
 import photos
 import sysinfo
+import wx
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(ROOT, "static")
@@ -222,6 +223,20 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if self.path.startswith("/api/wx/radar/"):
+            parts = self.path.split("?")[0].split("/")   # /api/wx/radar/<kind>/<ts>.jpg
+            data = wx.frame(load_config(), parts[4], parts[5].split(".")[0]) if len(parts) == 6 else None
+            if not data:
+                return self._json({"error": "not found"}, 404)
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Cache-Control", "max-age=86400")   # a scan never changes
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if self.path.startswith("/api/wx"):
+            return self._json(wx.summary(load_config()))
         if self.path.startswith("/api/state"):
             cfg = load_config()
             with state_lock:
@@ -288,6 +303,7 @@ def main():
     cpu_percent()  # prime the CPU delta
     sysinfo.start()
     extras.start(load_config)
+    wx.start(load_config)
     srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     print("iPad panel on http://0.0.0.0:%d" % port, flush=True)
     srv.serve_forever()

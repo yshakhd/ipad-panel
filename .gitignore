@@ -5,3 +5,4 @@ ha-dev/dev-login.txt
 __pycache__/
 config.json
 static/private/
+cache/

@@ -161,6 +161,7 @@
 </div>
 <script src="sky.js"></script>
 <script src="extras.js"></script>
+<script src="wx.js"></script>
 <script src="city.js"></script>
 <script>
 (function () {
@@ -293,6 +294,7 @@
     var t = 'translate(' + [0, 4, 4, 0][shift] + 'px,' + [0, 0, -4, -4][shift] + 'px)';
     $('info').style.webkitTransform = t; $('info').style.transform = t;
   }, 300000);
+  Wx.attach($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
   if (unit) paintUnits();
   poll();
   setInterval(tick, 1000);

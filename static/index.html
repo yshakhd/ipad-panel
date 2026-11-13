@@ -270,6 +270,7 @@
 </div>
 <div id="toast"></div>
 <script src="extras.js"></script>
+<script src="wx.js"></script>
 <script src="scene.js"></script>
 
 <script>
@@ -650,6 +651,7 @@
     $('wrap').style.webkitTransform = t; $('wrap').style.transform = t;
   }
 
+  Wx.attach($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
   if (unit) paintUnits();
   tick(); poll();
   if (location.hash === '#home') showView('home');
