@@ -233,6 +233,15 @@ share `?wx=`, `?wind=`, `?time=`, `?days=`, `?place=&lat=&lon=` and `?unit=`.
 They show the place's live air quality too (or `?aqi=180`), and the date
 slider reaches the holidays. In the city you can also ring the doorbell and
 leave him a note.
+
+The demo remembers each visitor's choices in their own browser (`demo/keep.js`):
+the place, °F or °C, the scene that was open last, the city's room, who lives
+there, the bedroom picture, and their photos (shrunk to 1600 px and kept in
+IndexedDB). Nothing is uploaded. Links with their own settings still win. The
+weather, wind, time and date controls stay temporary, so the picture goes back
+to the live weather. It can also be added to a phone or iPad Home Screen
+(`demo/manifest.webmanifest`), where it opens full screen and its storage isn't
+cleared after a week away, as Safari otherwise does.
 `static/meadow.js` explains how to embed the scene elsewhere.
 
 ## Writing for old Safari

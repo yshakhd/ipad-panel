@@ -1245,7 +1245,7 @@
     // start painting an <img> (already loaded) right away; src is what a tap on the painting shows
     paint: function (img, src) { clearTimeout(cycle); current = src || null; paintFrom(img); cycle = setTimeout(nextPainting, paintSecs * 1000); },
     // photo URLs to cycle through, and seconds per painting
-    setPhotos: function (urls, secs) { list = urls.slice(); li = 0; if (secs) paintSecs = secs; },
+    setPhotos: function (urls, secs) { list = urls.slice(); li = 0; if (secs) paintSecs = secs; if (builtKey) nextPainting(); },   // starts on the new list now
     // the US air quality index: above 50 a haze, above 150 the orange of wildfire smoke
     setAir: function (n) { if (param('aqi')) return; n = +n || 0; if (n !== aqi) { aqi = n; if (builtKey) paintHaze(); } }
   };

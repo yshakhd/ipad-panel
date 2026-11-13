@@ -4,6 +4,17 @@
 <meta charset="utf-8">
 <title>The Painter's Meadow</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Panel">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>   // the start page (and the Home Screen icon): open the city if that was open last; links with settings open where they point
+  try { if (!location.search && localStorage.getItem('panel.scene') === '"city"') location.replace('city.html'); } catch (e) {}
+</script>
+
 <meta name="description" content="An old painter in a windy meadow paints your photos, stroke by stroke. Live weather, a real sun, grass that sways with the wind. Drawn entirely in code.">
 <link rel="stylesheet" href="../static/fonts/fonts.css">
 <style>
@@ -129,7 +140,7 @@
   <p>He paints whatever is in front of him. Give him your photos, change the sky, or move through the year.</p>
 
   <label>Your photos <span>stay on this device</span></label>
-  <label class="file" style="margin:0">Choose photos<input id="files" type="file" accept="image/*" multiple></label>
+  <div class="row"><label class="file" style="margin:0">Choose photos<input id="files" type="file" accept="image/*" multiple></label><button id="files-clear" type="button" hidden>Remove</button></div>
 
   <label for="wind-range">Wind <span id="wind-val"></span></label>
   <input id="wind-range" type="range" min="0" max="80" step="1" value="10">
@@ -160,6 +171,7 @@
 <script>window.MEADOW_STANDALONE = true;</script>
 <script src="../static/sky.js"></script>
 <script src="places.js"></script>
+<script src="keep.js"></script>
 <script src="../static/meadow.js"></script>
 <script>
 (function () {
@@ -176,8 +188,11 @@
   function q(n) { var m = new RegExp('[?&]' + n + '=([^&#]*)').exec(location.search); return m ? decodeURIComponent(m[1]) : null; }
 
   var WX = { clear: 0, partly: 2, cloudy: 3, fog: 45, drizzle: 53, rain: 63, heavy: 65, snow: 73, blizzard: 75, storm: 95 };
-  var unit = q('unit') || (/^en-US/.test(navigator.language || '') ? 'F' : 'C');
-  var placeSet = !!q('place'), place = { name: q('place') || 'Kyoto', lat: +(q('lat') || 35.0116), lon: +(q('lon') || 135.7681) };
+  // a link's own settings win; then what this browser remembers (keep.js); then the defaults
+  var saved = Keep.get('place');
+  var unit = q('unit') || Keep.get('unit') || (/^en-US/.test(navigator.language || '') ? 'F' : 'C');
+  var placeSet = !!(q('place') || saved), place = q('place') ? { name: q('place'), lat: +q('lat'), lon: +q('lon') } : saved || { name: 'Kyoto', lat: 35.0116, lon: 135.7681 };
+  Keep.set('scene', 'meadow');
   var live = null, manual = { code: null, wind: null }, dayN = +(q('days') || 0), timeH = q('time') ? (function (t) { var p = t.split(':'); return +p[0] + p[1] / 60; })(q('time')) : null;
 
   function T(c) { return Math.round(unit === 'F' ? c * 9 / 5 + 32 : c); }
@@ -332,29 +347,35 @@
   $('time-range').oninput = function () { timeH = +this.value; Meadow.setTime(timeH); render(); };
   $('day-range').oninput = function () { dayN = +this.value; Meadow.setDays(dayN); render(); };
   $('live').onclick = function () { manual = { code: null, wind: null }; timeH = null; dayN = 0; Meadow.setDays(0); Meadow.setTime(null); fetchWeather(); };
-  $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; render(); };
+  $('units').onclick = function () { unit = unit === 'F' ? 'C' : 'F'; Keep.set('unit', unit); render(); };
   Places.attach({ input: $('place'), button: $('find'), list: $('place-list'), status: $('place-status'), pick: function (r) {   // suggestions as you type
-    place = { name: r.name, lat: r.lat, lon: r.lon }; placeSet = true;
+    place = { name: r.name, lat: r.lat, lon: r.lon }; placeSet = true; Keep.set('place', place);
     manual = { code: null, wind: null }; timeH = null; Meadow.setTime(null); fetchWeather();
   } });
   $('find-here').onclick = function () {
     if (!navigator.geolocation) { $('place-status').textContent = 'This browser cannot share its location.'; return; }
     $('place-status').textContent = 'Asking for your location';
     navigator.geolocation.getCurrentPosition(function (p) {
-      place = { name: 'your area', lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2) }; placeSet = true;
+      place = { name: 'your area', lat: +p.coords.latitude.toFixed(2), lon: +p.coords.longitude.toFixed(2) }; placeSet = true; Keep.set('place', place);
       manual = { code: null, wind: null }; timeH = null; Meadow.setTime(null); fetchWeather();
     }, function () { $('place-status').textContent = 'Location was not shared. Search for a town instead.'; });
   };
-  $('files').onchange = function () {
-    var urls = [], i;
-    for (i = 0; i < this.files.length; i++) urls.push(URL.createObjectURL(this.files[i]));
-    if (!urls.length) return;
-    Meadow.setPhotos(urls, 60);
-    var img = new Image();
-    img.onload = function () { Meadow.paint(img, urls[0]); };
-    img.src = urls[0];
-    $('place-status').textContent = urls.length === 1 ? 'He is painting your photo.' : 'He is painting your photos, a new one every minute.';
+  function usePhotos(urls) { if (urls.length) { Meadow.setPhotos(urls, 60); $('files-clear').hidden = false; } }
+  $('files').onchange = function () {   // kept in this browser (keep.js), so they're here next time
+    if (!this.files.length) return;
+    $('place-status').textContent = 'Getting your photos ready';
+    var n = this.files.length;
+    Keep.savePhotos(this.files, function (urls) {
+      usePhotos(urls);
+      $('place-status').textContent = n === 1 ? 'He is painting your photo.' : 'He is painting your photos, a new one every minute.';
+    });
+    this.value = '';
   };
+  $('files-clear').onclick = function () {
+    Keep.clearPhotos(); Meadow.setPhotos([], 60); this.hidden = true;
+    $('place-status').textContent = 'Your photos are gone from this device. He paints the meadow again.';
+  };
+  Keep.loadPhotos(usePhotos);
   $('painting-hit').onclick = function () {
     $('viewer-img').style.backgroundImage = 'url(' + (Meadow.photo() || Meadow.snapshot()) + ')';
     $('viewer').className = 'on';
