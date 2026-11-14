@@ -160,7 +160,7 @@ To start the server on boot with systemd:
 | `presence` | Home Assistant `person` or `device_tracker` entities. When all of them are away, the panel dims as it does overnight |
 | `scene_events` | `doorbell` and `door` lists of Home Assistant entities (binary sensors or event entities) that the city's dog reacts to |
 | `charger` | A Home Assistant smart plug the iPad charges from: `entity`, `on_minutes`, `off_minutes` (default 120 and 120). See below |
-| `spotify` | Music: `client_id`, `client_secret` of your Spotify app, and `device`, the speaker to wake when nothing is playing (default `Spotifyd`). See below |
+| `spotify` | Music: `client_id`, `client_secret` of your Spotify app, and optionally `device`, the speaker to wake when nothing is playing (default: this computer's name, which is what the Spotify desktop app is listed as). See below |
 | `watchdog` | Notifies you when the iPad stops checking in for `minutes` (default 15), and again when it's back: through the Home Assistant service in `notify` (e.g. `notify.mobile_app_your_phone`; default: a notification in Home Assistant) and/or an [ntfy](https://ntfy.sh) topic URL in `ntfy` |
 | `weather_console` | Optional overrides for the weather console: `radar` (a NEXRAD site such as `"KDIX"`), `station` (an airport such as `"KSMQ"`) `states` (where to look for warning outlines, e.g. `["NJ", "NY"]`) and `satellite` (a GOES-19 sector: `"ne"` by default, or `"se"`, `"cgl"`, `"sp"`, `"psw"`, `"pnw"` and others). By default all three come from the National Weather Service for your location |
 | `air_quality`, `weather_alerts` | Set to `false` to hide the air quality or the weather warnings |
@@ -198,20 +198,35 @@ meadow's wireless gives off notes while music plays.
 
 The iPad can't play Spotify itself (iOS 9 Safari can't, and the Spotify app left iOS 9
 long ago), so the panel is a remote: the music plays on a Spotify Connect speaker,
-by default the Spotify desktop app on this computer (`device` is its name in Spotify's
-speaker list, normally the computer's hostname), or any phone or speaker on your account.
-Spotify requires Premium for this.
+by default the Spotify desktop app on this computer, or any phone or speaker on your
+account. Spotify requires Premium for this.
 
 Setup, once:
 1. At https://developer.spotify.com/dashboard, create an app. Pick **Web API**, and add
    the redirect URI `http://127.0.0.1:8765/api/spotify/callback`.
 2. Copy its Client ID and Client secret into `config.json`:
-   `"spotify": { "client_id": "...", "client_secret": "...", "device": "Spotifyd" }`
+   `"spotify": { "client_id": "...", "client_secret": "..." }`. Add `"device": "<name>"`
+   only if the speaker to wake isn't the desktop app on this computer (the name as it
+   appears in Spotify's speaker list).
 3. Restart the server, then open `http://127.0.0.1:8765/api/spotify/login` in a browser
    **on this computer** and press Agree. The login is kept in `spotify-token.json`
    (git-ignored).
 
 4. Keep the Spotify desktop app open on this computer (it can sit minimised).
+
+If the redirect URI's port doesn't match `port` in `config.json`, the login fails;
+change one to match the other.
+
+### Using it with someone else's Spotify
+Each copy of the panel signs in to one Spotify account. To set it up for another
+person, they need Premium, and one of:
+- **Their own app** (simplest): they follow the steps above with their own developer
+  account. Spotify only lets an app's owner use it in Development Mode if the owner
+  has Premium.
+- **Your app**: in your app's dashboard, open **User Management** and add their name and
+  the email of their Spotify account (Development Mode allows 5 people). Give them your
+  Client ID and secret privately, never in git, and they sign in with their own account
+  at step 3.
 
 Why not spotifyd: it's built on librespot, and Spotify refuses librespot the audio keys
 for some accounts (librespot issue #1649). On those, every song fails after a second and

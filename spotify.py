@@ -7,7 +7,7 @@ and the iPad shows and drives it through the Spotify Web API, by way of this ser
 Setup (once): make an app at https://developer.spotify.com/dashboard with the redirect URI
     http://127.0.0.1:8765/api/spotify/callback
 put its Client ID and Secret in config.json:
-    "spotify": { "client_id": "...", "client_secret": "...", "device": "Spotifyd" }
+    "spotify": { "client_id": "...", "client_secret": "..." }
 then open http://127.0.0.1:8765/api/spotify/login in a browser on this computer and allow it.
 The refresh token is kept in spotify-token.json (git-ignored).
 
@@ -17,6 +17,7 @@ returns at most 10 per type; track lists only for playlists you own or collabora
 """
 import base64
 import json
+import socket
 import os
 import threading
 import time
@@ -284,9 +285,14 @@ def _me(cfg):
     return _cached("me", 86400, lambda: (call(cfg, "GET", "/me") or {}).get("id"))
 
 
+def _home_name(cfg):
+    return (cfg.get("spotify") or {}).get("device") or socket.gethostname()
+
+
 def _home_device(cfg):
-    """The device to wake when nothing is playing anywhere: config spotify.device (default Spotifyd)."""
-    want = ((cfg.get("spotify") or {}).get("device") or "Spotifyd").lower()
+    """The device to wake when nothing is playing anywhere: config spotify.device, or by default
+    this computer's hostname, which is the name the Spotify desktop app shows up under."""
+    want = (_home_name(cfg)).lower()
     ds = devices(cfg)
     for d in ds:
         if (d["name"] or "").lower() == want:
@@ -307,7 +313,7 @@ def command(cfg, req):
             dev = _home_device(cfg)
             if not dev:
                 raise SpotifyError(404, "NO_DEVICE", "%s isn't on. Open Spotify on the panel's computer, or pick another speaker."
-                                   % ((cfg.get("spotify") or {}).get("device") or "The speaker"))
+                                   % _home_name(cfg))
             return fn(dev)
     def q(dev, extra=None):
         p = dict(extra or {})
