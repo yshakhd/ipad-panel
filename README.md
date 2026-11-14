@@ -198,7 +198,8 @@ meadow's wireless gives off notes while music plays.
 
 The iPad can't play Spotify itself (iOS 9 Safari can't, and the Spotify app left iOS 9
 long ago), so the panel is a remote: the music plays on a Spotify Connect speaker,
-spotifyd on this computer by default, or any phone, computer or speaker on your account.
+by default the Spotify desktop app on this computer (`device` is its name in Spotify's
+speaker list, normally the computer's hostname), or any phone or speaker on your account.
 Spotify requires Premium for this.
 
 Setup, once:
@@ -210,12 +211,11 @@ Setup, once:
    **on this computer** and press Agree. The login is kept in `spotify-token.json`
    (git-ignored).
 
-4. spotifyd has to be signed in to your account, or Spotify won't list it as a speaker:
-   run `spotifyd auth` once and sign in in the browser, then `systemctl --user restart spotifyd`.
+4. Keep the Spotify desktop app open on this computer (it can sit minimised).
 
-spotifyd 0.4 can't play a bare list of songs, so a song always starts inside something:
-its playlist, your Liked Songs, or its album, and plays on from there. It also can't jump
-within some songs; the player says so when a seek doesn't take.
+Why not spotifyd: it's built on librespot, and Spotify refuses librespot the audio keys
+for some accounts (librespot issue #1649). On those, every song fails after a second and
+it skips through the whole list. The official app doesn't have that problem.
 
 Spotify limits apps like this one (Development Mode, 2026): track lists only for
 playlists you made or collaborate on (others still play), and 10 search results per kind.

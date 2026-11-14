@@ -1,7 +1,7 @@
 """Spotify for the panel: a remote control, not a player.
 
 iOS 9 Safari can't play Spotify (and the Spotify app left iOS 9 long ago), so the music plays
-on a Spotify Connect device (spotifyd on this computer by default, or your phone, a speaker...)
+on a Spotify Connect device (the Spotify desktop app on this computer by default, or your phone...)
 and the iPad shows and drives it through the Spotify Web API, by way of this server.
 
 Setup (once): make an app at https://developer.spotify.com/dashboard with the redirect URI
@@ -291,7 +291,7 @@ def _home_device(cfg):
     for d in ds:
         if (d["name"] or "").lower() == want:
             return d["id"]
-    return ds[0]["id"] if ds else None
+    return None   # don't guess: another speaker may not be able to play (spotifyd can't, on some accounts)
 
 
 def command(cfg, req):
@@ -306,7 +306,8 @@ def command(cfg, req):
                 raise
             dev = _home_device(cfg)
             if not dev:
-                raise SpotifyError(404, "NO_DEVICE", "No Spotify speaker is on. Open Spotify on a phone or computer, or start spotifyd.")
+                raise SpotifyError(404, "NO_DEVICE", "%s isn't on. Open Spotify on the panel's computer, or pick another speaker."
+                                   % ((cfg.get("spotify") or {}).get("device") or "The speaker"))
             return fn(dev)
     def q(dev, extra=None):
         p = dict(extra or {})
