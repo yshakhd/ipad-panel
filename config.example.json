@@ -73,8 +73,8 @@
   },
   "charger": {
     "entity": "switch.ipad_charger",
-    "on_minutes": 120,
-    "off_minutes": 120
+    "on_minutes": 60,
+    "off_minutes": 300
   },
   "watchdog": {
     "minutes": 15,
