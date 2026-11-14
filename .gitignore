@@ -6,3 +6,4 @@ __pycache__/
 config.json
 static/private/
 cache/
+ha-dev/matter/

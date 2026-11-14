@@ -9,3 +9,15 @@ services:
       - ./config:/config
     environment:
       - TZ=US/Eastern
+
+  # Matter controller (the Tapo P125M charger plug speaks Matter; its Tapo protocol isn't supported yet)
+  matter-server:
+    image: ghcr.io/home-assistant-libs/python-matter-server:stable
+    container_name: matter-server
+    network_mode: host
+    restart: unless-stopped
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - ./matter:/data
+    command: --storage-path /data --primary-interface enp12s0

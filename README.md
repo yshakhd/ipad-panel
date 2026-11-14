@@ -182,6 +182,13 @@ If the iPad stops checking in (the `watchdog`), the plug is switched on and
 stays on until it's back. If the screen ever starts to lift, unplug the iPad
 and stop using it.
 
+Tapo plugs with newer firmware (the P125M, for one) use an encryption Home
+Assistant's TP-Link integration can't speak yet, so add them through **Matter**
+instead: run the `matter-server` service in `ha-dev/docker-compose.yml`, add
+the Matter integration (`ws://localhost:5580/ws`), and pair the plug with the
+code from the Tapo app (the plug's settings > Matter). It stays in the Tapo app
+too, and works with no internet.
+
 ## Home controls (Home Assistant)
 List entities under `home_assistant.entities`, either as `"light.kitchen"` or
 as `{"id": "cover.garage_door", "name": "Garage"}` to rename a tile. Only listed

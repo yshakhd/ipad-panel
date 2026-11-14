@@ -10,8 +10,9 @@ configuration table explains every key. After each change, restart the server
       the Home Assistant app on your phone. Most of the items below need it.
 
 ## When you get them
-- [ ] **Smart plug for the iPad's charger:** protects the old battery from
-      sitting at full charge around the clock.
+- [x] **Smart plug for the iPad's charger:** on since 2026-11-13: a Tapo P125M,
+      paired to Home Assistant over Matter as `switch.ipad_charger`. It keeps the
+      old battery from sitting at full charge around the clock.
       ```json
       "charger": { "entity": "switch.ipad_charger", "on_minutes": 120, "off_minutes": 120 }
       ```
