@@ -157,10 +157,10 @@
   <div id="status"></div>
   <div id="viewer" class="tap"><div id="viewer-img"></div><p>Tap anywhere to go back to the city</p></div>
 </div>
+<script src="swipe.js"></script>
+<link rel="x-later" href="wx.js">
 <script src="sky.js"></script>
 <script src="extras.js"></script>
-<script src="wx.js"></script>
-<script src="swipe.js"></script>
 <script src="city.js"></script>
 <script>
 (function () {
@@ -281,7 +281,7 @@
     x.open('GET', '/api/state?v=2&t=' + Date.now(), true);
     x.timeout = 8000;
     x.onload = function () {
-      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = Date.now(); } catch (e) { window.onerror(String(e), 'city.html', 0, 0); } }
+      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = Date.now(); Swipe.ready(); try { localStorage.setItem('state.cache', x.responseText); } catch (e2) {} } catch (e) { window.onerror(String(e), 'city.html', 0, 0); } }
     };
     x.send();
   }
@@ -291,10 +291,20 @@
     var t = 'translate(' + [0, 4, 4, 0][shift] + 'px,' + [0, 0, -4, -4][shift] + 'px)';
     $('info').style.webkitTransform = t; $('info').style.transform = t;
   }, 300000);
-  Wx.attach($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
+  Swipe.lazyWx($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
   Swipe.attach('city', function () { return $('viewer').className.indexOf('on') < 0; });   // swipe sideways for the next scene
   if (unit) paintUnits();
-  poll();
+  // draw at once from the last state this iPad saw, rather than wait for the server's answer
+  function fromCache() {
+    try {
+      var c = JSON.parse(localStorage.getItem('state.cache') || 'null');
+      if (!c) return;
+      c.events = []; c.server_time = Date.now() / 1000;
+      render(c); build = null;   // the live answer decides whether the page files changed
+      Swipe.mark('cached'); Swipe.ready();
+    } catch (e) {}
+  }
+  fromCache(); poll();
   setInterval(tick, 1000);
   setInterval(poll, 5000);
   setTimeout(function () { location.reload(); }, 6 * 3600 * 1000);

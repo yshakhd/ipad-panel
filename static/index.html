@@ -267,9 +267,9 @@
   <div id="tiles"></div>
 </div>
 <div id="toast"></div>
-<script src="extras.js"></script>
-<script src="wx.js"></script>
 <script src="swipe.js"></script>
+<link rel="x-later" href="wx.js">
+<script src="extras.js"></script>
 <script src="scene.js"></script>
 
 <script>
@@ -635,7 +635,7 @@
     x.open('GET', '/api/state?v=2&t=' + Date.now(), true);
     x.timeout = 8000;
     x.onload = function () {
-      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = Date.now(); } catch (e) { window.onerror(String(e), 'index.html', 0, 0); } }
+      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = Date.now(); Swipe.ready(); try { localStorage.setItem('state.cache', x.responseText); } catch (e2) {} } catch (e) { window.onerror(String(e), 'index.html', 0, 0); } }
     };
     x.send();
   }
@@ -648,10 +648,20 @@
     $('wrap').style.webkitTransform = t; $('wrap').style.transform = t;
   }
 
-  Wx.attach($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
+  Swipe.lazyWx($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
   Swipe.attach('photos', function () { return view === 'overview'; });   // swipe sideways for the next scene
   if (unit) paintUnits();
-  tick(); poll();
+  // draw at once from the last state this iPad saw, rather than wait for the server's answer
+  function fromCache() {
+    try {
+      var c = JSON.parse(localStorage.getItem('state.cache') || 'null');
+      if (!c) return;
+      c.events = []; c.server_time = Date.now() / 1000;
+      render(c); build = null;   // the live answer decides whether the page files changed
+      Swipe.mark('cached'); Swipe.ready();
+    } catch (e) {}
+  }
+  tick(); fromCache(); poll();
   if (location.hash === '#home') showView('home');
   if (location.hash === '#system') showView('sheet');
   setInterval(tick, 1000);

@@ -1878,7 +1878,12 @@
     var toward = (windDir + 180) % 360, s = Math.sin(face(toward, V[view].face) * Math.PI / 180);
     return (s >= 0 ? 1 : -1) * (0.35 + 0.65 * Math.abs(s));
   }
-  var lastW = null;
+  var lastW = null, restTimer = null, petsLit = null;
+  function buildView(n) {
+    var v = V[n];
+    drawSky(v); buildSun(v); buildCity(v, n); buildLights(v); buildClouds(v); buildFx(v); placeSky(v);
+    v.ready = true;
+  }
   function rebuild() {
     var o = OVERCAST[kind] || 0, gr = GREY[phase];
     oc = o;
@@ -1886,8 +1891,17 @@
     sky = greyed(SKY[skyName], gr, o * 0.85); city = greyed(CITY[phase], gr, o * 0.5); room = greyed(ROOM[phase], gr, o * 0.2);
     room.rim = ROOM[phase].rim && (phase === 'night' || o < 0.5) ? ROOM[phase].rim : null;
     clouds = []; fxList = [];
-    ['bed', 'desk'].forEach(function (n) { var v = V[n]; drawSky(v); buildSun(v); buildCity(v, n); buildLights(v); buildClouds(v); buildFx(v); placeSky(v); });
-    drawDeskRoom(); drawBedRoom(); buildDog(); buildCat(); buildPeople(); buildWx(); paintHaze();
+    // The room on screen first; the other room and the dog's and cat's sprite sheets (which only
+    // change with the light) a moment later. On the iPad mini that's 0.3 s instead of 1 s before
+    // the scene appears, and the 5-minute refresh no longer redraws the pets for nothing.
+    clearTimeout(restTimer);
+    var other = view === 'bed' ? 'desk' : 'bed';
+    buildView(view); V[other].ready = false;
+    drawDeskRoom(); drawBedRoom(); buildPeople(); buildWx(); paintHaze();
+    restTimer = setTimeout(function () {
+      buildView(other);
+      if (petsLit !== phase) { buildDog(); buildCat(); petsLit = phase; }
+    }, 900);
     if (noteEl.style.opacity === '1' && lastNote) paintNote(lastNote);
     builtAt = Date.now();
   }
@@ -1927,7 +1941,7 @@
     if (key !== built || Date.now() - builtAt > 5 * 60 * 1000) {
       kind = k; phase = ph;
       setView(v, !!built && changed); built = key; rebuild();
-    } else { placeSky(V.bed); placeSky(V.desk); }   // the same sky, but the sun and moon move with the clock
+    } else { if (V.bed.ready) placeSky(V.bed); if (V.desk.ready) placeSky(V.desk); }   // the same sky, but the sun and moon move with the clock
   }
 
   /* ---------------- bad air: a haze over the skyline ----------------
@@ -2083,7 +2097,7 @@
     if (view === 'desk') {
       codeTick(t); editTick(t);
       // he looks at whichever screen is busy, leans back to think, and his hands type
-      updateDog(t, dt); updateCat(t, dt);
+      if (dogSheet) updateDog(t, dt); if (catSheet) updateCat(t, dt);   // the sheets arrive a moment after the scene
       if (kitty.keys && t > kitty.keyAt) { catKey(); kitty.keyAt = t + rnd(0.1, 0.25); code.next = Math.max(code.next, t + 1.5); }
       var look = handsTick(t, dt);
       if (doorLook > 0) { doorLook -= dt; look = 13; }   // round towards the door

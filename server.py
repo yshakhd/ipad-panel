@@ -190,7 +190,28 @@ def weather(cfg):
         return {"error": "Weather unavailable: %s" % e, "lat": cfg["latitude"], "lon": cfg["longitude"]}
 
 
+_ASSET = re.compile(r'((?:src|href)=")([\w./-]+\.(?:js|css))(")')
+
+
+def _page(name):
+    """A page with each script and stylesheet link stamped with its file's version (?v=mtime),
+    so the iPad can keep those files for good and switch scenes without asking for them again."""
+    with open(os.path.join(STATIC, name), "rb") as f:
+        html = f.read().decode("utf-8")
+    def stamp(m):
+        try:
+            v = int(os.path.getmtime(os.path.join(STATIC, m.group(2))))
+        except OSError:
+            return m.group(0)
+        return "%s%s?v=%d%s" % (m.group(1), m.group(2), v, m.group(3))
+    return _ASSET.sub(stamp, html).encode("utf-8")
+
+
 class Handler(SimpleHTTPRequestHandler):
+    # keep the connection open between requests: the iPad loads several files per page,
+    # and a new connection for each costs it a round trip or two
+    protocol_version = "HTTP/1.1"
+
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=STATIC, **kw)
 
@@ -222,7 +243,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def end_headers(self):
-        if not self.path.startswith(("/api/", "/photo/")):
+        if self.path.startswith(("/api/", "/photo/")):
+            pass
+        elif "?v=" in self.path or self.path.startswith("/fonts/"):
+            self.send_header("Cache-Control", "max-age=31536000")   # versioned (or never changes): keep it
+        else:
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
@@ -292,13 +317,30 @@ class Handler(SimpleHTTPRequestHandler):
                 "city": {"sleep_hour": (cfg.get("city") or {}).get("sleep_hour", 1),
                          "wake_hour": (cfg.get("city") or {}).get("wake_hour", 8)},
             })
+        name = {"/": "index.html"}.get(self.path.split("?")[0], self.path.split("?")[0].lstrip("/"))
+        if name.endswith(".html") and "/" not in name and os.path.isfile(os.path.join(STATIC, name)):
+            body = _page(name)
+            tag = '"%x"' % (hash(body) & 0xffffffffffff)
+            if self.headers.get("If-None-Match") == tag:
+                self.send_response(304)
+                self.send_header("ETag", tag)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("ETag", tag)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         return super().do_GET()
 
     def do_POST(self):
         if self.path.startswith("/api/clientlog"):
             n = int(self.headers.get("Content-Length", 0))
             print("client-log %s %s" % (self.client_address[0],
-                  self.rfile.read(min(n, 2000)).decode("utf-8", "replace")), flush=True)
+                  self.rfile.read(n)[:2000].decode("utf-8", "replace")), flush=True)   # read it all: the connection stays open
             return self._json({"ok": True})
         if self.path.startswith("/api/home/action"):
             n = int(self.headers.get("Content-Length", 0))
