@@ -109,6 +109,22 @@
   .mz-hit.playing b { opacity: 0.9; -webkit-animation: mzbob 2.4s ease-in-out infinite; animation: mzbob 2.4s ease-in-out infinite; }
   @-webkit-keyframes mzbob { 0%, 100% { -webkit-transform: translate3d(0,0,0); } 50% { -webkit-transform: translate3d(0,-6px,0); } }
   @keyframes mzbob { 0%, 100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-6px,0); } }
+  /* a post-it on the monitor's bezel: tap it for how to set Spotify up on another copy of the panel */
+  #postit { left: 456px; top: 384px; width: 46px; height: 40px; padding: 5px 4px 0; background: #ffe36e; color: #5a4a12;
+    font-style: italic; font-size: 11px; line-height: 12px; text-align: center; box-shadow: 1px 2px 3px rgba(0,0,0,0.35);
+    -webkit-transform: rotate(-5deg); transform: rotate(-5deg); }
+  #postit:before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; background: rgba(0,0,0,0.06); }
+  #note { display: none; position: absolute; left: 0; top: 0; width: 1024px; height: 768px; background: rgba(6,8,12,0.72); }
+  #note.on { display: block; }
+  #note > div { position: absolute; left: 212px; top: 150px; width: 540px; padding: 34px 38px 26px; background: #ffe98a; color: #3d3210;
+    font-size: 19px; line-height: 1.42; box-shadow: 0 24px 50px rgba(0,0,0,0.5); -webkit-transform: rotate(-1.2deg); transform: rotate(-1.2deg); }
+  #note > div:before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: rgba(0,0,0,0.05); }
+  #note h2 { margin: 0 0 12px; font-size: 27px; font-weight: 500; font-style: italic; }
+  #note ol { margin: 0; padding-left: 24px; }
+  #note li { margin-bottom: 9px; }
+  #note code { font-family: Menlo, monospace; font-size: 14px; background: rgba(255,255,255,0.45); padding: 0 3px; word-wrap: break-word; }
+  #note .fine { margin: 12px 0 0; font-size: 16px; font-style: italic; color: #6b5a22; }
+  #note .back { margin: 14px 0 0; font-size: 15px; text-align: right; opacity: 0.6; }
   #photo-hit { left: 748px; top: 272px; width: 220px; height: 160px; }
 
   /* scene links, computer stats */
@@ -149,6 +165,7 @@
       <div id="dclock">--:--</div>
       <div id="photo-hit" class="tap"></div>
       <div id="phone-desk" class="tap mz-hit"><b>♪</b></div>
+      <div id="postit" class="tap">Spotify setup ♪</div>
     </div>
   </div>
   <div id="info">
@@ -177,6 +194,17 @@
   </div>
   <div id="sys" class="tap"></div>
   <div id="status"></div>
+  <div id="note" class="tap"><div>
+    <h2>Spotify on your own copy</h2>
+    <ol>
+      <li>Make an app at <code>developer.spotify.com/dashboard</code>. Pick Web API, and add the redirect URI <code>http://127.0.0.1:8765/api/spotify/callback</code>. Or ask to be added to mine.</li>
+      <li>Copy <code>config.example.json</code> to <code>config.json</code>, and put the app's Client ID and secret under <code>"spotify"</code>.</li>
+      <li>Start the server. On that same computer, open <code>127.0.0.1:8765/api/spotify/login</code> and sign in with your Spotify.</li>
+      <li>Keep the Spotify app open on that computer. Minimised is fine.</li>
+    </ol>
+    <p class="fine">You need Premium. The README's Music section has the rest.</p>
+    <p class="back">Tap to put it back</p>
+  </div></div>
   <div id="viewer" class="tap"><div id="viewer-img"></div><p>Tap anywhere to go back to the city</p></div>
 </div>
 <script src="swipe.js"></script>
@@ -219,6 +247,11 @@
     clearTimeout(onTap.v); onTap.v = setTimeout(function () { $('viewer').className = 'tap'; }, 30000);
   });
   onTap($('viewer'), function () { $('viewer').className = 'tap'; });
+  onTap($('postit'), function () {
+    $('note').className = 'on tap';
+    clearTimeout(onTap.n); onTap.n = setTimeout(function () { $('note').className = 'tap'; }, 120000);
+  });
+  onTap($('note'), function () { $('note').className = 'tap'; });
   // taps on the scene itself: wake the cat, call the dog (cursor:pointer so iOS 9 sends them)
   $('world').style.cursor = 'pointer';
   onTap($('world'), function (e) {
@@ -318,7 +351,7 @@
   Music.attach($('phone-bed'), 'phone'); Music.attach($('phone-desk'), 'phone');
   Music.onChange(function (on) { $('phone-bed').className = $('phone-desk').className = 'tap mz-hit' + (on ? ' playing' : ''); });
   Swipe.lazyWx($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
-  Swipe.attach('city', function () { return $('viewer').className.indexOf('on') < 0; });   // swipe sideways for the next scene
+  Swipe.attach('city', function () { return $('viewer').className.indexOf('on') < 0 && $('note').className.indexOf('on') < 0; });   // swipe sideways for the next scene
   if (unit) paintUnits();
   // draw at once from the last state this iPad saw, rather than wait for the server's answer
   function fromCache() {
