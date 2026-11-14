@@ -210,6 +210,13 @@ Setup, once:
    **on this computer** and press Agree. The login is kept in `spotify-token.json`
    (git-ignored).
 
+4. spotifyd has to be signed in to your account, or Spotify won't list it as a speaker:
+   run `spotifyd auth` once and sign in in the browser, then `systemctl --user restart spotifyd`.
+
+spotifyd 0.4 can't play a bare list of songs, so a song always starts inside something:
+its playlist, your Liked Songs, or its album, and plays on from there. It also can't jump
+within some songs; the player says so when a seek doesn't take.
+
 Spotify limits apps like this one (Development Mode, 2026): track lists only for
 playlists you made or collaborate on (others still play), and 10 search results per kind.
 

@@ -118,7 +118,10 @@ def call(cfg, method, path, params=None, body=None):
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
             raw = r.read()
-            return json.loads(raw) if raw else None
+            try:
+                return json.loads(raw) if raw else None
+            except ValueError:   # some commands answer with a bare id or nothing useful
+                return None
     except urllib.error.HTTPError as e:
         try:
             err = json.loads(e.read()).get("error", {})
@@ -153,7 +156,7 @@ def _track(t):
     if not t:
         return None
     album = t.get("album") or {}
-    return {"uri": t.get("uri"), "name": t.get("name"), "ms": t.get("duration_ms"),
+    return {"uri": t.get("uri"), "name": t.get("name"), "ms": t.get("duration_ms"), "album_uri": album.get("uri"),
             "artist": ", ".join(a.get("name", "") for a in t.get("artists") or []) or (t.get("show") or {}).get("name", ""),
             "album": album.get("name") or "", "art": _img(album.get("images") or t.get("images")),
             "thumb": _img(album.get("images") or t.get("images"), 64)}
@@ -277,6 +280,10 @@ def devices(cfg):
             for d in got.get("devices") or []]
 
 
+def _me(cfg):
+    return _cached("me", 86400, lambda: (call(cfg, "GET", "/me") or {}).get("id"))
+
+
 def _home_device(cfg):
     """The device to wake when nothing is playing anywhere: config spotify.device (default Spotifyd)."""
     want = ((cfg.get("spotify") or {}).get("device") or "Spotifyd").lower()
@@ -315,7 +322,14 @@ def command(cfg, req):
     elif a == "prev":
         call(cfg, "POST", "/me/player/previous")
     elif a == "seek":
-        call(cfg, "PUT", "/me/player/seek", {"position_ms": int(req.get("ms", 0))})
+        want = int(req.get("ms", 0))
+        call(cfg, "PUT", "/me/player/seek", {"position_ms": want})
+        time.sleep(1.2)
+        got = player(cfg, fresh=True)
+        if got.get("playing") and abs((got.get("progress") or 0) - want) > 6000:   # spotifyd 0.4 can't seek in some songs
+            raise SpotifyError(409, "SEEK_IGNORED", "%s couldn't jump within this song; it plays on from where it was."
+                               % ((got.get("device") or {}).get("name") or "This speaker"))
+        return got
     elif a == "volume":
         call(cfg, "PUT", "/me/player/volume", {"volume_percent": max(0, min(100, int(req.get("pct", 50))))})
     elif a == "shuffle":
@@ -323,7 +337,11 @@ def command(cfg, req):
     elif a == "transfer":
         call(cfg, "PUT", "/me/player", body={"device_ids": [req["device"]], "play": True})
     elif a == "start":
+        # spotifyd can't play a bare list of songs ("context is not available"), so a song
+        # always starts inside something: its playlist, Liked Songs, or its album
         body = {}
+        if req.get("context") == "liked":
+            req["context"] = "spotify:user:%s:collection" % _me(cfg)
         if req.get("context"):
             body["context_uri"] = req["context"]
             if req.get("offset"):

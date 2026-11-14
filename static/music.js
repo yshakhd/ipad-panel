@@ -429,10 +429,12 @@ var Music = (function () {
     if (a === 'ctx') return send({ action: 'start', context: uri });
     if (a === 'plsong') return send({ action: 'start', context: lists.plUri, offset: uri });
     if (a.indexOf('all:') === 0) return paintAll(a.slice(4), 'Liked songs');
-    if (a.indexOf('song:') === 0) {   // play this song, then the rest of its list
-      list = lists[a.slice(5)] || []; var uris = [];
-      for (i = 0; i < list.length; i++) uris.push(list[i].uri);
-      return send({ action: 'start', uris: uris, offset: uri });
+    if (a.indexOf('song:') === 0) {   // a liked song plays on through Liked Songs; others through their album
+      var from = a.slice(5), song = null;
+      list = lists[from] || [];
+      for (i = 0; i < list.length; i++) if (list[i].uri === uri) song = list[i];
+      if (from === 'liked') return send({ action: 'start', context: 'liked', offset: uri });
+      return send({ action: 'start', context: song && song.album_uri, offset: uri });
     }
   }
 
