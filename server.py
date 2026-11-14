@@ -208,6 +208,20 @@ def _page(name):
     return _ASSET.sub(stamp, html).encode("utf-8")
 
 
+# Spotify only sends a sign-in back to 127.0.0.1, which on a phone is the phone itself. So from another
+# device: sign in, land on a page that won't load, and paste its address here.
+_SPOTIFY_PASTE = """<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>Connect Spotify</title>
+<body style="font:18px/1.45 Georgia,serif;max-width:560px;margin:0 auto;padding:28px 18px;background:#fbf6e6;color:#2f2a1c">
+<h1 style="font-size:26px;font-weight:normal;font-style:italic">Connect Spotify</h1>
+<p>1. <a href="{url}" target="_blank" style="color:#1a7f45">Sign in to Spotify</a> and press Agree.</p>
+<p>2. You'll land on a page that won't load. That's expected. Copy its whole address from the address bar.</p>
+<p>3. Paste it here:</p>
+<form action="/api/spotify/callback" method="get">
+<input name="paste" autocomplete="off" placeholder="http://127.0.0.1:..." style="width:100%;box-sizing:border-box;font:16px monospace;padding:10px;border:1px solid #b9ae8a;border-radius:6px">
+<button style="margin-top:12px;font:17px Georgia,serif;padding:9px 18px;border:0;border-radius:6px;background:#1a7f45;color:#fff">Connect</button>
+</form></body>"""
+
 class Handler(SimpleHTTPRequestHandler):
     # keep the connection open between requests: the iPad loads several files per page,
     # and a new connection for each costs it a round trip or two
@@ -356,8 +370,14 @@ class Handler(SimpleHTTPRequestHandler):
         if path == "login":
             if spotify.status(cfg) == "unconfigured":
                 return self._send(400, b"Add spotify.client_id and client_secret to config.json first.", "text/plain")
-            return self._send(302, b"", "text/plain", {"Location": spotify.login_url(cfg)})
+            if self.client_address[0] in ("127.0.0.1", "::1"):
+                return self._send(302, b"", "text/plain", {"Location": spotify.login_url(cfg)})
+            return self._send(200, _SPOTIFY_PASTE.replace("{url}", spotify.login_url(cfg).replace("&", "&amp;")).encode(),
+                              "text/html; charset=utf-8")
         if path == "callback":
+            if "paste" in q:   # signed in on another device: the address of the page that didn't load holds the code
+                pq = urllib.parse.parse_qs(urllib.parse.urlparse(q["paste"][0].strip()).query)
+                q = {k: v for k, v in pq.items() if k in ("code", "error")} or {"error": ["that address has no code in it"]}
             if "code" not in q:
                 return self._send(400, ("Spotify said: %s" % q.get("error", ["no code"])[0]).encode(), "text/plain")
             try:

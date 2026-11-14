@@ -136,12 +136,9 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
 3. Give the server a fixed address in your router (a DHCP reservation) so the
    iPad always finds it.
 
-To start the server on boot with systemd:
-
-    cp ipad-panel.service ~/.config/systemd/user/
-    systemctl --user daemon-reload
-    systemctl --user enable --now ipad-panel
-    sudo loginctl enable-linger $USER   # keep it running when logged out
+To start the server on boot with systemd, run `./install.sh` from this folder. The
+first run makes `config.json` from the example. Fill it in and run it again, and it
+installs and starts the service, and prints the address to open on the iPad.
 
 ## Configuration (`config.json`)
 | Key | What it does |
@@ -208,9 +205,11 @@ Setup, once:
    `"spotify": { "client_id": "...", "client_secret": "..." }`. Add `"device": "<name>"`
    only if the speaker to wake isn't the desktop app on this computer (the name as it
    appears in Spotify's speaker list).
-3. Restart the server, then open `http://127.0.0.1:8765/api/spotify/login` in a browser
-   **on this computer** and press Agree. The login is kept in `spotify-token.json`
-   (git-ignored).
+3. Restart the server and open `http://<server>:8765/api/spotify/login`. On the server
+   itself (`127.0.0.1`), it signs straight in. From a phone or another computer, it
+   walks you through it: sign in, land on a page that won't load (Spotify only sends
+   sign-ins back to `127.0.0.1`), and paste that page's address back. The login is
+   kept in `spotify-token.json` (git-ignored).
 
 4. Keep the Spotify desktop app open on this computer (it can sit minimised).
 
@@ -248,7 +247,7 @@ for trying the tiles without real hardware.
 
 ## Moving to a Raspberry Pi
 1. Raspberry Pi OS 64-bit, a DHCP reservation for the Pi, and Docker.
-2. Copy this folder over and install the systemd service as above.
+2. Clone this repo and run `./install.sh` (see above).
 3. Run Home Assistant with Docker (`ha-dev/docker-compose.yml` is a start: point
    its volume at a fresh config folder and remove `demo:`).
 4. Create a long-lived access token in Home Assistant, save it to

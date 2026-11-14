@@ -198,9 +198,9 @@
     <h2>Spotify on your own copy</h2>
     <ol>
       <li>Make an app at <code>developer.spotify.com/dashboard</code>. Pick Web API, and add the redirect URI <code>http://127.0.0.1:8765/api/spotify/callback</code>. Or ask to be added to mine.</li>
-      <li>Copy <code>config.example.json</code> to <code>config.json</code>, and put the app's Client ID and secret under <code>"spotify"</code>.</li>
-      <li>Start the server. On that same computer, open <code>127.0.0.1:8765/api/spotify/login</code> and sign in with your Spotify.</li>
-      <li>Keep the Spotify app open on that computer. Minimised is fine.</li>
+      <li>On an always-on computer (a Raspberry Pi is ideal), clone the repo and run <code>./install.sh</code>. Put the app's Client ID and secret under <code>"spotify"</code> in <code>config.json</code>, and run it again.</li>
+      <li>On your phone, open <code>&lt;that computer&gt;:8765/api/spotify/login</code> and follow it.</li>
+      <li>Music plays on any speaker you pick under "Playing on …": your phone, a smart speaker, or the Spotify app on your laptop.</li>
     </ol>
     <p class="fine">You need Premium. The README's Music section has the rest.</p>
     <p class="back">Tap to put it back</p>
