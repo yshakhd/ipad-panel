@@ -99,6 +99,16 @@
     background: radial-gradient(ellipse at center, rgba(140,200,255,0.55), rgba(140,200,255,0) 70%);
     -webkit-transition: opacity 0.8s; transition: opacity 0.8s; }
 
+  /* his phones, by the bed and on the desk: tap one for music (Spotify, playing on the panel's computer).
+     While something plays, the screen glows Spotify green and a note bobs above it. */
+  #phone-bed { left: 56px; top: 484px; width: 80px; height: 40px; }
+  #phone-desk { left: 614px; top: 492px; width: 76px; height: 44px; }
+  .mz-hit b { position: absolute; left: 50%; top: -14px; margin-left: -6px; font-size: 18px; font-weight: normal; color: #b8f5cf; opacity: 0;
+    text-shadow: 0 0 8px rgba(30,215,96,0.8); -webkit-transition: opacity 0.8s; transition: opacity 0.8s; }
+  .mz-hit.playing { background: -webkit-radial-gradient(center, ellipse, rgba(30,215,96,0.4), rgba(30,215,96,0) 65%); background: radial-gradient(ellipse at center, rgba(30,215,96,0.4), rgba(30,215,96,0) 65%); }
+  .mz-hit.playing b { opacity: 0.9; -webkit-animation: mzbob 2.4s ease-in-out infinite; animation: mzbob 2.4s ease-in-out infinite; }
+  @-webkit-keyframes mzbob { 0%, 100% { -webkit-transform: translate3d(0,0,0); } 50% { -webkit-transform: translate3d(0,-6px,0); } }
+  @keyframes mzbob { 0%, 100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-6px,0); } }
   #photo-hit { left: 748px; top: 272px; width: 220px; height: 160px; }
 
   /* scene links, computer stats */
@@ -132,11 +142,13 @@
       <div></div>
       <div id="bc" class="disp"><div id="bc-time">--:--</div><div id="bc-sun"></div></div>
       <div id="phone"></div>
+      <div id="phone-bed" class="tap mz-hit"><b>♪</b></div>
     </div>
     <div id="desk" class="half">
       <div></div>
       <div id="dclock">--:--</div>
       <div id="photo-hit" class="tap"></div>
+      <div id="phone-desk" class="tap mz-hit"><b>♪</b></div>
     </div>
   </div>
   <div id="info">
@@ -172,6 +184,7 @@
 <script src="sky.js"></script>
 <script src="extras.js"></script>
 <script src="city.js"></script>
+<script src="music.js"></script>
 <script>
 (function () {
   var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -282,6 +295,7 @@
     renderSys(s);
     City.setAir(s.air ? s.air.aqi : 0);
     Extras.render(s, { door: City.door, message: City.note });
+    Music.setState(s.music);
     var m = $('msg');
     if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; } else m.style.display = 'none';
     tick();
@@ -301,6 +315,8 @@
     var t = 'translate(' + [0, 4, 4, 0][shift] + 'px,' + [0, 0, -4, -4][shift] + 'px)';
     $('info').style.webkitTransform = t; $('info').style.transform = t;
   }, 300000);
+  Music.attach($('phone-bed'), 'phone'); Music.attach($('phone-desk'), 'phone');
+  Music.onChange(function (on) { $('phone-bed').className = $('phone-desk').className = 'tap mz-hit' + (on ? ' playing' : ''); });
   Swipe.lazyWx($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
   Swipe.attach('city', function () { return $('viewer').className.indexOf('on') < 0; });   // swipe sideways for the next scene
   if (unit) paintUnits();

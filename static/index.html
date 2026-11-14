@@ -121,6 +121,11 @@
   .stat small { font-size: 15px; color: #A9B3C1; margin-right: 6px; }
   .stat .num { font-size: 25px; }
   .warn { color: #F5B04A; } .hot { color: #FF5D4E; }
+  /* music: opens the Spotify remote (the music plays on the panel's computer); shows the song while one plays */
+  #music-btn { margin-right: 22px; padding: 7px 16px 7px 12px; border-radius: 20px; border: 1px solid rgba(30,215,96,0.55); color: #F2EDE4;
+    font-size: 17px; max-width: 210px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-flex: none; flex: none; }
+  #music-btn b { color: #1ed760; font-weight: normal; margin-right: 8px; }
+  #music-btn.playing { background: rgba(30,215,96,0.14); }
   #inst .more { font-style: italic; font-size: 17px; color: #A9B3C1; white-space: nowrap; }
   #status { position: absolute; top: 8px; left: 50%; width: 300px; margin-left: -150px; text-align: center;
     font-size: 14px; font-style: italic; color: #FF5D4E; }
@@ -232,6 +237,7 @@
     <div id="i-disks" class="flex"></div>
     <div class="stat"><small>Chip</small><span class="num" id="i-temp">--</span></div>
     <div class="grow"></div>
+    <div id="music-btn" class="tap"><b>♪</b><span id="music-txt">Spotify</span></div>
     <div class="more">Show breakdown</div>
   </div>
   <div id="status"></div>
@@ -281,6 +287,7 @@
 <link rel="x-later" href="wx.js">
 <script src="extras.js"></script>
 <script src="scene.js"></script>
+<script src="music.js"></script>
 
 <script>
 (function () {
@@ -636,6 +643,7 @@
     renderWeather(s.weather);
     renderHome(s.home);
     Extras.render(s);
+    Music.setState(s.music);
     var m = $('msg');
     if (s.message && s.message.text) { m.textContent = s.message.text; m.style.display = 'block'; }
     else m.style.display = 'none';
@@ -658,6 +666,11 @@
     $('wrap').style.webkitTransform = t; $('wrap').style.transform = t;
   }
 
+  Music.attach($('music-btn'), 'phone');
+  Music.onChange(function (on, it) {
+    $('music-btn').className = 'tap' + (on ? ' playing' : '');
+    $('music-txt').textContent = on && it && it.name ? it.name + (it.artist ? ' · ' + it.artist : '') : 'Spotify';
+  });
   Swipe.lazyWx($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
   Swipe.attach('photos', function () { return view === 'overview'; });   // swipe sideways for the next scene
   if (unit) paintUnits();

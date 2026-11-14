@@ -7,3 +7,4 @@ config.json
 static/private/
 cache/
 ha-dev/matter/
+spotify-token.json

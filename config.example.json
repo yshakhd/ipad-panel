@@ -80,5 +80,10 @@
     "minutes": 15,
     "notify": "notify.mobile_app_your_phone",
     "ntfy": ""
+  },
+  "spotify": {
+    "client_id": "your Spotify app's Client ID",
+    "client_secret": "its Client secret",
+    "device": "Spotifyd"
   }
 }

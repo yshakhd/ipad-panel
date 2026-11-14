@@ -160,6 +160,7 @@ To start the server on boot with systemd:
 | `presence` | Home Assistant `person` or `device_tracker` entities. When all of them are away, the panel dims as it does overnight |
 | `scene_events` | `doorbell` and `door` lists of Home Assistant entities (binary sensors or event entities) that the city's dog reacts to |
 | `charger` | A Home Assistant smart plug the iPad charges from: `entity`, `on_minutes`, `off_minutes` (default 120 and 120). See below |
+| `spotify` | Music: `client_id`, `client_secret` of your Spotify app, and `device`, the speaker to wake when nothing is playing (default `Spotifyd`). See below |
 | `watchdog` | Notifies you when the iPad stops checking in for `minutes` (default 15), and again when it's back: through the Home Assistant service in `notify` (e.g. `notify.mobile_app_your_phone`; default: a notification in Home Assistant) and/or an [ntfy](https://ntfy.sh) topic URL in `ntfy` |
 | `weather_console` | Optional overrides for the weather console: `radar` (a NEXRAD site such as `"KDIX"`), `station` (an airport such as `"KSMQ"`) `states` (where to look for warning outlines, e.g. `["NJ", "NY"]`) and `satellite` (a GOES-19 sector: `"ne"` by default, or `"se"`, `"cgl"`, `"sp"`, `"psw"`, `"pnw"` and others). By default all three come from the National Weather Service for your location |
 | `air_quality`, `weather_alerts` | Set to `false` to hide the air quality or the weather warnings |
@@ -188,6 +189,29 @@ instead: run the `matter-server` service in `ha-dev/docker-compose.yml`, add
 the Matter integration (`ws://localhost:5580/ws`), and pair the plug with the
 code from the Tapo app (the plug's settings > Matter). It stays in the Tapo app
 too, and works with no internet.
+
+## Music (Spotify)
+Tap a phone in the city (by the bed or on the desk), the wireless in the meadow's
+grass, or the Spotify button in the photo scene's bottom bar. A player pops up: now
+playing, your library, search, and a choice of speaker. The city's phones glow and the
+meadow's wireless gives off notes while music plays.
+
+The iPad can't play Spotify itself (iOS 9 Safari can't, and the Spotify app left iOS 9
+long ago), so the panel is a remote: the music plays on a Spotify Connect speaker,
+spotifyd on this computer by default, or any phone, computer or speaker on your account.
+Spotify requires Premium for this.
+
+Setup, once:
+1. At https://developer.spotify.com/dashboard, create an app. Pick **Web API**, and add
+   the redirect URI `http://127.0.0.1:8765/api/spotify/callback`.
+2. Copy its Client ID and Client secret into `config.json`:
+   `"spotify": { "client_id": "...", "client_secret": "...", "device": "Spotifyd" }`
+3. Restart the server, then open `http://127.0.0.1:8765/api/spotify/login` in a browser
+   **on this computer** and press Agree. The login is kept in `spotify-token.json`
+   (git-ignored).
+
+Spotify limits apps like this one (Development Mode, 2026): track lists only for
+playlists you made or collaborate on (others still play), and 10 search results per kind.
 
 ## Home controls (Home Assistant)
 List entities under `home_assistant.entities`, either as `"light.kitchen"` or

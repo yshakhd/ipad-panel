@@ -22,6 +22,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import extras
 import ha
 import photos
+import spotify
 import sysinfo
 import wx
 
@@ -287,6 +288,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(data)
             return
+        if self.path.startswith("/api/spotify/"):
+            return self._spotify_get()
         if self.path.startswith("/api/wx"):
             return self._json(wx.summary(load_config()))
         if self.path.startswith("/api/state"):
@@ -310,6 +313,7 @@ class Handler(SimpleHTTPRequestHandler):
                 "calendar": extras.calendar(cfg),
                 "away": extras.away(cfg),
                 "events": extras.events(cfg),
+                "music": spotify.summary(cfg),
                 "build": max(os.path.getmtime(os.path.join(STATIC, f)) for f in os.listdir(STATIC)),
                 "default_unit": "F" if cfg.get("units", "fahrenheit") == "fahrenheit" else "C",
                 "night": [cfg.get("night_dim_start_hour", 23), cfg.get("night_dim_end_hour", 7)],
@@ -336,7 +340,71 @@ class Handler(SimpleHTTPRequestHandler):
             return
         return super().do_GET()
 
+    def _send(self, code, body, typ, extra=None):
+        self.send_response(code)
+        self.send_header("Content-Type", typ)
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _spotify_get(self):
+        cfg = load_config()
+        u = urllib.parse.urlparse(self.path)
+        path, q = u.path[len("/api/spotify/"):], urllib.parse.parse_qs(u.query)
+        if path == "login":
+            if spotify.status(cfg) == "unconfigured":
+                return self._send(400, b"Add spotify.client_id and client_secret to config.json first.", "text/plain")
+            return self._send(302, b"", "text/plain", {"Location": spotify.login_url(cfg)})
+        if path == "callback":
+            if "code" not in q:
+                return self._send(400, ("Spotify said: %s" % q.get("error", ["no code"])[0]).encode(), "text/plain")
+            try:
+                spotify.finish_login(cfg, q["code"][0])
+            except Exception as e:
+                return self._send(500, ("Couldn't finish connecting: %s" % e).encode(), "text/plain")
+            return self._send(200, b"<!doctype html><meta charset=utf-8><body style='font:20px Georgia;padding:40px'>"
+                                   b"Spotify is connected. You can close this tab; tap the phone on the iPad.", "text/html; charset=utf-8")
+        if path == "art":
+            try:
+                body, typ = spotify.art(q.get("u", [""])[0])
+            except Exception:
+                body, typ = None, None
+            if not body:
+                return self._json({"error": "not found"}, 404)
+            return self._send(200, body, typ, {"Cache-Control": "max-age=604800"})
+        try:
+            if path == "state":
+                return self._json(spotify.player(cfg))
+            if spotify.status(cfg) != "ready":
+                return self._json({"status": spotify.status(cfg)})
+            if path == "library":
+                return self._json(spotify.library(cfg))
+            if path.startswith("playlist/"):
+                return self._json(spotify.playlist(cfg, path.split("/", 1)[1]))
+            if path == "search":
+                return self._json(spotify.search(cfg, q.get("q", [""])[0]))
+            if path == "devices":
+                return self._json({"devices": spotify.devices(cfg)})
+        except spotify.SpotifyError as e:
+            return self._json({"error": e.message, "reason": e.reason}, 502)
+        except Exception as e:
+            return self._json({"error": "Couldn't reach Spotify (%s)" % e.__class__.__name__}, 502)
+        return self._json({"error": "not found"}, 404)
+
     def do_POST(self):
+        if self.path.startswith("/api/spotify/cmd"):
+            n = int(self.headers.get("Content-Length", 0))
+            try:
+                return self._json(spotify.command(load_config(), json.loads(self.rfile.read(n) or b"{}")))
+            except spotify.SpotifyError as e:
+                msg = e.message
+                if e.reason == "PREMIUM_REQUIRED":
+                    msg = "Spotify only lets Premium accounts control playback."
+                return self._json({"error": msg, "reason": e.reason}, 502)
+            except Exception as e:
+                return self._json({"error": "Couldn't reach Spotify (%s)" % e.__class__.__name__}, 502)
         if self.path.startswith("/api/clientlog"):
             n = int(self.headers.get("Content-Length", 0))
             print("client-log %s %s" % (self.client_address[0],

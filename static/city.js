@@ -437,6 +437,8 @@
     rrect(g, 396, 512, 170, 18, 4); g.fillStyle = '#1b1d23'; g.fill();
     g.fillStyle = night ? 'rgba(120,200,255,0.35)' : 'rgba(255,255,255,0.12)'; for (i = 0; i < 12; i++) g.fillRect(402 + i * 13.5, 515, 10, 3);
     g.fillStyle = '#1b1d23'; ellipse(g, 606, 524, 9, 6); g.fill();
+    rrect(g, 628, 512, 46, 15, 3); g.fillStyle = '#16181c'; g.fill();   // his phone, face up (tap it for music)
+    rrect(g, 631, 514, 40, 11, 2); g.fillStyle = night ? 'rgba(90,110,140,0.35)' : 'rgba(255,255,255,0.12)'; g.fill();
     g.fillStyle = night ? '#4b5f6a' : '#e9eef0'; rrect(g, 690, 494, 24, 30, 3); g.fill();
     g.strokeStyle = night ? '#4b5f6a' : '#e9eef0'; g.lineWidth = 4; g.beginPath(); g.arc(716, 508, 7, -1.3, 1.3); g.stroke();
     g.fillStyle = '#2f9e8f'; g.fillRect(690, 500, 24, 4);
