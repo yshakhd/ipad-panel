@@ -150,8 +150,6 @@
     </div>
   </div>
   <div id="nav" class="flex">
-    <div class="link tap" id="go-photos">Photo scene</div>
-    <div class="link tap" id="go-meadow">Meadow scene</div>
     <div class="link tap" id="go-home">Home controls</div>
     <div id="units" class="tap"><span data-u="F">°F</span><span data-u="C">°C</span></div>
   </div>
@@ -162,6 +160,7 @@
 <script src="sky.js"></script>
 <script src="extras.js"></script>
 <script src="wx.js"></script>
+<script src="swipe.js"></script>
 <script src="city.js"></script>
 <script>
 (function () {
@@ -188,8 +187,6 @@
     for (var i = 0; i < s.length; i++) s[i].className = s[i].getAttribute('data-u') === unit ? 'on' : '';
   }
   onTap($('units'), function () { unit = unit === 'F' ? 'C' : 'F'; store('unit', unit); paintUnits(); if (lastState) render(lastState); });
-  onTap($('go-photos'), function () { store('scene', 'photos'); location.href = '/'; });
-  onTap($('go-meadow'), function () { store('scene', 'meadow'); location.href = '/meadow.html'; });
   onTap($('go-home'), function () { location.href = '/#home'; });
   onTap($('sys'), function () { location.href = '/#system'; });
   onTap($('photo-hit'), function () {
@@ -295,6 +292,7 @@
     $('info').style.webkitTransform = t; $('info').style.transform = t;
   }, 300000);
   Wx.attach($('w-temp'), function () { return unit; });   // tap the temperature for the weather console
+  Swipe.attach('city', function () { return $('viewer').className.indexOf('on') < 0; });   // swipe sideways for the next scene
   if (unit) paintUnits();
   poll();
   setInterval(tick, 1000);

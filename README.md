@@ -148,7 +148,7 @@ To start the server on boot with systemd:
 |---|---|
 | `place_name`, `latitude`, `longitude` | Weather location (from [Open-Meteo](https://open-meteo.com/), no key needed) and the sun's position |
 | `units` | `"fahrenheit"` or `"celsius"`. The iPad can switch too, and remembers it |
-| `scene` | Starting scene: `"meadow"`, `"city"` or `"photos"`. Links at the top switch scenes on the iPad |
+| `scene` | Starting scene: `"meadow"`, `"city"` or `"photos"`. Swipe sideways on the iPad to change scene (photos, meadow, city, round and round) |
 | `city.sleep_hour`, `city.wake_hour` | When he's in bed in the city scene (default 1 and 8, local hours) |
 | `photos.dirs` | Folders of JPG, PNG or WebP photos. Images under 800px are skipped; HEIC isn't supported |
 | `photos.seconds_per_photo` | Slideshow speed in the photo scene (default 5) |
