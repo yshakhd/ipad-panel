@@ -2067,7 +2067,7 @@
   var last = 0, acc = 0, dimmed = false, drawn = 0, fpsAt = 0, headA = 0, headY = 0, jitterAt = 0;
   function frame(nowMs) {
     nextFrame(frame);
-    if (window.WX_OPEN) { last = 0; return; }   // the weather console is up: draw nothing
+    if (window.WX_OPEN || window.SWIPING) { last = 0; return; }   // the weather console is up, or a swipe is sliding: draw nothing
     if (!last) { last = nowMs; return; }
     var dt = (nowMs - last) / 1000; last = nowMs;
     if (dt > 0.25) dt = 0.25;

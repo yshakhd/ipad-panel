@@ -15,6 +15,16 @@
     } catch (e) {}
   };
   try { var sc = localStorage.getItem('scene'); if (sc === 'photos') location.replace('/' + location.search); else if (sc === 'meadow') location.replace('/meadow.html' + location.search); } catch (e) {}
+  // Watchdog: if this page stops polling (a script that failed to load or parse kills the
+  // page's own code, and with it the reload that would bring the fix), reload once the
+  // server answers again. The page's poll sets window.LIVE each time it hears back.
+  window.LIVE = Date.now();
+  setInterval(function () {
+    if (Date.now() - window.LIVE < 90000) return;
+    var x = new XMLHttpRequest(); x.open('GET', '/api/state?ping=' + Date.now(), true);
+    x.onload = function () { if (x.status === 200) location.reload(); };
+    x.send();
+  }, 30000);
 </script>
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
@@ -281,7 +291,7 @@
     x.open('GET', '/api/state?v=2&t=' + Date.now(), true);
     x.timeout = 8000;
     x.onload = function () {
-      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = Date.now(); Swipe.ready(); try { localStorage.setItem('state.cache', x.responseText); } catch (e2) {} } catch (e) { window.onerror(String(e), 'city.html', 0, 0); } }
+      if (x.status === 200) { try { render(JSON.parse(x.responseText)); lastOk = window.LIVE = Date.now(); Swipe.ready(); try { localStorage.setItem('state.cache', x.responseText); } catch (e2) {} } catch (e) { window.onerror(String(e), 'city.html', 0, 0); } }
     };
     x.send();
   }

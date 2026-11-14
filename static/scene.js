@@ -39,7 +39,7 @@
     if (idx >= list.length) { shuffle(list); idx = 0; }
     var src = '/photo/' + list[idx++] + '.jpg';
     var img = new Image();
-    img.onload = function () { show(src); timer = setTimeout(next, secs * 1000); };
+    img.onload = function () { slides[1 - cur]._img = img; show(src); timer = setTimeout(next, secs * 1000); };
     img.onerror = function () { timer = setTimeout(next, 2000); };
     img.src = src;
   }
@@ -164,7 +164,7 @@
   var last = 0, t0 = Date.now();
   function frame() {
     window.requestAnimationFrame(frame);
-    if (window.WX_OPEN) return;   // the weather console is up: draw nothing
+    if (window.WX_OPEN || window.SWIPING) return;   // the weather console is up, or a swipe is sliding: draw nothing
     var now = Date.now();
     if (now - last < 33 || document.hidden) return;   // ~30fps cap
     last = now;
