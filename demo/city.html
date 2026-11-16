@@ -69,6 +69,21 @@
   #phone { left: 66px; top: 494px; width: 60px; height: 30px; opacity: 0; transition: opacity 0.8s;
     background: radial-gradient(ellipse at center, rgba(140,200,255,0.55), rgba(140,200,255,0) 70%); }
   #photo-hit { left: 748px; top: 272px; width: 220px; height: 160px; cursor: zoom-in; }
+  /* a post-it on the monitor's bezel: how to get the real panel's Spotify player going */
+  #postit { left: 456px; top: 384px; width: 46px; height: 40px; padding: 5px 4px 0; background: #ffe36e; color: #5a4a12; cursor: pointer;
+    font-style: italic; font-size: 11px; line-height: 12px; text-align: center; box-shadow: 1px 2px 3px rgba(0,0,0,0.35); transform: rotate(-5deg); }
+  #postit:before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px; background: rgba(0,0,0,0.06); }
+  #spnote { display: none; position: absolute; left: 0; top: 0; width: 1024px; height: 768px; background: rgba(6,8,12,0.72); cursor: pointer; }
+  #spnote.on { display: block; }
+  #spnote > div { position: absolute; left: 212px; top: 120px; width: 540px; padding: 34px 38px 26px; background: #ffe98a; color: #3d3210;
+    font-size: 19px; line-height: 1.42; box-shadow: 0 24px 50px rgba(0,0,0,0.5); transform: rotate(-1.2deg); }
+  #spnote > div:before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 18px; background: rgba(0,0,0,0.05); }
+  #spnote h2 { margin: 0 0 12px; font-size: 27px; font-weight: 500; font-style: italic; }
+  #spnote ol { margin: 0; padding-left: 24px; }
+  #spnote li { margin-bottom: 9px; }
+  #spnote code { font-family: Menlo, monospace; font-size: 14px; background: rgba(255,255,255,0.45); padding: 0 3px; word-wrap: break-word; }
+  #spnote .fine { margin: 12px 0 0; font-size: 16px; font-style: italic; color: #6b5a22; }
+  #spnote .back { margin: 14px 0 0; font-size: 15px; text-align: right; opacity: 0.6; }
   #viewer { display: none; position: absolute; left: 0; top: 0; width: 1024px; height: 768px; background: rgba(6,8,12,0.9); cursor: zoom-out; }
   #viewer.on { display: block; }
   #viewer div { position: absolute; left: 92px; top: 64px; width: 840px; height: 630px; background-size: cover; background-position: center;
@@ -139,6 +154,7 @@
       <div></div>
       <div id="dclock">--:--</div>
       <div id="photo-hit" title="See the photo up close"></div>
+      <div id="postit" title="Spotify setup">Spotify setup ♪</div>
     </div>
   </div>
   <div id="info">
@@ -147,6 +163,17 @@
     <div id="weather" class="sky"><div id="w-temp"></div><div id="w-text">Fetching the weather</div><div id="w-sun"></div><div id="w-more"></div><div id="w-days"></div></div>
     <div id="wind" class="ground"><div id="wind-speed"></div><div id="wind-words"></div></div>
   </div>
+  <div id="spnote"><div>
+    <h2>Spotify on your own panel</h2>
+    <ol>
+      <li>Make an app at <code>developer.spotify.com/dashboard</code>. Pick Web API, and add the redirect URI <code>http://127.0.0.1:8765/api/spotify/callback</code>. Or ask to be added to mine.</li>
+      <li>On an always-on computer (a Raspberry Pi is ideal), clone <code>github.com/yshakhd/ipad-panel</code> and run <code>./install.sh</code>. Put the app's Client ID and secret under <code>"spotify"</code> in <code>config.json</code>, and run it again.</li>
+      <li>On your phone, open <code>&lt;that computer&gt;:8765/api/spotify/login</code> and follow it.</li>
+      <li>Music plays on any speaker you pick under "Playing on …": your phone, a smart speaker, or the Spotify app on your laptop.</li>
+    </ol>
+    <p class="fine">You need Premium. The README's Music section has the rest.</p>
+    <p class="back">Click to put it back</p>
+  </div></div>
   <div id="viewer"><div id="viewer-img"></div></div>
 </div>
 
@@ -519,8 +546,10 @@
     $('viewer').className = 'on';
   };
   $('viewer').onclick = function () { $('viewer').className = ''; };
+  $('postit').onclick = function () { $('spnote').className = 'on'; };
+  $('spnote').onclick = function () { $('spnote').className = ''; };
   $('world').onclick = function (e) {   // tap the sleeping cat to wake it, or the floor to call the dog
-    if (e.target.id === 'photo-hit') return;
+    if (e.target.id === 'photo-hit' || e.target.id === 'postit') return;
     var r = $('stage').getBoundingClientRect(), k = r.width / 1024;
     City.tap((e.clientX - r.left) / k, (e.clientY - r.top) / k);
   };
