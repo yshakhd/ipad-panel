@@ -147,7 +147,7 @@ installs and starts the service, and prints the address to open on the iPad.
 | `units` | `"fahrenheit"` or `"celsius"`. The iPad can switch too, and remembers it |
 | `scene` | Starting scene: `"meadow"`, `"city"` or `"photos"`. Swipe sideways on the iPad to change scene (photos, meadow, city, round and round) |
 | `city.sleep_hour`, `city.wake_hour` | When he's in bed in the city scene (default 1 and 8, local hours) |
-| `photos.dirs` | Folders of JPG, PNG or WebP photos. Images under 800px are skipped; HEIC isn't supported |
+| `photos.dirs` | Folders of JPG, PNG or WebP photos, and iPhone HEIC with `pip install pillow-heif`. Images under 800px are skipped |
 | `photos.seconds_per_photo` | Slideshow speed in the photo scene (default 5) |
 | `photos.seconds_per_painting` | How long each painting stays up in the meadow, and each photo edit in the city (default 120) |
 | `night_dim_start_hour`, `night_dim_end_hour` | Dims the screen overnight (and slows the animation to save power) |

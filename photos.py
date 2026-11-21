@@ -16,6 +16,12 @@ except ImportError:  # slideshow just stays empty without Pillow
     Image = None
 
 EXTS = (".jpg", ".jpeg", ".png", ".webp")
+try:  # iPhone photos (HEIC), when pillow-heif is installed
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+    EXTS += (".heic", ".heif")
+except ImportError:
+    pass
 MAX_EDGE = 1600
 MIN_EDGE = 800       # skip icons, logos, tiny screenshots
 CACHE = os.path.expanduser("~/.cache/ipad-panel/photos")
