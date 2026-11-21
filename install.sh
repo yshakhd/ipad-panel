@@ -3,6 +3,7 @@
 set -e
 DIR=$(cd "$(dirname "$0")" && pwd)
 [ -f "$DIR/config.json" ] || { cp "$DIR/config.example.json" "$DIR/config.json"; echo "Made config.json from the example: fill it in, then run ./install.sh again."; exit 0; }
+python3 -c "import PIL" 2>/dev/null || echo "Warning: Pillow isn't installed, so the photo slideshow and the radar won't work. Install it with: sudo apt install python3-pil (Debian / Raspberry Pi OS) or pip install pillow"
 mkdir -p "$HOME/.config/systemd/user"
 sed "s#%h/work/ipad-panel#$DIR#g" "$DIR/ipad-panel.service" > "$HOME/.config/systemd/user/ipad-panel.service"
 systemctl --user daemon-reload

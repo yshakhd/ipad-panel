@@ -122,7 +122,7 @@ JavaScript and iOS 9-safe CSS, so it works on the original iPad mini
 ## Getting started
 1. On the computer that will serve the panel:
 
-       pip install pillow
+       pip install pillow                   # Debian / Raspberry Pi OS: sudo apt install python3-pil
        cp config.example.json config.json   # set place_name, latitude, longitude
        python3 server.py                    # serves on port 8765
 
@@ -247,7 +247,9 @@ for trying the tiles without real hardware.
 
 ## Moving to a Raspberry Pi
 1. Raspberry Pi OS 64-bit, a DHCP reservation for the Pi, and Docker.
-2. Clone this repo and run `./install.sh` (see above).
+2. `sudo apt install python3-pil` (Pillow, for the photo slideshow and the
+   radar; `pip install` is blocked on Raspberry Pi OS), then clone this repo and
+   run `./install.sh` (see above).
 3. Run Home Assistant with Docker (`ha-dev/docker-compose.yml` is a start: point
    its volume at a fresh config folder and remove `demo:`).
 4. Create a long-lived access token in Home Assistant, save it to
