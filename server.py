@@ -21,6 +21,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import extras
 import ha
+import homelab
 import photos
 import spotify
 import sysinfo
@@ -194,6 +195,16 @@ def weather(cfg):
 _ASSET = re.compile(r'((?:src|href)=")([\w./-]+\.(?:js|css))(")')
 
 
+def home_tiles(cfg):
+    """Home Assistant tiles, with the homelab's (ad blocking) in front."""
+    home, lab = ha.states(cfg), homelab.tiles(cfg)
+    if not lab:
+        return home
+    if home is None or "error" in home:
+        return {"tiles": lab, "error": home["error"]} if home else {"tiles": lab}
+    return {"tiles": lab + home["tiles"]}
+
+
 def _page(name):
     """A page with each script and stylesheet link stamped with its file's version (?v=mtime),
     so the iPad can keep those files for good and switch scenes without asking for them again."""
@@ -258,7 +269,9 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def end_headers(self):
-        if self.path.startswith(("/api/", "/photo/")):
+        if self.path.startswith("/api/photos"):
+            self.send_header("Access-Control-Allow-Origin", "*")   # other pages (a dashboard) may borrow a photo
+        elif self.path.startswith(("/api/", "/photo/")):
             pass
         elif "?v=" in self.path or self.path.startswith("/fonts/"):
             self.send_header("Cache-Control", "max-age=31536000")   # versioned (or never changes): keep it
@@ -320,7 +333,8 @@ class Handler(SimpleHTTPRequestHandler):
                            "load": os.getloadavg()[0]},
                 "weather": w,
                 "message": msg,
-                "home": ha.states(cfg),
+                "home": home_tiles(cfg),
+                "homelab": homelab.summary(cfg),
                 "air": extras.air(cfg),
                 "alerts": extras.alerts(cfg),
                 "outlook": extras.outlook(cfg),
@@ -434,7 +448,8 @@ class Handler(SimpleHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", 0))
             try:
                 req = json.loads(self.rfile.read(n) or b"{}")
-                ok, msg = ha.action(load_config(), req.get("entity_id", ""), req.get("action", ""))
+                eid = req.get("entity_id", "")
+                ok, msg = (homelab if eid.startswith("homelab.") else ha).action(load_config(), eid, req.get("action", ""))
             except Exception as e:
                 ok, msg = False, "Home Assistant error: %s" % e.__class__.__name__
             return self._json({"ok": ok, "message": msg}, 200 if ok else 400)

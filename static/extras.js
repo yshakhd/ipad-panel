@@ -1,6 +1,7 @@
 /*
  * The extra lines every scene shows, from /api/state:
- *   under the date (#notes): weather warnings, the doorbell, and the next calendar event;
+ *   under the date (#notes): homelab services that are down, weather warnings, the doorbell,
+ *   and the next calendar event;
  *   under the sunrise (#w-more): a rain heads-up, and the air quality.
  * Also says when everyone's away (the scene dims) and hands doorbell and door events,
  * and new messages, to the scene. ES5, for the iPad's iOS 9 Safari.
@@ -37,6 +38,9 @@ var Extras = (function () {
       var r = recent[recent.length - 1];
       lines.push('<div class="n-ev">' + (r.kind === 'doorbell' ? 'Someone’s at the door' : esc(r.name) + ' opened') + '</div>');
     }
+
+    var down = s.homelab && s.homelab.down || [];   // homelab services Uptime Kuma sees as down
+    if (down.length) lines.push('<div class="n-alert">' + esc(down.join(', ')) + (down.length > 1 ? ' are' : ' is') + ' down</div>');
 
     var al = s.alerts || [];
     for (i = 0; i < al.length; i++) lines.push('<div class="n-alert">' + esc(al[i].event) + (al[i].until ? ' until ' + esc(al[i].until) : '') + '</div>');

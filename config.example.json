@@ -76,6 +76,15 @@
     "on_minutes": 60,
     "off_minutes": 300
   },
+  "homelab": {
+    "kuma": "http://localhost:3001/status/homelab",
+    "adguard": {
+      "url": "http://localhost:3080",
+      "username": "panel",
+      "password_file": "adguard-pass.txt"
+    },
+    "pause_minutes": 10
+  },
   "watchdog": {
     "minutes": 15,
     "notify": "notify.mobile_app_your_phone",
